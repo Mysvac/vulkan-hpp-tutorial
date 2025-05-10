@@ -1,0 +1,68 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 91f3142..5e16e7b 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -27,6 +27,8 @@ private:
+     /////////////////////////////////////////////////////////////////
+     /// class member
+     GLFWwindow* m_window{ nullptr };
++    vk::raii::Context m_context;
++    vk::raii::Instance m_instance{ nullptr };
+     /////////////////////////////////////////////////////////////////
+     
+     /////////////////////////////////////////////////////////////////
+@@ -45,7 +47,7 @@ private:
+     }
+ 
+     void initVulkan() {
+-
++        createInstance();
+     }
+ 
+     void mainLoop() {
+@@ -59,6 +61,45 @@ private:
+         glfwTerminate();
+     }
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// create instance
++    void createInstance(){
++        vk::ApplicationInfo applicationInfo( 
++            "Hello Triangle",   // pApplicationName
++            1,                  // applicationVersion
++            "No Engine",        // pEngineName
++            1,                  // engineVersion
++            VK_API_VERSION_1_1  // apiVersion
++        );
++
++        vk::InstanceCreateInfo createInfo( 
++            {},                 // vk::InstanceCreateFlags
++            &applicationInfo    // vk::ApplicationInfo*
++        );
++
++        // std::vector<vk::ExtensionProperties>
++        auto extensions = m_context.enumerateInstanceExtensionProperties();
++        std::cout << "available extensions:\n";
++
++        for (const auto& extension : extensions) {
++            std::cout << '\t' << extension.extensionName << std::endl;
++        }
++
++        uint32_t glfwExtensionCount = 0;
++        const char** glfwExtensions;
++        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
++
++        std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
++        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
++
++        createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
++        createInfo.ppEnabledExtensionNames = requiredExtensions.data();
++        createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
++
++        m_instance = m_context.createInstance( createInfo );
++    }
++    /////////////////////////////////////////////////////////////////
+ };
+ 
+ int main() {

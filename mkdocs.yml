@@ -1,5 +1,5 @@
 site_name: Vulkan-hpp-tutorial
-site_url: https://Mysvac.github.io/vulkan-hpp-tutorial/ 
+site_url: https://mysvac.github.io/vulkan-hpp-tutorial/ 
 repo_url: https://github.com/Mysvac/vulkan-hpp-tutorial
 
 theme:
@@ -26,12 +26,12 @@ markdown_extensions:
 
 
 nav:
-  - README: index.md
+  - 首页: index.md
   - 简介: md/0000_intro.md
-  - 概述: md/0001_overview.md
-  - 开发环境: md/0002_env.md
-  - 接口差异: md/0003_diff.md
+  - 开发环境: md/0001_env.md
+  - 接口差异: md/0002_diff.md
   - 绘制三角形:
     - 设置:
       - 基础代码: md/0100_base.md
+      - 实例: md/0101_instance.md
 

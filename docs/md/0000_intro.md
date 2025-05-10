@@ -1,36 +1,38 @@
-# 教程简介
-
-本教程将系统讲解 Vulkan 图形与计算 API 的基础知识与实际应用。
-
-教程基于现代 C++20 标准和 Vulkan-Hpp 绑定，充分利用 RAII 等现代 C++ 特性。
-
-*注：Vulkan-Hpp 是 Vulkan SDK 的官方组成部分，非第三方库*
+# 项目介绍
 
 ## Vulkan 技术概览
 
-Vulkan 是由 [Khronos group](https://www.khronos.org/)（OpenGL 的制定者）推出的新一代图形与计算 API，它提供了对现代显卡硬件更精细的抽象控制。与传统的 [OpenGL](https://en.wikipedia.org/wiki/OpenGL) 和 [Direct3D](https://en.wikipedia.org/wiki/Direct3D) 相比，Vulkan 的主要优势包括：
+### 什么是 Vulkan？
 
-- 更明确的应用程序行为描述
-- 显著的性能提升
-- 更可预测的驱动程序行为
-- 真正的跨平台支持（Windows/Linux/Android）
+Vulkan 是 [Khronos Group](https://www.khronos.org/) 推出的**现代图形与计算 API** 。与传统 API （如[OpenGL](https://en.wikipedia.org/wiki/OpenGL)和[Direct3D](https://en.wikipedia.org/wiki/Direct3D)）相比，它为显卡提供了更好的抽象，使你更好的描述应用程序的行为，从而带来更好的性能和减少意外的驱动程序行为。
 
-*注：macOS 需要通过 MoltenVK 进行转译*
+### 与传统API的关键差异
 
-这些优势的代价是 API 复杂度显著提高。开发者需要手动管理包括帧缓冲创建、内存分配等底层细节，驱动程序提供的自动化帮助大幅减少。
+| 维度            | OpenGL/D3D11          | Vulkan               |
+|-----------------|----------------------|----------------------|
+| 驱动开销        | 高（隐式状态管理）    | 极低（显式声明）      |
+| 线程模型        | 单线程主导            | 原生多线程支持        |
+| 着色器编译      | 运行时GLSL编译        | 预编译SPIR-V字节码    |
+| 内存管理        | 驱动自动分配          | 开发者控制内存类型    |
 
+这些好处的代价是您必须使用更细致的 API，每个细节都需要由您的应用程序从头开始设置，这意味着您必须在应用程序中执行更多工作以确保正确的行为。
 
-**基于上述原因，Vulkan 适合：**
+### 什么人适合Vulkan
 
-- 追求极致性能的图形程序员
-- 需要精细硬件控制的开发者
-- 跨平台图形应用开发者
+ Vulkan 并不适合所有人。它针对的是热衷于高性能计算机图形学并愿意投入一些工作的程序员。
 
-**若您更关注游戏开发而非底层图形编程，建议考虑：**
+如果您主要对游戏开发感兴趣，那么 OpenGL 或 Direct3D 可能更适合您，因为它们的上手难度相对较低，且在多数场景下仍然能够满足需求。
 
-- 继续使用 OpenGL/Direct3D
-- 采用 Unity/Unreal 等游戏引擎
+另一种选择是使用 [Unreal Engine](https://en.wikipedia.org/wiki/Unreal_Engine#Unreal_Engine_4) 或 [Unity](https://en.wikipedia.org/wiki/Unity_(game_engine)) 这样的游戏引擎。这些引擎可以利用 Vulkan 的高性能特性，同时为开发者提供更易用的高级 API，从而在不牺牲太多性能的前提下显著降低开发难度。
 
+## 验证层(Validation Layer)
+Vulkan 采用"默认高性能"的设计哲学，其调试系统具有以下关键特性：
+
+1. 默认情况下，错误检查和调试功能非常有限
+2. 允许您通过称为验证层的功能启用广泛的检查
+3. 可以在开发期间启用它们，然后在发布应用程序时完全禁用
+
+任何人都可以编写自己的验证层，但 LunarG 的 Vulkan SDK 提供了一组标准的验证层，我们将在本教程中使用它。
 
 
 ## 学习前提
@@ -52,39 +54,38 @@ Vulkan 是由 [Khronos group](https://www.khronos.org/)（OpenGL 的制定者）
 
 强烈推荐先修课程： [GAMES101-现代计算机图形学入门](https://www.bilibili.com/video/BV1X7411F744)。  
 
+## 绘制三角形需要什么
 
-## 开发环境
-我们将使用以下工具链：
+绘制三角形之前，我们大致需要先初始化以下内容：
 
-- [Vulkan SDK](https://lunarg.com/vulkan-sdk/)
-- [GLM](http://glm.g-truc.net/) 线性代数库
-- [GLFW](http://www.glfw.org/) 窗口库
-- [CMake](https://cmake.org/) 构建系统
-- [vcpkg](https://vcpkg.io/) 依赖管理
+1. 实例和物理设备选择
+    - Vk实例（`VkInstance`）：应用程序与 Vulkan 驱动程序之间沟通的桥梁
+    - 物理硬件（`VkPhysicalDevice`）：物理设备，检测支持的功能和特性
+    - 逻辑硬件（`VkDevice`）：逻辑设备，管理资源和操作，关联特定队列族
 
-后面的章节会详细介绍环境的搭建。
+2. 显式窗口表面和交换链
+    - 窗口表面（`VkSurfaceKHR`）：跨平台的抽象接口，用于渲染内容到窗口
+    - 交换链（`VkSwapchainKHR`）：管理多级缓冲区
 
-## 教程结构
-1. 核心概念解析
-2. 开发环境配置
-3. 第一个三角形绘制
-4. 高级功能实现
+3. 图像视图和帧缓冲
+    - 图像视图（`VkImageView`）：图像资源的抽象视图，描述图像基本信息
+    - 帧缓冲（`VkFramebuffer`）：图像资源和渲染通道连接的桥梁
+    - 渲染通道（`VkRenderPass`）：定义渲染过程中各个附件的使用方式
 
-每个章节包含：
+4. 图形管线
+    - 着色器模块（`VkShaderModule`）：SPIR-V 字节码加载
+    - 图像管线（`VkPipeline`）：定义图形管线的固定功能和可编程着色器阶段
 
-- 概念讲解
-- API 代码演示
-- 辅助函数封装
-- 完整代码链接
+5. 命令执行
+    - 命令池（`VkCommandPool`）：用于分配和管理命令缓冲
+    - 命令缓冲（`VkCommandBuffer`）：记录渲染操作和命令序列的容器
+    - 队列（`VkQueue`）：用于提交命令缓冲
 
-*注意：虽然渲染第一个三角形需要约 1000 行代码，但后续扩展纹理和 3D 模型不再需要那么多重复工作，相对简单。*
+> 你现在无需记住这些内容，在后面的教程中随时可以回顾此内容。
 
-### 其他说明
+由于大量的初始化工作，仅仅是绘制一个三角形就需要接近1000行代码。但在后续的过程中，你会逐渐理解各个组件的作用，以及这些繁琐步骤的意义。且在完成了第一个三角形后，后续扩展纹理和 3D 模型不再需要那么多重复工作。
 
-Vulkan SDK本身由C编写，这带来更好的跨语言能力，你可以其他语言调用C接口。
 
-基于底层C接口的C++教程：[Vulkan-tutorial](https://vulkan-tutorial.com/)  
-Rust教程 [Vulkan-tutorial-rs](https://github.com/bwasty/vulkan-tutorial-rs) 
-
+## 最后
 
 准备好投入高性能图形 API 的未来了吗？ 让我们开始吧！

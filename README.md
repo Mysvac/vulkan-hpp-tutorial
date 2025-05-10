@@ -32,7 +32,7 @@
 这是Vulkan的C++入门教程文档。  
 我们将基于Vulkan-Hpp封装提供的raii相关内容进行介绍。
 
-**文档网站：<https://Mysvac.github.io/vulkan-hpp-tutorial>**
+**文档网站：<https://mysvac.github.io/vulkan-hpp-tutorial>**
 
 > 本文档使用AI优化语言组织，请注意甄别错误!
 
