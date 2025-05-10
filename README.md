@@ -4,8 +4,8 @@
 
 <p>
     <a href="#中文"><img src="https://img.shields.io/badge/中文-red?style=for-the-badge" alt="中文" /></a>
-    &nbsp;&nbsp;
-    <a href="#ENGLISH"><img src="https://img.shields.io/badge/English-blue?style=for-the-badge" alt="English" /></a>
+    <!-- &nbsp;&nbsp;
+    <a href="#ENGLISH"><img src="https://img.shields.io/badge/English-blue?style=for-the-badge" alt="English" /></a> -->
 </p>
 <p>
     <a href="https://www.vulkan.org/">
@@ -27,29 +27,24 @@
 
 <div id="中文">
 
-## 前言
-这是Vulkan的C++入门教程。  
+## 项目文档说明
+
+这是Vulkan的C++入门教程文档。  
 我们将基于Vulkan-Hpp封装提供的raii相关内容进行介绍。
 
-*制作本教程的原因是作者发现没有完整的`vulkan-hpp-raii`基础示例*
+**文档网站：<https://Mysvac.github.io/vulkan-hpp-tutorial>**
 
-**制作中······**
+> 本文档使用AI优化语言组织，请注意甄别错误!
 
-库文档参考[vulkan-hpp](https://github.com/KhronosGroup/Vulkan-Hpp)。
-
-英文内容参考[Vulkan-Tutorial](https://github.com/Overv/VulkanTutorial)。  
-中文内容参考[Vulkan-Tutorial](https://tutorial.vulkan.net.cn/Introduction)。
-
-> 本教程使用AI优化语言组织，请注意甄别错误!
-
-## 说明
+## 项目说明
 
 ### 项目结构
 - `src` 中存放Cpp完整代码。
 - `shaders`中存放shader代码。
 - `docs` 中存放文档
     - `md` 中存放教程文档。
-    - `codes` 中存放每一节的Cpp代码。
+    - `images` 相关图片资源
+    - `codes` 中存放每一节的代码和差异文件。
 
 ### C++标准说明
 使用C++20标准，但不会使用C++20的模块功能。
@@ -71,18 +66,14 @@
 
 我们将使用Vcpkg管理第三方库，简化安装。
 
-### 文档说明
-`codes` 文件中存放了各章节代码，提供 `.diff` 差异描述文件。
-
-`md` 文件夹中存放了所有文档，可自行观看。
 
 </div>
 
 ---
-
+<!-- 
 <div id="ENGLISH">
 
 // TODO
 
-</div>
+</div> -->
 

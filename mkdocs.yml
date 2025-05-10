@@ -1,8 +1,18 @@
 site_name: Vulkan-hpp-tutorial
+site_url: https://Mysvac.github.io/vulkan-hpp-tutorial/ 
 repo_url: https://github.com/Mysvac/vulkan-hpp-tutorial
 
 theme:
   name: material
+  palette:  # 启用深浅模式切换
+    - scheme: default  # 浅色模式
+      toggle:
+        icon: material/weather-sunny  # 太阳图标
+        name: 切换到深色模式
+    - scheme: slate  # 深色模式（内置）
+      toggle:
+        icon: material/weather-night  # 月亮图标
+        name: 切换到浅色模式
   features:
     - content.code.annotate
     - content.code.copy
@@ -16,7 +26,7 @@ markdown_extensions:
 
 
 nav:
-  - Home: index.md
+  - README: index.md
   - 简介: md/0000_intro.md
   - 概述: md/0001_overview.md
   - 开发环境: md/0002_env.md

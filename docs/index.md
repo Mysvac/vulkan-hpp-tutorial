@@ -10,14 +10,7 @@
 
 > 本教程使用AI优化语言组织，请注意甄别错误!
 
-## 说明
-
-### 项目结构
-- `src` 中存放Cpp完整代码。
-- `shaders`中存放shader代码。
-- `docs` 中存放文档
-    - `md` 中存放教程文档。
-    - `codes` 中存放每一节的Cpp代码。
+## 文档说明
 
 ### C++标准说明
 使用C++20标准，但不会使用C++20的模块功能。
@@ -27,22 +20,23 @@
 
 *且 C++23 的标准库模块与标准库头文件似乎是冲突的，这很可能导致显著延缓C++模块化的发展*
 
-### 构建与依赖管理
+### 项目构建与依赖管理
 由于C++20，你需要较新的编译器：
 - Visual Studio 2022 17.4 或更高版本（提供 19.34 或更高版本）cl.exe
 - Clang 16.0.0 或更高版本
 - GCC 14.0 或更高版本
-- CMake 3.28 或更高版本
+- CMake 3.30 或更高版本
 - Ninja 1.10.2 或更高版本
 
 我们将使用CMake进行项目构建，跨平台。
 
 我们将使用Vcpkg管理第三方库，简化安装。
 
-## 参考
+## 参考资料
 
-Vulkan-hpp文档[vulkan-hpp](https://github.com/KhronosGroup/Vulkan-Hpp)。
+Vulkan-hpp文档 [vulkan-hpp](https://github.com/KhronosGroup/Vulkan-Hpp) 。
 
-Vulkan英文教程[Vulkan-Tutorial](https://github.com/Overv/VulkanTutorial)。  
-Vulkan中文教程[Vulkan-Tutorial](https://tutorial.vulkan.net.cn/Introduction)。
+Vulkan英文教程 [Vulkan-Tutorial](https://github.com/Overv/VulkanTutorial) 。
+
+Vulkan中文教程 [Vulkan-Tutorial](https://tutorial.vulkan.net.cn/Introduction) 。
 
