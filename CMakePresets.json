@@ -1,0 +1,40 @@
+{
+    "version": 8,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 30,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+          "name": "Ninja-x64",
+          "description": "x64-config",
+          "generator": "Ninja Multi-Config",
+          "binaryDir": "${sourceDir}/build/",
+          "installDir": "${sourceDir}/build/",
+          "cacheVariables": {
+              "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+              "CMAKE_CXX_COMPILER": "cl.exe",
+              "CMAKE_C_COMPILER": "cl.exe"
+            },
+          "architecture": {
+              "value": "x64",
+              "strategy": "external"
+          }
+        }
+      ],
+      "buildPresets": [
+          {
+          "name": "x64-build-debug",
+          "displayName": "x64 Build Debug",
+          "configurePreset": "Ninja-x64",
+          "configuration": "Debug"
+          },
+          {
+            "name": "x64-build-release",
+            "displayName": "x64 Build Release",
+            "configurePreset": "Ninja-x64",
+            "configuration": "Release"
+        }
+      ]
+}

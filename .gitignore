@@ -1,0 +1,6 @@
+.vs/
+.vscode/
+.idea/
+
+build/
+shaders/*.spv
