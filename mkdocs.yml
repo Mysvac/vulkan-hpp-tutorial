@@ -19,11 +19,12 @@ theme:
 
 
 markdown_extensions:
+  - pymdownx.superfences
   - pymdownx.highlight:
       use_pygments: true
-      pygments_style: material
-  - pymdownx.superfences
 
+extra_css:
+  - css/style.css
 
 nav:
   - 首页: index.md

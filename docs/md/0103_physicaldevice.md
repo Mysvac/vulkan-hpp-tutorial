@@ -102,9 +102,7 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 
 你还可以创建自己的评分机制，然后挑选最好的显卡，像这样
 
-```c++
-
-pp
+```cpp
 int rateDeviceSuitability(const vk::raii::PhysicalDevice& physicalDevice) {
     auto properties = physicalDevice.getProperties();
     auto features = physicalDevice.getFeatures();

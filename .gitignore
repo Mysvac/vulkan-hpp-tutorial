@@ -4,4 +4,4 @@
 
 build/
 shaders/*.spv
-sites/
+site/
