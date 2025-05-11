@@ -87,6 +87,8 @@ static constexpr std::array<const char*,1> validationLayers {
 ```
 
 > `NDEBUG` 宏是 C++ 标准的一部分，意思是“非调试”。
+>
+> 常量值与常量对象的内容，此处不介绍，若需要请自行学习。
 
 ### 2. 验证层可用性检查
 
@@ -172,7 +174,7 @@ std::vector<const char*> getRequiredExtensions() {
 }
 ```
 
-> 此处使用了 `VK_EXT_DEBUG_UTILS_EXTENSION_NAME` 宏，它等于文字字符串 `"VK_EXT_debug_utils"` 。
+> 此处使用了 `VK_EXT_DEBUG_UTILS_EXTENSION_NAME` 宏，它等于字符串 `"VK_EXT_debug_utils"` 。
 
 现在可以在 `createInstance` 中使用此函数简化代码：
 
@@ -226,7 +228,7 @@ if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
 }
 ```
 
-第二个参数 MessageType 参数可以具有以下值
+第二个参数 MessageType 可以具有以下值
 
 - `vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral`：发生了一些与规范或性能无关的事件
 

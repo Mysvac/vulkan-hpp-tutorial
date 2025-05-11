@@ -1,0 +1,86 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 557b85f..45b3668 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -7,6 +7,7 @@
+ #include <array>
+ #include <set>
+ #include <memory>
++#include <optional>
+ #include <stdexcept>
+ 
+ 
+@@ -42,6 +43,7 @@ private:
+     vk::raii::Context m_context;
+     vk::raii::Instance m_instance{ nullptr };
+     vk::raii::DebugUtilsMessengerEXT m_debugMessenger{ nullptr };
++    vk::raii::PhysicalDevice m_physicalDevice{ nullptr };
+     /////////////////////////////////////////////////////////////////
+     
+     /////////////////////////////////////////////////////////////////
+@@ -62,6 +64,7 @@ private:
+     void initVulkan() {
+         createInstance();
+         setupDebugMessenger();
++        pickPhysicalDevice();
+     }
+ 
+     void mainLoop() {
+@@ -176,6 +179,57 @@ private:
+         m_debugMessenger = m_instance.createDebugUtilsMessengerEXT( createInfo );
+     }
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// physical device
++    bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
++        QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
++
++        return indices.isComplete();
++    }
++    void pickPhysicalDevice() {
++        // std::vector<vk::raii::PhysicalDevice>
++        auto physicalDevices = m_instance.enumeratePhysicalDevices();
++        if(physicalDevices.empty()){
++            throw std::runtime_error("failed to find GPUs with Vulkan support!");
++        }
++
++        for (const auto& it : physicalDevices) {
++            if (isDeviceSuitable(it)) {
++                m_physicalDevice = it;
++                break;
++            }
++        }
++        if(m_physicalDevice == nullptr){
++            throw std::runtime_error("failed to find a suitable GPU!");
++        }
++    }
++    struct QueueFamilyIndices {
++        std::optional<uint32_t> graphicsFamily;
++        bool isComplete() {
++            return graphicsFamily.has_value();
++        }
++    };
++    QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
++        QueueFamilyIndices indices;
++        
++        // std::vector<vk::QueueFamilyProperties>
++        auto queueFamilies = physicalDevice.getQueueFamilyProperties();
++
++        for (int i = 0; const auto& queueFamily : queueFamilies) {
++            if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
++                indices.graphicsFamily = i;
++            }
++            if (indices.isComplete()) {
++                break;
++            }
++
++            ++i;
++        }
++
++        return indices;
++    }
++    /////////////////////////////////////////////////////////////////
+ };
+ 
+ int main() {
