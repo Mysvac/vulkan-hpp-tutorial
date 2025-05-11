@@ -1,0 +1,102 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index d68014c..5f22ef0 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -43,9 +43,11 @@ private:
+     vk::raii::Context m_context;
+     vk::raii::Instance m_instance{ nullptr };
+     vk::raii::DebugUtilsMessengerEXT m_debugMessenger{ nullptr };
++    vk::raii::SurfaceKHR m_surface{ nullptr };
+     vk::raii::PhysicalDevice m_physicalDevice{ nullptr };
+     vk::raii::Device m_device{ nullptr };
+     vk::raii::Queue m_graphicsQueue{ nullptr };
++    vk::raii::Queue m_presentQueue{ nullptr };
+     /////////////////////////////////////////////////////////////////
+     
+     /////////////////////////////////////////////////////////////////
+@@ -66,6 +68,7 @@ private:
+     void initVulkan() {
+         createInstance();
+         setupDebugMessenger();
++        createSurface();
+         pickPhysicalDevice();
+         createLogicalDevice();
+     }
+@@ -209,8 +212,10 @@ private:
+     }
+     struct QueueFamilyIndices {
+         std::optional<uint32_t> graphicsFamily;
++        std::optional<uint32_t> presentFamily;
++
+         bool isComplete() {
+-            return graphicsFamily.has_value();
++            return graphicsFamily.has_value() && presentFamily.has_value();
+         }
+     };
+     QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
+@@ -223,6 +228,9 @@ private:
+             if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
+                 indices.graphicsFamily = i;
+             }
++            if(physicalDevice.getSurfaceSupportKHR(i, m_surface)){
++                indices.presentFamily = i;
++            }
+             if (indices.isComplete()) {
+                 break;
+             }
+@@ -239,20 +247,26 @@ private:
+     void createLogicalDevice() {
+         QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
+ 
+-        vk::DeviceQueueCreateInfo queueCreateInfo(
+-            {},                             // flags
+-            indices.graphicsFamily.value(), // queueFamilyIndex
+-            1                               // queueCount
+-        );
++        std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
++        // isDeviceSuitable() ensure queue availability
++        std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
++
+         float queuePriority = 1.0f;
+-        queueCreateInfo.pQueuePriorities = &queuePriority;
++        for (uint32_t queueFamily : uniqueQueueFamilies) {
++            queueCreateInfos.emplace_back( vk::DeviceQueueCreateInfo(
++                {},                             // flags
++                indices.graphicsFamily.value(), // queueFamilyIndex
++                1,                              // queueCount
++                &queuePriority    
++            ));
++        }
+ 
+         vk::PhysicalDeviceFeatures deviceFeatures;
+ 
+         vk::DeviceCreateInfo createInfo(
+-            {},                 // flags
+-            1,                  // queueCreateInfoCount
+-            &queueCreateInfo    // pQueueCreateInfos
++            {},                         // flags
++            queueCreateInfos.size(),    // queueCreateInfoCount
++            queueCreateInfos.data()     // pQueueCreateInfos
+         );
+         createInfo.pEnabledFeatures = &deviceFeatures;
+ 
+@@ -263,6 +277,19 @@ private:
+ 
+         m_device = m_physicalDevice.createDevice( createInfo );
+         m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
++        m_presentQueue = m_device.getQueue( indices.presentFamily.value(), 0 );
++    }
++    /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// surface
++    void createSurface() {
++        VkSurfaceKHR cSurface;
++
++        if (glfwCreateWindowSurface( *m_instance, m_window, nullptr, &cSurface ) != VK_SUCCESS) {
++            throw std::runtime_error("failed to create window surface!");
++        }
++        m_surface = vk::raii::SurfaceKHR( m_instance, cSurface );
+     }
+     /////////////////////////////////////////////////////////////////
+ };
