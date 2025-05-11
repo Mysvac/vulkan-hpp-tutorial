@@ -1,0 +1,60 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 45b3668..d68014c 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -44,6 +44,8 @@ private:
+     vk::raii::Instance m_instance{ nullptr };
+     vk::raii::DebugUtilsMessengerEXT m_debugMessenger{ nullptr };
+     vk::raii::PhysicalDevice m_physicalDevice{ nullptr };
++    vk::raii::Device m_device{ nullptr };
++    vk::raii::Queue m_graphicsQueue{ nullptr };
+     /////////////////////////////////////////////////////////////////
+     
+     /////////////////////////////////////////////////////////////////
+@@ -65,6 +67,7 @@ private:
+         createInstance();
+         setupDebugMessenger();
+         pickPhysicalDevice();
++        createLogicalDevice();
+     }
+ 
+     void mainLoop() {
+@@ -230,6 +233,38 @@ private:
+         return indices;
+     }
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// logical device
++    void createLogicalDevice() {
++        QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
++
++        vk::DeviceQueueCreateInfo queueCreateInfo(
++            {},                             // flags
++            indices.graphicsFamily.value(), // queueFamilyIndex
++            1                               // queueCount
++        );
++        float queuePriority = 1.0f;
++        queueCreateInfo.pQueuePriorities = &queuePriority;
++
++        vk::PhysicalDeviceFeatures deviceFeatures;
++
++        vk::DeviceCreateInfo createInfo(
++            {},                 // flags
++            1,                  // queueCreateInfoCount
++            &queueCreateInfo    // pQueueCreateInfos
++        );
++        createInfo.pEnabledFeatures = &deviceFeatures;
++
++        if (enableValidationLayers) {
++            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
++            createInfo.ppEnabledLayerNames = validationLayers.data();
++        }
++
++        m_device = m_physicalDevice.createDevice( createInfo );
++        m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
++    }
++    /////////////////////////////////////////////////////////////////
+ };
+ 
+ int main() {

@@ -37,4 +37,5 @@ nav:
       - 实例: md/0101_instance.md
       - 验证层: md/0102_validation.md
       - 物理设备: md/0103_physicaldevice.md
+      - 逻辑设备: md/0104_device.md
 
