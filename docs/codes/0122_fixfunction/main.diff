@@ -1,0 +1,99 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 364d55b..0143df4 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -59,6 +59,7 @@ private:
+     vk::Format m_swapChainImageFormat;
+     vk::Extent2D m_swapChainExtent;
+     std::vector<vk::raii::ImageView> m_swapChainImageViews;
++    vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
+     /////////////////////////////////////////////////////////////////
+     
+     /////////////////////////////////////////////////////////////////
+@@ -498,6 +499,86 @@ private:
+         );
+ 
+         vk::PipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
++
++        std::vector<vk::DynamicState> dynamicStates = {
++            vk::DynamicState::eViewport,
++            vk::DynamicState::eScissor
++        };
++
++        vk::PipelineDynamicStateCreateInfo dynamicState{
++            {},                     // flags
++            static_cast<uint32_t>(dynamicStates.size()),    // dynamicStateCount
++            dynamicStates.data()    // pDynamicStates
++        };
++
++        vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
++
++        vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
++            {},                                     // flags
++            vk::PrimitiveTopology::eTriangleList,   // topology
++            false                                   // primitiveRestartEnable - default false
++        );
++
++        vk::Viewport viewport(
++            0.0f,                                           // x
++            0.0f,                                           // y
++            static_cast<float>(m_swapChainExtent.width),    // width
++            static_cast<float>(m_swapChainExtent.height),   // height
++            0.0f,                                           // minDepth
++            1.0f                                            // maxDepth
++        );
++
++        vk::Rect2D scissor(
++            {0, 0},             // offset
++            m_swapChainExtent   // Extent2D
++        );
++
++        vk::PipelineViewportStateCreateInfo viewportState(
++            {},         // flags
++            1,          // viewportCount 
++            nullptr,    // pViewports 
++            1,          // scissorCount 
++            nullptr     // pScissors 
++        );
++
++        vk::PipelineRasterizationStateCreateInfo rasterizer;
++        rasterizer.depthClampEnable = false;
++        rasterizer.rasterizerDiscardEnable = false;
++        rasterizer.polygonMode = vk::PolygonMode::eFill;
++        rasterizer.lineWidth = 1.0f;
++        rasterizer.cullMode = vk::CullModeFlagBits::eBack;
++        rasterizer.frontFace = vk::FrontFace::eClockwise;
++        rasterizer.depthBiasEnable = false;
++
++        vk::PipelineMultisampleStateCreateInfo multisampling(
++            {},                             // flags
++            vk::SampleCountFlagBits::e1,    //  rasterizationSamples
++            false                           // sampleShadingEnable
++        );
++
++        vk::PipelineColorBlendAttachmentState colorBlendAttachment(
++            false,                      // blendEnable 
++            vk::BlendFactor::eOne,      // srcColorBlendFactor - optional
++            vk::BlendFactor::eZero,     // dstColorBlendFactor - optional
++            vk::BlendOp::eAdd,          // colorBlendOp - optional
++            vk::BlendFactor::eOne,      // srcAlphaBlendFactor - optional
++            vk::BlendFactor::eZero,     // dstAlphaBlendFactor - optional
++            vk::BlendOp::eAdd,          // alphaBlendOp - optional
++            vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
++            vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
++            // colorWriteMask - default is RGBA
++        );
++
++        vk::PipelineColorBlendStateCreateInfo colorBlending(
++            {},                     // flags
++            false,                  // logicOpEnable 
++            vk::LogicOp::eCopy,     // logicOp 
++            1,                      // attachmentCount 
++            &colorBlendAttachment   // pAttachments 
++        );
++
++        vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
++        m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
+     }
+     /////////////////////////////////////////////////////////////////
+ };

@@ -4,13 +4,13 @@
 
 ### 什么是 Vulkan？
 
-Vulkan 是 [Khronos Group](https://www.khronos.org/) 推出的**现代图形与计算 API** 。与传统 API （如[OpenGL](https://en.wikipedia.org/wiki/OpenGL)和[Direct3D](https://en.wikipedia.org/wiki/Direct3D)）相比，它为显卡提供了更好的抽象，使你更好的描述应用程序的行为，从而带来更好的性能和减少意外的驱动程序行为。
+Vulkan 是 [Khronos Group](https://www.khronos.org/) 推出的**现代图形与计算 API** 。与传统 API （如[OpenGL](https://en.wikipedia.org/wiki/OpenGL)和[Direct3D](https://en.wikipedia.org/wiki/Direct3D)）相比，它为显卡提供了更好的抽象，使你可以更好的描述应用程序的行为，从而带来更好的性能和减少意外的驱动程序行为。
 
 ### 与传统API的关键差异
 
 | 维度            | OpenGL/D3D11          | Vulkan               |
 |-----------------|----------------------|----------------------|
-| 驱动开销        | 高（隐式状态管理）    | 极低（显式声明）      |
+| 驱动开销        | 高（隐式状态管理）    | 低（显式声明）      |
 | 线程模型        | 单线程主导            | 原生多线程支持        |
 | 着色器编译      | 运行时GLSL编译        | 预编译SPIR-V字节码    |
 | 内存管理        | 驱动自动分配          | 开发者控制内存类型    |

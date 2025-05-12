@@ -31,6 +31,8 @@
 
 **文档网站：<https://mysvac.github.io/vulkan-hpp-tutorial>**
 
+**制作中**
+
 > 本文档使用AI优化语言组织，请注意甄别错误!
 
 ### 教程简介
