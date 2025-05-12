@@ -42,3 +42,5 @@ nav:
       - 窗口表面: md/0110_surface.md
       - 交换链: md/0111_swapchain.md
       - 图像视图: md/0112_imageview.md
+    - 图像管线基础:
+      - 介绍: md/0120_pipeline.md
