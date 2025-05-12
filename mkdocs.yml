@@ -44,3 +44,4 @@ nav:
       - 图像视图: md/0112_imageview.md
     - 图像管线基础:
       - 介绍: md/0120_pipeline.md
+      - 着色器模块: md/0121_shader.md
