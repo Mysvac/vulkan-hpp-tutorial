@@ -41,3 +41,4 @@ nav:
     - 呈现:
       - 窗口表面: md/0110_surface.md
       - 交换链: md/0111_swapchain.md
+      - 图像视图: md/0112_imageview.md
