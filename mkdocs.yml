@@ -51,3 +51,4 @@ nav:
     - 绘制:
       - 帧缓冲: md/0130_framebuffer.md
       - 命令缓冲: md/0131_commandbuffer.md
+      - 渲染和呈现: md/0132_rendering.md

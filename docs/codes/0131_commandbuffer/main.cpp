@@ -94,6 +94,7 @@ private:
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
+        createCommandBuffer();
     }
 
     void mainLoop() {
