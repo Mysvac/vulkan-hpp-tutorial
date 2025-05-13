@@ -108,8 +108,9 @@ vk::InstanceCreateInfo createInfo(
 **说明**：
 
 1. 任何 `CreateInfo` 都有一个 `flags` 参数。
-2. `flags`参数提供默认初始化，大部分时候无需修改。
-3. 实际参数很多，但都提供了默认初始化，无需手动设置。
+2. `flags` 参数是位枚举，用于控制特殊行为。
+3. `flags`参数提供默认初始化，即`0`，大部分时候无需修改。
+4. 还有其他参数，但都提供了默认初始化，无需手动设置。
 
 注意到，`&applicationInfo`传入指针，需要注意生命周期！
 
@@ -139,6 +140,7 @@ m_instance = vk::raii::Instance( m_context, createInfo );
 Vulkan 是一个平台无关的 API，这意味着您需要一个扩展来处理窗口系统接口。
 
 #### 获取所需扩展与修改CreateInfo
+
 GLFW 有一个方便的内置函数，可以返回它需要的扩展，我们可以将其传递给结构体
 
 ```cpp
@@ -153,6 +155,7 @@ createInfo.setPpEnabledExtensionNames(glfwExtensions);
 ```
 
 #### 测试与运行
+
 现在尝试构建与运行项目，非MacOS不应该出现错误。
 
 ### 5. 处理MacOS的错误

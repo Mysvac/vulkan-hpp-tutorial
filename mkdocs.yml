@@ -50,3 +50,4 @@ nav:
       - 结论: md/0124_conclusion.md
     - 绘制:
       - 帧缓冲: md/0130_framebuffer.md
+      - 命令缓冲: md/0131_commandbuffer.md
