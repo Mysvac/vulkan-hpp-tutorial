@@ -1,4 +1,5 @@
-# Vulkan逻辑设备
+# Vulkan 逻辑设备与队列
+
 在选择要使用的物理设备之后，我们需要设置一个逻辑设备来与之交互。
 
 创建逻辑设备，你需要：
@@ -10,6 +11,7 @@
 如果您有需要，甚至可以从同一个物理设备创建多个逻辑设备。
 
 ## 基础结构
+
 首先添加一个新的类成员 `m_device` 来存储逻辑设备句柄。
 现在你的成员变量顺序应该是
 
@@ -79,13 +81,12 @@ vk::PhysicalDeviceFeatures deviceFeatures;
 有了前面的两个结构，我们就可以开始填写主要的 `vk::DeviceCreateInfo` 结构了。
 
 ```cpp
-vk::DeviceCreateInfo createInfo(
-    {},                 // flags
-    1,                  // queueCreateInfoCount
-    &queueCreateInfo    // pQueueCreateInfos
-);
+vk::DeviceCreateInfo createInfo;
+createInfo.setQueueCreateInfos( queueCreateInfo );
 createInfo.pEnabledFeatures = &deviceFeatures;
 ```
+
+> 之前提过，特殊的`setter`甚至可以输入单元素，自动封装成数组。
 
 其余信息与 `vk::InstanceCreateInfo` 结构相似，并要求您指定扩展和验证层。不同之处在于这次这些是设备特定的。
 
@@ -93,8 +94,7 @@ createInfo.pEnabledFeatures = &deviceFeatures;
 
 ```cpp
 if (enableValidationLayers) {
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-    createInfo.ppEnabledLayerNames = validationLayers.data();
+    createInfo.setPEnabledLayerNames( validationLayers );
 }
 ```
 

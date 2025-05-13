@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 5e16e7b..557b85f 100644
+index 5f58927..06c048f 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -4,6 +4,8 @@
@@ -71,26 +71,26 @@ index 5e16e7b..557b85f 100644
          vk::ApplicationInfo applicationInfo( 
              "Hello Triangle",   // pApplicationName
              1,                  // applicationVersion
-@@ -86,20 +119,63 @@ private:
+@@ -86,20 +119,62 @@ private:
              std::cout << '\t' << extension.extensionName << std::endl;
          }
  
 -        uint32_t glfwExtensionCount = 0;
 -        const char** glfwExtensions;
 -        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
--
+-        
 -        std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
 -        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+-
 +        std::vector<const char*> requiredExtensions = getRequiredExtensions();
- 
-         createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-         createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+         // special setter
+         createInfo.setPEnabledExtensionNames( requiredExtensions );
          createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
  
-+        vk::DebugUtilsMessengerCreateInfoEXT  debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
++        // vk::DebugUtilsMessengerCreateInfoEXT
++        auto debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
 +        if (enableValidationLayers) {
-+            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-+            createInfo.ppEnabledLayerNames = validationLayers.data();
++            createInfo.setPEnabledLayerNames( validationLayers );
 +            createInfo.pNext = &debugMessengerCreateInfo;
 +        }
 +

@@ -1,4 +1,4 @@
-# Vulkan实例创建与RAII管理
+# Vulkan 实例
 
 ## RAII上下文初始化
 
@@ -13,7 +13,7 @@
 3. 保证它的生命周期覆盖其他Vulkan组件
 4. 可以无参构造，不可`nullptr`构造（特殊）
 
-所以我们可以直接将他作为成员变量，类实例化时自动创建并加载上下文：
+所以我们可以直接将它作为成员变量，类实例化时自动创建并加载上下文：
 
 ```cpp
 private:
@@ -24,23 +24,7 @@ private:
 
 现在直接构建与运行程序，请保证程序不报错。
 
-## RAII资源管理机制简介
-
-| 传统Vulkan API | Vulkan-hpp RAII封装 |
-|----------------|---------------------|
-| 手动调用`vkCreateXxx` | 通过构造函数或父对象成员函数创建 |
-| 必须显式调用`vkDestroyXxx` | 自动在析构时释放 |
-| 返回裸句柄 | 返回资源管理对象 |
-
-> `raii`类内存储了普通类的指针，并在析构函数中执行 `vkDestroy` 清理资源。
-
-对于大部分 `vk::raii` 管理的对象：
-
-- 可以直接转换成普通类型
-- 不支持无参构造，但支持`nullptr`构造
-- 不支持拷贝，仅可移动
-
-> 由于普通类型本身只是资源的句柄，无实际资源，无需担心类型转换造成内存泄漏。
+> RAII机制参考接口介绍章节。
 
 
 ## 创建实例
@@ -86,6 +70,7 @@ void createInstance(){
 
 注意到，它并不是raii的，因为它只是个配置信息，不含特殊资源。
 所以我们可以无参构造，然后直接修改成员变量，像这样：
+
 ```cpp
 vk::ApplicationInfo applicationInfo;
 applicationInfo.pApplicationName = "xxxx";  // class member is public
@@ -109,7 +94,7 @@ vk::InstanceCreateInfo createInfo(
 
 1. 任何 `CreateInfo` 都有一个 `flags` 参数。
 2. `flags` 参数是位枚举，用于控制特殊行为。
-3. `flags`参数提供默认初始化，即`0`，大部分时候无需修改。
+3. `flags`参数提供默认初始化，大部分时候无需修改。
 4. 还有其他参数，但都提供了默认初始化，无需手动设置。
 
 注意到，`&applicationInfo`传入指针，需要注意生命周期！
@@ -135,11 +120,11 @@ m_instance = vk::raii::Instance( m_context, createInfo );
 
 > 本文档统一使用成员函数创建子对象。
 
-### 4. 添加扩展以支持GLFW
+## 添加扩展以支持GLFW
 
 Vulkan 是一个平台无关的 API，这意味着您需要一个扩展来处理窗口系统接口。
 
-#### 获取所需扩展与修改CreateInfo
+### 1. 获取所需扩展与修改CreateInfo
 
 GLFW 有一个方便的内置函数，可以返回它需要的扩展，我们可以将其传递给结构体
 
@@ -147,22 +132,51 @@ GLFW 有一个方便的内置函数，可以返回它需要的扩展，我们可
 uint32_t glfwExtensionCount = 0;
 const char** glfwExtensions;
 glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-// 扩展的数量
-createInfo.setEnabledExtensionCount(glfwExtensionCount);
-// 扩展名数组，每个扩展名都是个字符串字面量
-createInfo.setPpEnabledExtensionNames(glfwExtensions);
+// 将参数包装成数组
+std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
+// 使用特殊的setter，可以直接传入数组
+createInfo.setPEnabledExtensionNames( requiredExtensions );
 ```
 
-#### 测试与运行
+注意这里我们使用了 `setPEnabledExtensionNames` ，它一次性设置了2个参数，等于这样：
+
+```cpp
+// 扩展的数量
+createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
+// 扩展名数组，每个扩展名都是个字符串字面量
+createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+```
+
+> 为了兼容底层C接口，很多配置信息的参数依然是首元素指针+元素数量的方式。
+> 但是vulkan-hpp提供了更高级的成员函数，也就是上面用到的 `setter`，可以简化代码。
+
+### 2. 特殊settter函数说明
+
+vulkan-hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::ArrayProxyNoTemporaries` 模板参数简化了数组参数的设置。
+
+> 这些函数的命名大致是： `set......s` ，末尾`s`表示多个。  
+> 假如是 `setAs`，那么应该有类似 `pA` 和 `aCount` 的成员变量，分别表示开始指针和数量。
+
+这些函数能够自动处理数组参数：
+
+   - 接收任意连续容器（`std::vector`、`std::array`、原生数组）或初始化列表。
+   - 支持直接传入单个元素（自动包装为单元素数组）。
+   - 自动计算元素数量并设置指针，无需手动管理 `....Count` 和 `p....s`。
+
+> 实际上，每个成员变量还有自身的 `setter` ，他们和直接赋值是等效的。
+> 
+> 为了方便区分，如果是单参数，我们直接赋值而不用 `setter` 函数。  
+> 如果使用了 `setter` ，那么大概率是上述情况。
+
+### 3. 测试与运行
 
 现在尝试构建与运行项目，非MacOS不应该出现错误。
 
-### 5. 处理MacOS的错误
+## 处理MacOS的错误
 
 > 特征：err.code() 为  `vk::Result::eErrorIncompatibleDriver`
 
-如果在使用最新 MoltenVK sdk 的 MacOS 上，可能抛出异常，因为MacOS是运行Vulkan必须启用转换层扩展。
+如果在使用最新 MoltenVK sdk 的 MacOS 上，可能抛出异常，因为MacOS在运行Vulkan时必须启用转换层扩展。
 
 **解决方案：**
 
@@ -177,8 +191,7 @@ createInfo.setPpEnabledExtensionNames(glfwExtensions);
 std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
 requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
-createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+createInfo.setPEnabledExtensionNames( requiredExtensions );
 createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 // ......
 ```
@@ -186,7 +199,7 @@ createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 现在重新尝试构建与运行项目，不应该出现错误。
 
 
-### 6. 检查扩展支持
+## 检查扩展支持
 
 不支持扩展时，创建 `instance` 就会抛出异常，异常代码为 `vk::Result::eErrorExtensionNotPresent`。
 
@@ -212,11 +225,11 @@ for (const auto& extension : extensions) {
 
 ## 清理资源
 
-1. `CreateInfo`和 `ApplicationInfo` 是简单结构，不含其他资源，自然析构即可。
+- `CreateInfo`和 `ApplicationInfo` 是简单结构，不含其他资源，自然析构即可。
 
-2. C风格接口必须手动调用相关 `Destory` 函数释放 `VkInstance` 等特殊资源。
+- C风格接口必须手动调用相关 `Destory` 函数释放 `VkInstance` 等特殊资源。
 
-3. 我们使用了 `vk::raii`，不需要在 `cleanup` 中手动清理资源。
+- 我们使用了 `vk::raii`，不需要在 `cleanup` 中手动清理资源。
 
 
 

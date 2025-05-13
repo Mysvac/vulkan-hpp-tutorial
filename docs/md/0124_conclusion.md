@@ -1,4 +1,4 @@
-# Vulkan 创建管线
+# Vulkan 图形管线-结论
 
 现在我们可以结合之前章节中的所有结构和对象来创建图形管线了！以下是我们现在拥有的对象类型，作为一个快速回顾
 
@@ -14,11 +14,8 @@
 在 `createGraphicsPipeline` 函数的末尾。
 
 ```cpp
-vk::GraphicsPipelineCreateInfo pipelineInfo(
-    {},             // flags
-    2,              // stageCount 
-    shaderStages    // pStages 
-);
+vk::GraphicsPipelineCreateInfo pipelineInfo;
+pipelineInfo.setStages( shaderStages );
 ```
 
 我们首先填写了 `vk::PipelineShaderStageCreateInfo` 结构体数组
@@ -77,7 +74,7 @@ vk::raii::Pipeline m_graphicsPipeline{ nullptr };
 最后创建图形管线
 
 ```cpp
-m_graphicsPipeline = m_device.createGraphicsPipeline(nullptr, pipelineInfo);
+m_graphicsPipeline = m_device.createGraphicsPipeline( nullptr, pipelineInfo );
 ```
 
 `createGraphicsPipeline` 用于创建单个对象，`createGraphicsPipelines`则可以一次性创建多个。

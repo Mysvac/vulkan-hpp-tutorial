@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 557b85f..45b3668 100644
+index 06c048f..9146825 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -7,6 +7,7 @@
@@ -26,7 +26,7 @@ index 557b85f..45b3668 100644
      }
  
      void mainLoop() {
-@@ -176,6 +179,57 @@ private:
+@@ -175,6 +178,58 @@ private:
          m_debugMessenger = m_instance.createDebugUtilsMessengerEXT( createInfo );
      }
      /////////////////////////////////////////////////////////////////
@@ -57,13 +57,14 @@ index 557b85f..45b3668 100644
 +    }
 +    struct QueueFamilyIndices {
 +        std::optional<uint32_t> graphicsFamily;
++
 +        bool isComplete() {
 +            return graphicsFamily.has_value();
 +        }
 +    };
 +    QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
 +        QueueFamilyIndices indices;
-+        
++
 +        // std::vector<vk::QueueFamilyProperties>
 +        auto queueFamilies = physicalDevice.getQueueFamilyProperties();
 +
@@ -77,7 +78,7 @@ index 557b85f..45b3668 100644
 +
 +            ++i;
 +        }
-+
++        
 +        return indices;
 +    }
 +    /////////////////////////////////////////////////////////////////

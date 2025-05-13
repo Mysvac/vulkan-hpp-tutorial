@@ -44,10 +44,17 @@ void createCommandPool() {
 QueueFamilyIndices queueFamilyIndices = findQueueFamilies( m_physicalDevice );
 
 vk::CommandPoolCreateInfo poolInfo(
-    {},         // flags
+    vk::CommandPoolCreateFlagBits::eResetCommandBuffer, // flags
     queueFamilyIndices.graphicsFamily.value()
 );
 ```
+
+命令池至少有两个可能的标志:
+
+- `vk::CommandPoolCreateFlagBits::eTransient`：提示命令缓冲区非常频繁地用新命令重新记录（可能会改变内存分配行为）
+- `vk::CommandPoolCreateFlagBits::eResetCommandBuffer`：允许单独重新记录命令缓冲区，如果没有此标志，则必须将它们全部一起重置
+
+我们将每帧记录一个命令缓冲区，所以我们希望能够重置并重新记录它。因此我们需要设置 `eResetCommandBuffer` 标志位。
 
 命令缓冲区通过在设备队列之一（例如我们检索到的图形和呈现队列）上提交来执行。
 每个命令池只能分配在单一类型的队列上提交的命令缓冲区。我们将记录用于绘制的命令，这就是为什么我们选择了图形队列族。
@@ -121,7 +128,7 @@ level 参数指定分配的命令缓冲区是主命令缓冲区还是辅助命�
 使用的 `vk::raii::CommandBuffer` 将作为参数传入，以及我们想要写入的当前交换链图像的索引。
 
 ```cpp
-void recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer,, uint32_t imageIndex) {
+void recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, uint32_t imageIndex) {
 
 }
 ```
@@ -177,9 +184,8 @@ renderPassInfo.renderArea.extent = m_swapChainExtent;   // 区域尺寸（匹配
 指定附件初始化时的清除值（对应 VK_ATTACHMENT_LOAD_OP_CLEAR）：
 
 ```cpp
-vk::ClearValue clearColor(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));  // RGBA黑色（不透明度100%）
-renderPassInfo.clearValueCount = 1;                        // 清除值数量
-renderPassInfo.pClearValues = &clearColor;                 // 清除值数组指针
+vk::ClearValue clearColor(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
+renderPassInfo.setClearValues( clearColor );
 ```
 
 ### 4. 启动渲染通道 
@@ -227,7 +233,7 @@ vk::Rect2D scissor(
 commandBuffer.setScissor(0, scissor);
 ```
 
-setter的第一个参数是开始位置的索引，第二个参数是对应的数组代理，能接受数组容器，也能将单个数据直接转换成数组。
+`setter` 的第一个参数是开始位置的索引，第二个参数是对应的数组代理。
 
 现在我们准备好为三角形发出绘制命令了
 

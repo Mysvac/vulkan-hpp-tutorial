@@ -89,12 +89,12 @@ private:
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions;
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
+        
         std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
         requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-        createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+        // special setter
+        createInfo.setPEnabledExtensionNames( requiredExtensions );
         createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
         m_instance = m_context.createInstance( createInfo );

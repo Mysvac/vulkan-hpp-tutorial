@@ -142,10 +142,8 @@ vk::AttachmentReference colorAttachmentRef(
 对于第一个三角形，我们只使用单个子通道，子通道使用 `vk::SubpassDescription` 结构描述
 
 ```cpp
-vk::SubpassDescription subpass(
-    {},     // flags  and  pipelineBindPoint
-    vk::PipelineBindPoint::eGraphics
-);
+vk::SubpassDescription subpass;
+subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 ```
 
 Vulkan 未来也可能支持计算子通道，因此我们必须明确说明这是一个图形子通道。
@@ -153,8 +151,7 @@ Vulkan 未来也可能支持计算子通道，因此我们必须明确说明这�
 接下来，我们指定对颜色附件的引用
 
 ```cpp
-subpass.colorAttachmentCount = 1;
-subpass.pColorAttachments = &colorAttachmentRef;
+subpass.setColorAttachments( colorAttachmentRef );
 ```
 
 片段着色器中使用 `layout(location = 0) out vec4 outColor` 指令引用的就是此数组！
@@ -186,13 +183,10 @@ vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
 `vk::AttachmentReference` 对象使用此数组的索引引用附件。
 
 ```cpp
-vk::RenderPassCreateInfo renderPassInfo(
-    {},                 // flags
-    1,                  // attachmentCount 
-    &colorAttachment,   // pAttachments 
-    1,                  // subpassCount 
-    &subpass            // pSubpasses 
-);
+vk::RenderPassCreateInfo renderPassInfo;
+renderPassInfo.setAttachments( colorAttachment );
+renderPassInfo.setSubpasses( subpass );
+
 m_renderPass = m_device.createRenderPass(renderPassInfo);
 ```
 

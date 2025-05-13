@@ -66,8 +66,7 @@ bool checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice)
 启用扩展只需要对逻辑设备创建结构进行少量更改，现在修改 `createLogicalDevice` 函数，添加内容
 
 ```cpp
-createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+createInfo.setPEnabledExtensionNames( deviceExtensions );
 ```
 
 现在运行代码并验证您的显卡是否能够创建交换链。
@@ -308,7 +307,8 @@ uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 我们还应该确保在执行此操作时不要超过图像的最大数量，其中 0 是一个特殊值，表示没有最大值
 
 ```cpp
-if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+if (swapChainSupport.capabilities.maxImageCount > 0 && 
+    imageCount > swapChainSupport.capabilities.maxImageCount) {
     imageCount = swapChainSupport.capabilities.maxImageCount;
 }
 ```
@@ -320,7 +320,7 @@ if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSup
 ```cpp
 vk::SwapchainCreateInfoKHR createInfo(
     {},                         // flags
-    *m_surface,                 // vk::Surface
+    m_surface,                  // vk::Surface
     imageCount,                 // minImageCount
     surfaceFormat.format,       // Format
     surfaceFormat.colorSpace,   // ColorSpaceKHR
@@ -352,16 +352,13 @@ vk::SwapchainCreateInfoKHR createInfo(
 
 ```cpp
 QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
-uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+std::vector<uint32_t> queueFamilyIndices { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
 if (indices.graphicsFamily != indices.presentFamily) {
     createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-    createInfo.queueFamilyIndexCount = 2;
-    createInfo.pQueueFamilyIndices = queueFamilyIndices;
+    createInfo.setQueueFamilyIndices( queueFamilyIndices );
 } else {
     createInfo.imageSharingMode = vk::SharingMode::eExclusive;
-    createInfo.queueFamilyIndexCount = 0; // Optional
-    createInfo.pQueueFamilyIndices = nullptr; // Optional
 }
 ```
 
@@ -442,6 +439,7 @@ std::vector<vk::Image> m_swapChainImages;
 ```cpp
 m_swapChainImages = m_swapChain.getImages();
 ```
+
 > 注意，`vk::image` 的资源释放由`swapChain`管理，交换链释放时会自动释放此资源，所以无需RAII。  
 > 情况类似`vk::PhysicalDevice`，但物理设备API加了`raii::`，这里却没有，十分奇怪。
 > 
@@ -453,6 +451,7 @@ m_swapChainImages = m_swapChain.getImages();
 
 ```cpp
 // class member
+// ...
 vk::raii::SwapchainKHR m_swapChain{ nullptr };
 std::vector<vk::Image> m_swapChainImages;
 vk::Format m_swapChainImageFormat;

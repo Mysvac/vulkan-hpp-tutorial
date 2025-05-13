@@ -54,23 +54,19 @@ m_swapChainFramebuffers.reserve( m_swapChainImageViews.size() );
 
 ```cpp
 for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
-    vk::ImageView attachments[] = {
-        m_swapChainImageViews[i]
-    };
-
-    vk::FramebufferCreateInfo framebufferInfo(
-        {},                         // flags
-        m_renderPass,               // renderPass
-        1,                          // attachmentCount
-        attachments,                // pAttachments
-        m_swapChainExtent.width,    // width
-        m_swapChainExtent.height,   // height
-        1                           // layers
-    );
+    vk::FramebufferCreateInfo framebufferInfo;
+    framebufferInfo.renderPass = m_renderPass;
+    framebufferInfo.setAttachments( *m_swapChainImageViews[i] );
+    framebufferInfo.width = m_swapChainExtent.width;
+    framebufferInfo.height = m_swapChainExtent.height;
+    framebufferInfo.layers = 1;
 
     m_swapChainFramebuffers.emplace_back( m_device.createFramebuffer(framebufferInfo) );
 }
 ```
+
+> 注意 `setAttachments` 的参数输入时需要使用 `*`运算符重载 将 `vk::raii::ImageView` 显式转换成 `vk::ImageView` ，
+> 否则需要经过2次隐式转换才能变成数组，无法转换成功。
 
 如您所见，帧缓冲的创建非常简单。我们首先需要指定帧缓冲需要与哪个 `renderPass` 兼容。
 您只能将帧缓冲与它兼容的渲染通道一起使用，这大致意味着它们使用相同数量和类型的附件。

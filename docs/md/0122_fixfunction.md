@@ -1,4 +1,4 @@
-# Vulkan 图像管线-固定功能
+# Vulkan 图形管线-固定功能
 
 旧的图形 API 为图形管线的大部分阶段提供了默认状态。
 但在 Vulkan 中，您必须显式地指定大多数管线状态，因为它们将被烘焙到不可变的管线状态对象中。
@@ -34,11 +34,8 @@ std::vector<vk::DynamicState> dynamicStates = {
     vk::DynamicState::eScissor
 };
 
-vk::PipelineDynamicStateCreateInfo dynamicState{
-    {},                     // flags
-    static_cast<uint32_t>(dynamicStates.size()),    // dynamicStateCount
-    dynamicStates.data()    // pDynamicStates
-};
+vk::PipelineDynamicStateCreateInfo dynamicState;
+dynamicState.setDynamicStates( dynamicStates );
 ```
 
 这将导致管线创建时暂时忽略这些值的配置，并使您能够（需要）在绘制时指定数据，这样设置更加灵活且常见。
@@ -91,12 +88,10 @@ vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
 
 ```cpp
 vk::Viewport viewport(
-    0.0f,                                           // x
-    0.0f,                                           // y
+    0.0f, 0.0f,                                     // x y
     static_cast<float>(m_swapChainExtent.width),    // width
     static_cast<float>(m_swapChainExtent.height),   // height
-    0.0f,                                           // minDepth
-    1.0f                                            // maxDepth
+    0.0f, 1.0f                                      // minDepth maxDepth
 );
 ```
 
@@ -125,26 +120,13 @@ vk::Rect2D scissor(
 在没有动态状态的情况下，需要使用 `vk::PipelineViewportStateCreateInfo` 结构在管线中设置视口和裁剪矩形。
 这使得此管线的视口和裁剪矩形不可变。对这些值进行的任何更改都需要创建具有新值的新管线。
 
-```cpp
-vk::PipelineViewportStateCreateInfo viewportState(
-    {},         // flags
-    1,          // viewportCount 
-    &viewport,  // pViewports 
-    1,          // scissorCount 
-    &scissor    // pScissors 
-);
-```
 
 而我们启用了动态状态，只需要在管线创建时指定它们的计数
 
 ```cpp
-vk::PipelineViewportStateCreateInfo viewportState(
-    {},         // flags
-    1,          // viewportCount 
-    nullptr,    // pViewports 
-    1,          // scissorCount 
-    nullptr     // pScissors 
-);
+vk::PipelineViewportStateCreateInfo viewportState;
+viewportState.setViewports( viewport );
+viewportState.setScissors( scissor );
 ```
 
 使用动态状态，甚至可以在单个命令缓冲区中指定不同的视口和/或裁剪矩形。
@@ -301,13 +283,10 @@ colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
 第二个结构体引用所有帧缓冲的结构体数组，并允许您设置混合常量，您可以在上述计算中将其用作混合因子。
 
 ```cpp
-vk::PipelineColorBlendStateCreateInfo colorBlending(
-    {},                     // flags
-    false,                  // logicOpEnable 
-    vk::LogicOp::eCopy,     // logicOp 
-    1,                      // attachmentCount 
-    &colorBlendAttachment   // pAttachments 
-);
+vk::PipelineColorBlendStateCreateInfo colorBlending;
+colorBlending.logicOpEnable = false;
+colorBlending.logicOp = vk::LogicOp::eCopy;
+colorBlending.setAttachments( colorBlendAttachment );
 ```
 
 如果您想使用第二种混合方法（按位组合），则应将 `logicOpEnable` 设置为 `true`。

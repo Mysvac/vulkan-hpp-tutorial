@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index d68014c..5f22ef0 100644
+index a75c863..0efa108 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -43,9 +43,11 @@ private:
@@ -22,19 +22,19 @@ index d68014c..5f22ef0 100644
          pickPhysicalDevice();
          createLogicalDevice();
      }
-@@ -209,8 +212,10 @@ private:
+@@ -208,9 +211,10 @@ private:
      }
      struct QueueFamilyIndices {
          std::optional<uint32_t> graphicsFamily;
 +        std::optional<uint32_t> presentFamily;
-+
+ 
          bool isComplete() {
 -            return graphicsFamily.has_value();
 +            return graphicsFamily.has_value() && presentFamily.has_value();
          }
      };
      QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
-@@ -223,6 +228,9 @@ private:
+@@ -223,6 +227,9 @@ private:
              if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
                  indices.graphicsFamily = i;
              }
@@ -44,7 +44,7 @@ index d68014c..5f22ef0 100644
              if (indices.isComplete()) {
                  break;
              }
-@@ -239,20 +247,26 @@ private:
+@@ -239,18 +246,24 @@ private:
      void createLogicalDevice() {
          QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
  
@@ -70,17 +70,13 @@ index d68014c..5f22ef0 100644
  
          vk::PhysicalDeviceFeatures deviceFeatures;
  
-         vk::DeviceCreateInfo createInfo(
--            {},                 // flags
--            1,                  // queueCreateInfoCount
--            &queueCreateInfo    // pQueueCreateInfos
-+            {},                         // flags
-+            queueCreateInfos.size(),    // queueCreateInfoCount
-+            queueCreateInfos.data()     // pQueueCreateInfos
-         );
+         vk::DeviceCreateInfo createInfo;
+-        createInfo.setQueueCreateInfos( queueCreateInfo );
++        createInfo.setQueueCreateInfos( queueCreateInfos );
          createInfo.pEnabledFeatures = &deviceFeatures;
  
-@@ -263,6 +277,19 @@ private:
+         if (enableValidationLayers) {
+@@ -259,6 +272,19 @@ private:
  
          m_device = m_physicalDevice.createDevice( createInfo );
          m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );

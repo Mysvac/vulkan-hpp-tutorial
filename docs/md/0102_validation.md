@@ -1,4 +1,4 @@
-# Vulkan验证层
+# Vulkan 验证层
 
 ## 什么是验证层？
 
@@ -138,12 +138,14 @@ void createInstance() {
 ### 3. 实例创建时启用验证层
 
 在 `createInstance` 中添加内容，修改 `vk::InstanceCreateInfo` 结构体，以包含验证层名称（如果已启用）
+
 ```cpp
 if (enableValidationLayers) {
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-    createInfo.ppEnabledLayerNames = validationLayers.data();
+    createInfo.setPEnabledLayerNames( validationLayers );
 }
 ```
+
+> 我们用了上一节提到的`setter`，它实际设置了指针和数量这两个成员变量。
 
 ## 调试回调设置
 
@@ -180,9 +182,9 @@ std::vector<const char*> getRequiredExtensions() {
 
 ```cpp
 std::vector<const char*> requiredExtensions = getRequiredExtensions();
-
-createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+// special setter
+createInfo.setPEnabledExtensionNames( requiredExtensions );
+createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 ```
 
 现在运行程序以确保你没有收到错误。
@@ -340,10 +342,10 @@ void setupDebugMessenger(){
 我们现在可以在 `createInstance` 函数中重用它
 
 ```cpp
-vk::DebugUtilsMessengerCreateInfoEXT  debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
+// vk::DebugUtilsMessengerCreateInfoEXT
+auto debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
 if (enableValidationLayers) {
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-    createInfo.ppEnabledLayerNames = validationLayers.data();
+    createInfo.setPEnabledLayerNames( validationLayers );
     createInfo.pNext = &debugMessengerCreateInfo;
 }
 ```

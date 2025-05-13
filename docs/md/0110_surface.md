@@ -1,4 +1,4 @@
-# Vulkan窗口表面
+# Vulkan 窗口表面
 
 Vulkan作为平台无关的API，需要通过WSI（窗口系统集成）扩展与窗口系统交互。
 
@@ -132,14 +132,12 @@ for (uint32_t queueFamily : uniqueQueueFamilies) {
 }
 ```
 
-并修改 `vk::DeviceCreateInfo` 以指向创建信息数组
+并修改 `setQueueCreateInfos` 以指向创建信息数组（参数变量名加个`s`）
 
 ```cpp
-vk::DeviceCreateInfo createInfo(
-    {},                         // flags
-    queueCreateInfos.size(),    // queueCreateInfoCount
-    queueCreateInfos.data()     // pQueueCreateInfos
-);
+vk::DeviceCreateInfo createInfo;
+createInfo.setQueueCreateInfos( queueCreateInfos );
+createInfo.pEnabledFeatures = &deviceFeatures;
 ```
 
 最后，不要忘了在函数末尾添加创建队列的语句：
