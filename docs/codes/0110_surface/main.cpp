@@ -129,15 +129,14 @@ private:
         }
 
         std::vector<const char*> requiredExtensions = getRequiredExtensions();
-
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-        createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+        // special setter
+        createInfo.setPEnabledExtensionNames( requiredExtensions );
         createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
-        vk::DebugUtilsMessengerCreateInfoEXT  debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
+        // vk::DebugUtilsMessengerCreateInfoEXT
+        auto debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
         if (enableValidationLayers) {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
+            createInfo.setPEnabledLayerNames( validationLayers );
             createInfo.pNext = &debugMessengerCreateInfo;
         }
 
@@ -220,7 +219,7 @@ private:
     };
     QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
         QueueFamilyIndices indices;
-        
+
         // std::vector<vk::QueueFamilyProperties>
         auto queueFamilies = physicalDevice.getQueueFamilyProperties();
 
@@ -241,7 +240,7 @@ private:
         return indices;
     }
     /////////////////////////////////////////////////////////////////
-
+    
     /////////////////////////////////////////////////////////////////
     /// logical device
     void createLogicalDevice() {
@@ -263,16 +262,12 @@ private:
 
         vk::PhysicalDeviceFeatures deviceFeatures;
 
-        vk::DeviceCreateInfo createInfo(
-            {},                         // flags
-            queueCreateInfos.size(),    // queueCreateInfoCount
-            queueCreateInfos.data()     // pQueueCreateInfos
-        );
+        vk::DeviceCreateInfo createInfo;
+        createInfo.setQueueCreateInfos( queueCreateInfos );
         createInfo.pEnabledFeatures = &deviceFeatures;
 
         if (enableValidationLayers) {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
+            createInfo.setPEnabledLayerNames( validationLayers );
         }
 
         m_device = m_physicalDevice.createDevice( createInfo );

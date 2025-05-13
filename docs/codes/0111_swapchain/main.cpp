@@ -139,15 +139,14 @@ private:
         }
 
         std::vector<const char*> requiredExtensions = getRequiredExtensions();
-
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-        createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+        // special setter
+        createInfo.setPEnabledExtensionNames( requiredExtensions );
         createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
-        vk::DebugUtilsMessengerCreateInfoEXT  debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
+        // vk::DebugUtilsMessengerCreateInfoEXT
+        auto debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
         if (enableValidationLayers) {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
+            createInfo.setPEnabledLayerNames( validationLayers );
             createInfo.pNext = &debugMessengerCreateInfo;
         }
 
@@ -247,7 +246,7 @@ private:
     };
     QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
         QueueFamilyIndices indices;
-        
+
         // std::vector<vk::QueueFamilyProperties>
         auto queueFamilies = physicalDevice.getQueueFamilyProperties();
 
@@ -268,7 +267,7 @@ private:
         return indices;
     }
     /////////////////////////////////////////////////////////////////
-
+    
     /////////////////////////////////////////////////////////////////
     /// logical device
     void createLogicalDevice() {
@@ -290,20 +289,15 @@ private:
 
         vk::PhysicalDeviceFeatures deviceFeatures;
 
-        vk::DeviceCreateInfo createInfo(
-            {},                         // flags
-            queueCreateInfos.size(),    // queueCreateInfoCount
-            queueCreateInfos.data()     // pQueueCreateInfos
-        );
+        vk::DeviceCreateInfo createInfo;
+        createInfo.setQueueCreateInfos( queueCreateInfos );
         createInfo.pEnabledFeatures = &deviceFeatures;
 
         if (enableValidationLayers) {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
+            createInfo.setPEnabledLayerNames( validationLayers );
         }
 
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-        createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+        createInfo.setPEnabledExtensionNames( deviceExtensions );
 
         m_device = m_physicalDevice.createDevice( createInfo );
         m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
@@ -383,13 +377,14 @@ private:
 
         uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 
-        if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+        if (swapChainSupport.capabilities.maxImageCount > 0 && 
+            imageCount > swapChainSupport.capabilities.maxImageCount) {
             imageCount = swapChainSupport.capabilities.maxImageCount;
         }
 
         vk::SwapchainCreateInfoKHR createInfo(
             {},                         // flags
-            *m_surface,                 // vk::Surface
+            m_surface,                  // vk::Surface
             imageCount,                 // minImageCount
             surfaceFormat.format,       // Format
             surfaceFormat.colorSpace,   // ColorSpaceKHR
@@ -399,16 +394,13 @@ private:
         );
 
         QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
-        uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+        std::vector<uint32_t> queueFamilyIndices { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
         if (indices.graphicsFamily != indices.presentFamily) {
             createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-            createInfo.queueFamilyIndexCount = 2;
-            createInfo.pQueueFamilyIndices = queueFamilyIndices;
+            createInfo.setQueueFamilyIndices( queueFamilyIndices );
         } else {
             createInfo.imageSharingMode = vk::SharingMode::eExclusive;
-            createInfo.queueFamilyIndexCount = 0; // Optional
-            createInfo.pQueueFamilyIndices = nullptr; // Optional
         }
 
         createInfo.preTransform = swapChainSupport.capabilities.currentTransform;

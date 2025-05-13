@@ -28,9 +28,9 @@ extra_css:
 
 nav:
   - 首页: index.md
-  - 简介: md/0000_intro.md
+  - 项目介绍: md/0000_intro.md
   - 开发环境: md/0001_env.md
-  - 接口差异: md/0002_diff.md
+  - 接口介绍: md/0002_diff.md
   - 绘制三角形:
     - 设置:
       - 基础代码: md/0100_base.md
@@ -42,9 +42,9 @@ nav:
       - 窗口表面: md/0110_surface.md
       - 交换链: md/0111_swapchain.md
       - 图像视图: md/0112_imageview.md
-    - 图像管线基础:
+    - 图形管线基础:
       - 介绍: md/0120_pipeline.md
-      - 着色器模块: md/0121_shader.md
+      - 着色器: md/0121_shader.md
       - 固定功能: md/0122_fixfunction.md
       - 渲染通道: md/0123_renderpass.md
       - 结论: md/0124_conclusion.md

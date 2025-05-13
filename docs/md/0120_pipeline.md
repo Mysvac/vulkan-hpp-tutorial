@@ -1,4 +1,4 @@
-# 图像管线介绍
+# Vulkan 图形管线介绍
 
 > 如果你忘记了什么是图形管线，可以回顾 [GAMES202课程第二节](https://www.bilibili.com/video/BV1YK4y1T7yY) 。
 

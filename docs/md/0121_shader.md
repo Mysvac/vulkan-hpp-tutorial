@@ -439,7 +439,7 @@ vk::PipelineShaderStageCreateInfo fragShaderStageInfo(
 最后，定义一个包含这两个结构的数组，我们稍后将在实际的管线创建步骤中使用它来引用它们。
 
 ```cpp
-vk::PipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo, fragShaderStageInfo };
 ```
 
 ## 测试

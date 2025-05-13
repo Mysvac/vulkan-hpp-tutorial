@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 91f3142..5e16e7b 100644
+index 91f3142..5f58927 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -27,6 +27,8 @@ private:
@@ -52,12 +52,12 @@ index 91f3142..5e16e7b 100644
 +        uint32_t glfwExtensionCount = 0;
 +        const char** glfwExtensions;
 +        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-+
++        
 +        std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
 +        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 +
-+        createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-+        createInfo.ppEnabledExtensionNames = requiredExtensions.data();
++        // special setter
++        createInfo.setPEnabledExtensionNames( requiredExtensions );
 +        createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 +
 +        m_instance = m_context.createInstance( createInfo );

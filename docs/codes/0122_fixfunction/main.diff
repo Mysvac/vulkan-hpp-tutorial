@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 364d55b..0143df4 100644
+index f4f77fa..dc1d57e 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -59,6 +59,7 @@ private:
@@ -10,21 +10,18 @@ index 364d55b..0143df4 100644
      /////////////////////////////////////////////////////////////////
      
      /////////////////////////////////////////////////////////////////
-@@ -498,6 +499,86 @@ private:
+@@ -490,6 +491,75 @@ private:
          );
  
-         vk::PipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-+
+         std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo, fragShaderStageInfo };
++    
 +        std::vector<vk::DynamicState> dynamicStates = {
 +            vk::DynamicState::eViewport,
 +            vk::DynamicState::eScissor
 +        };
 +
-+        vk::PipelineDynamicStateCreateInfo dynamicState{
-+            {},                     // flags
-+            static_cast<uint32_t>(dynamicStates.size()),    // dynamicStateCount
-+            dynamicStates.data()    // pDynamicStates
-+        };
++        vk::PipelineDynamicStateCreateInfo dynamicState;
++        dynamicState.setDynamicStates( dynamicStates );
 +
 +        vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 +
@@ -35,12 +32,10 @@ index 364d55b..0143df4 100644
 +        );
 +
 +        vk::Viewport viewport(
-+            0.0f,                                           // x
-+            0.0f,                                           // y
++            0.0f, 0.0f,                                     // x y
 +            static_cast<float>(m_swapChainExtent.width),    // width
 +            static_cast<float>(m_swapChainExtent.height),   // height
-+            0.0f,                                           // minDepth
-+            1.0f                                            // maxDepth
++            0.0f, 1.0f                                      // minDepth maxDepth
 +        );
 +
 +        vk::Rect2D scissor(
@@ -48,13 +43,9 @@ index 364d55b..0143df4 100644
 +            m_swapChainExtent   // Extent2D
 +        );
 +
-+        vk::PipelineViewportStateCreateInfo viewportState(
-+            {},         // flags
-+            1,          // viewportCount 
-+            nullptr,    // pViewports 
-+            1,          // scissorCount 
-+            nullptr     // pScissors 
-+        );
++        vk::PipelineViewportStateCreateInfo viewportState;
++        viewportState.setViewports( viewport );
++        viewportState.setScissors( scissor );
 +
 +        vk::PipelineRasterizationStateCreateInfo rasterizer;
 +        rasterizer.depthClampEnable = false;
@@ -84,13 +75,10 @@ index 364d55b..0143df4 100644
 +            // colorWriteMask - default is RGBA
 +        );
 +
-+        vk::PipelineColorBlendStateCreateInfo colorBlending(
-+            {},                     // flags
-+            false,                  // logicOpEnable 
-+            vk::LogicOp::eCopy,     // logicOp 
-+            1,                      // attachmentCount 
-+            &colorBlendAttachment   // pAttachments 
-+        );
++        vk::PipelineColorBlendStateCreateInfo colorBlending;
++        colorBlending.logicOpEnable = false;
++        colorBlending.logicOp = vk::LogicOp::eCopy;
++        colorBlending.setAttachments( colorBlendAttachment );
 +
 +        vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
 +        m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );

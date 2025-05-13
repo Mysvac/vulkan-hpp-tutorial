@@ -168,7 +168,9 @@ m_inFlightFence = m_device.createFence( fenceInfo );
 m_device.waitForFences( *m_inFlightFence, true, UINT64_MAX );
 ```
 
-第一个参数是我们的屏障，我们使用`*`运算符重载提取获取内部屏障句柄。
+> 第一个参数类型是数组代理，也就是我们之前说的特殊`setter`的那种形参。  
+> 所以此处需要使用`*`运算符显式转换成非`raii`类型，防止隐式转换次数超过1次。
+
 第二个参数表示我们想要等待所有围栏，但在单个围栏的情况下，这无关紧要。
 此函数还具有超时参数，我们将其设置为 64 位无符号整数的最大值 `UINT64_MAX`，这实际上禁用了超时。
 
@@ -177,6 +179,8 @@ m_device.waitForFences( *m_inFlightFence, true, UINT64_MAX );
 ```cpp
 m_device.resetFences( *m_inFlightFence );
 ```
+
+> 注意到`s`，这里同样是数组代理。
 
 在我们继续之前，我们的设计中有一个小小的障碍。
 在第一帧中，我们调用 `drawFrame()`，它立即等待 `m_inFlightFence` 发出信号。
@@ -219,6 +223,8 @@ uint32_t imageIndex = m_device.acquireNextImage2KHR(nextImageInfo).second;
 
 接下来的两个参数指定在呈现引擎完成使用图像后要发出信号的同步对象。这是我们可以开始绘制到图像的时间点。可以指定信号量、围栏或两者。我们在这里将使用我们的 `imageAvailableSemaphore` ，忽略了第四个参数围栏。
 
+最后一个参数指定GPU的情况，我们使用单个GPU而非集群，输入`1`使用第一个。
+
 他的返回值是一个 `std::pair<vk::Result, uint32_t>`， 有多种可能失败的原因，我们会在后面讨论，这里假设他一定成功。
 
 ## 记录命令缓冲
@@ -232,15 +238,6 @@ m_commandBuffers[0].reset();
 recordCommandBuffer(m_commandBuffers[0], imageIndex);
 ```
 
-
-启用`reset`功能需要设置标准位，现在修改`CommanPool`创建信息：
-```cpp
-vk::CommandPoolCreateInfo poolInfo(
-    vk::CommandPoolCreateFlagBits::eResetCommandBuffer, // flags
-    queueFamilyIndices.graphicsFamily.value()
-);
-```
-
 ## 提交命令缓冲
 
 队列提交和同步通过 `vk::SubmitInfo` 结构中的参数进行配置。
@@ -249,16 +246,14 @@ vk::CommandPoolCreateInfo poolInfo(
 vk::SubmitInfo submitInfo;
 
 submitInfo.setWaitSemaphores( *m_imageAvailableSemaphore );
-vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-submitInfo.pWaitDstStageMask = waitStages;
+std::vector<vk::PipelineStageFlags> waitStages { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+submitInfo.pWaitDstStageMask = waitStages.data();
 ```
 
 这两个参数指定在执行开始之前要等待哪些信号量以及在管线的哪些阶段等待。
 我们希望在图像可用之前等待向图像写入颜色，因此我们指定写入颜色附件的图形管线的阶段。
 这意味着从理论上讲，实现可以已经在图像尚不可用时开始执行我们的顶点着色器等。
 `waitStages` 数组中的每个条目都对应于 `WaitSemaphores` 中具有相同索引的信号量。
-
-注意这里我们用了setter，它是高级封装，能够自动将当个对象代理成数组，然后填写指针和数量等参数。
 
 接下来的两个参数指定要实际提交执行的命令缓冲区。我们只需提交我们拥有的单个命令缓冲区。
 
@@ -274,6 +269,11 @@ submitInfo.setSignalSemaphores( *m_renderFinishedSemaphore );
 ```
 
 我们现在可以使用 `submit` 将命令缓冲区提交到图形队列。
+
+```cpp
+m_graphicsQueue.submit(submitInfo, m_inFlightFence);
+```
+
 该函数将 `vk::SubmitInfo` 结构的数组作为参数，以便在工作负载大得多时提高效率。
 最后一个参数引用一个可选的围栏，该围栏将在命令缓冲区完成执行时发出信号。
 这使我们知道何时可以安全地重用命令缓冲区，因此我们希望为其提供 `m_inFlightFence`。
@@ -292,6 +292,8 @@ submitInfo.setSignalSemaphores( *m_renderFinishedSemaphore );
 或者我们可以使渲染通道等待 `vk::PipelineStageFlagBits::eColorAttachmentOutput` 阶段。
 我已决定在此处选择第二种选择，因为这是一个很好的借口，可以了解子通道依赖关系及其工作原理。
 
+子通道依赖关系在 `vk::SubpassDependency` 结构中指定。转到 `createRenderPass` 函数并添加一个
+
 ```cpp
 vk::SubpassDependency dependency;
 dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -305,7 +307,7 @@ dependency.dstSubpass = 0;
 
 ```cpp
 dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-dependency.srcAccessMask = 0;
+dependency.srcAccessMask = {};
 ```
 
 接下来的两个字段指定要等待的操作以及这些操作发生的阶段。
