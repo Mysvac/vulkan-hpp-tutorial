@@ -46,3 +46,4 @@ nav:
       - 介绍: md/0120_pipeline.md
       - 着色器模块: md/0121_shader.md
       - 固定功能: md/0122_fixfunction.md
+      - 渲染通道: md/0123_renderpass.md
