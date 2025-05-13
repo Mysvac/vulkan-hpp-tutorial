@@ -1,0 +1,90 @@
+# Vulkan 帧缓冲
+
+## 概念
+
+帧（Frame），对应屏幕上显示的一张图像。缓冲（Buffer），表示暂时存储，用于中转。
+
+帧缓冲（Framebuffer） 是一个逻辑对象，用于绑定 渲染通道（Render Pass） 所需的图像附件（Attachments），如颜色附件、深度/模板附件等。
+它定义了渲染操作的目标输出，是连接 Render Pass 和实际图像内存（如交换链图像、深度缓冲）的桥梁
+
+| **组件**            | **作用**                                                 | **关系**                                |
+|---------------------|---------------------------------------------------------|-----------------------------------------|
+| **Render Pass**     | 定义渲染流程（附件格式、子通道、依赖关系）。                 | 帧缓冲必须基于某个 Render Pass 创建。     |
+| **Framebuffer**     | 绑定具体的图像视图（`VkImageView`）到 Render Pass 的附件上 | 是 Render Pass 和实际图像之间的桥梁。     |
+| **Image/ImageView** | 存储像素数据（如交换链图像、深度缓冲）。                     | 帧缓冲通过 `VkImageView` 引用这些图像。   |
+
+## 创建帧缓冲
+
+现在，添加新成员变量：
+
+```cpp
+std::vector<vk::raii::Framebuffer> m_swapChainFramebuffers;
+```
+
+我们将在一个新的函数 `createFramebuffers` 中为这个数组创建对象，该函数在创建图形管线后调用
+
+```cpp
+void initVulkan() {
+    createInstance();
+    setupDebugMessenger();
+    createSurface();
+    pickPhysicalDevice();
+    createLogicalDevice();
+    createSwapChain();
+    createImageViews();
+    createRenderPass();
+    createGraphicsPipeline();
+    createFramebuffers();
+}
+
+// ...
+
+void createFramebuffers() {
+
+}
+```
+
+首先调整容器大小以容纳所有帧缓冲，注意使用 `reserve` 而非 `resize` 。
+
+```cpp
+m_swapChainFramebuffers.reserve( m_swapChainImageViews.size() );
+```
+
+然后，我遍历图像视图并从中创建帧缓冲
+
+```cpp
+for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
+    vk::ImageView attachments[] = {
+        m_swapChainImageViews[i]
+    };
+
+    vk::FramebufferCreateInfo framebufferInfo(
+        {},                         // flags
+        m_renderPass,               // renderPass
+        1,                          // attachmentCount
+        attachments,                // pAttachments
+        m_swapChainExtent.width,    // width
+        m_swapChainExtent.height,   // height
+        1                           // layers
+    );
+
+    m_swapChainFramebuffers.emplace_back( m_device.createFramebuffer(framebufferInfo) );
+}
+```
+
+如您所见，帧缓冲的创建非常简单。我们首先需要指定帧缓冲需要与哪个 `renderPass` 兼容。
+您只能将帧缓冲与它兼容的渲染通道一起使用，这大致意味着它们使用相同数量和类型的附件。
+
+`attachmentCount` 和 `pAttachments` 参数指定应绑定到渲染通道 `pAttachment` 数组中相应附件描述的 `vk::ImageView` 对象。
+
+`width` 和 `height` 参数无需说明，`layers` 指的是图像数组中的层数。我们的交换链图像是单张图像，因此层数是 `1`。
+
+## 测试
+
+我们拥有渲染所需的所有对象。在下一章中，我们将编写第一个实际的绘制命令。
+
+---
+
+**[C++代码](../codes/0130_framebuffer/main.cpp)**
+
+**[C++代码差异](../codes/0130_framebuffer/main.diff)**
