@@ -88,7 +88,8 @@ static constexpr std::array<const char*,1> validationLayers {
 
 > `NDEBUG` 宏是 C++ 标准的一部分，意思是“非调试”。
 >
-> 常量值与常量对象的内容，此处不介绍，若需要请自行学习。
+> 常量静态成员与静态数据成员的内容，此处不介绍，可参考[cppref-静态成员](https://zh.cppreference.com/w/cpp/language/static)。  
+> 你也可以全部使用`constexpr`，自带内联，保证是常量对象可ODR使用。
 
 ### 2. 验证层可用性检查
 

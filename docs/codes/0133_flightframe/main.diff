@@ -1,0 +1,121 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 3d4f0c6..dd674e4 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -41,6 +41,8 @@ private:
+     #else
+         static const bool enableValidationLayers = true;
+     #endif
++
++    static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+     /////////////////////////////////////////////////////////////////
+ 
+     /////////////////////////////////////////////////////////////////
+@@ -65,9 +67,10 @@ private:
+     std::vector<vk::raii::Framebuffer> m_swapChainFramebuffers;
+     vk::raii::CommandPool m_commandPool{ nullptr };
+     std::vector<vk::raii::CommandBuffer> m_commandBuffers;
+-    vk::raii::Semaphore m_imageAvailableSemaphore{ nullptr };
+-    vk::raii::Semaphore m_renderFinishedSemaphore{ nullptr };
+-    vk::raii::Fence m_inFlightFence{ nullptr };
++    std::vector<vk::raii::Semaphore> m_imageAvailableSemaphores;
++    std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
++    std::vector<vk::raii::Fence> m_inFlightFences;
++    uint32_t currentFrame = 0;
+     /////////////////////////////////////////////////////////////////
+     
+     /////////////////////////////////////////////////////////////////
+@@ -97,7 +100,7 @@ private:
+         createGraphicsPipeline();
+         createFramebuffers();
+         createCommandPool();
+-        createCommandBuffer();
++        createCommandBuffers();
+         createSyncObjects();
+     }
+ 
+@@ -675,11 +678,11 @@ private:
+ 
+         m_commandPool = m_device.createCommandPool( poolInfo );
+     }
+-    void createCommandBuffer() {
++    void createCommandBuffers() {
+         vk::CommandBufferAllocateInfo allocInfo(
+             m_commandPool,                      // command pool
+             vk::CommandBufferLevel::ePrimary,   // level
+-            1                                   // commandBufferCount
++            MAX_FRAMES_IN_FLIGHT                // commandBufferCount
+         );
+         m_commandBuffers = m_device.allocateCommandBuffers(allocInfo);
+     }
+@@ -731,46 +734,56 @@ private:
+             vk::FenceCreateFlagBits::eSignaled  // flags
+         );
+ 
+-        m_imageAvailableSemaphore = m_device.createSemaphore( semaphoreInfo );
+-        m_renderFinishedSemaphore = m_device.createSemaphore( semaphoreInfo );
+-        m_inFlightFence = m_device.createFence( fenceInfo );
++        for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i){
++            m_imageAvailableSemaphores.emplace_back( m_device, semaphoreInfo );
++            m_renderFinishedSemaphores.emplace_back( m_device, semaphoreInfo );
++            m_inFlightFences.emplace_back( m_device , fenceInfo );
++        }
+     }
+     void drawFrame() {
+-        m_device.waitForFences( *m_inFlightFence, true, UINT64_MAX );
+-        m_device.resetFences( *m_inFlightFence );
++        if( auto res = m_device.waitForFences( *m_inFlightFences[currentFrame], true, UINT64_MAX );
++            res != vk::Result::eSuccess){
++            throw std::runtime_error{"waitForFences error"};
++        }
++        m_device.resetFences( *m_inFlightFences[currentFrame] );
+ 
+         vk::AcquireNextImageInfoKHR nextImageInfo(
+             m_swapChain,
+             UINT64_MAX,
+-            m_imageAvailableSemaphore,
++            m_imageAvailableSemaphores[currentFrame],
+             {}, // fence
+             0x1 // single GPU
+         );
+ 
+         uint32_t imageIndex = m_device.acquireNextImage2KHR(nextImageInfo).second;
+ 
+-        m_commandBuffers[0].reset();
+-        recordCommandBuffer(m_commandBuffers[0], imageIndex);
++        m_commandBuffers[currentFrame].reset();
++        recordCommandBuffer(m_commandBuffers[currentFrame], imageIndex);
+ 
+         vk::SubmitInfo submitInfo;
+ 
+-        submitInfo.setWaitSemaphores( *m_imageAvailableSemaphore );
++        submitInfo.setWaitSemaphores( *m_imageAvailableSemaphores[currentFrame] );
+         std::vector<vk::PipelineStageFlags> waitStages { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+         submitInfo.setWaitDstStageMask( waitStages );
+ 
+-        submitInfo.setCommandBuffers( *m_commandBuffers[0] );
++        submitInfo.setCommandBuffers( *m_commandBuffers[currentFrame] );
+ 
+-        submitInfo.setSignalSemaphores( *m_renderFinishedSemaphore );
++        submitInfo.setSignalSemaphores( *m_renderFinishedSemaphores[currentFrame] );
+ 
+-        m_graphicsQueue.submit(submitInfo, m_inFlightFence);
++        m_graphicsQueue.submit(submitInfo, m_inFlightFences[currentFrame]);
+ 
+         vk::PresentInfoKHR presentInfo;
+-        presentInfo.setWaitSemaphores( *m_renderFinishedSemaphore );
++        presentInfo.setWaitSemaphores( *m_renderFinishedSemaphores[currentFrame] );
+ 
+         presentInfo.setSwapchains( *m_swapChain );
+         presentInfo.pImageIndices = &imageIndex;
+ 
+-        m_presentQueue.presentKHR( presentInfo );
++        if( auto res = m_presentQueue.presentKHR( presentInfo );
++            res != vk::Result::eSuccess) {
++            throw std::runtime_error{"presentKHR error"};
++        }
++
++        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+     }
+     /////////////////////////////////////////////////////////////////
+ };

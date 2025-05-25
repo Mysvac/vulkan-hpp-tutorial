@@ -52,3 +52,4 @@ nav:
       - 帧缓冲: md/0130_framebuffer.md
       - 命令缓冲: md/0131_commandbuffer.md
       - 渲染和呈现: md/0132_rendering.md
+      - 飞行中的帧: md/0133_flightframe.md
