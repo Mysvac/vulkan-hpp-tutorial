@@ -1,0 +1,69 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index e51eb7f..7880e6c 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -1,6 +1,7 @@
+ #include <vulkan/vulkan.hpp>
+ #include <vulkan/vulkan_raii.hpp>
+ #include <GLFW/glfw3.h>
++#include <glm/glm.hpp>
+ 
+ #include <iostream>
+ #include <fstream>
+@@ -567,6 +568,11 @@ private:
+ 
+         vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+ 
++        auto bindingDescription = Vertex::getBindingDescription();
++        auto attributeDescriptions = Vertex::getAttributeDescriptions();
++        vertexInputInfo.setVertexBindingDescriptions(bindingDescription);
++        vertexInputInfo.setVertexAttributeDescriptions(attributeDescriptions);
++
+         vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
+             {},                                     // flags
+             vk::PrimitiveTopology::eTriangleList,   // topology
+@@ -842,6 +848,44 @@ private:
+         createFramebuffers();
+     }
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// Vertex input
++    struct Vertex {
++        glm::vec2 pos;
++        glm::vec3 color;
++
++        static vk::VertexInputBindingDescription getBindingDescription() {
++            vk::VertexInputBindingDescription bindingDescription;
++            bindingDescription.binding = 0;
++            bindingDescription.stride = sizeof(Vertex);
++            bindingDescription.inputRate = vk::VertexInputRate::eVertex;
++
++            return bindingDescription;
++        }
++
++        static std::array<vk::VertexInputAttributeDescription, 2>  getAttributeDescriptions() {
++            std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions;
++
++            attributeDescriptions[0].binding = 0;
++            attributeDescriptions[0].location = 0;
++            attributeDescriptions[0].format = vk::Format::eR32G32Sfloat;
++            attributeDescriptions[0].offset = offsetof(Vertex, pos);
++
++            attributeDescriptions[1].binding = 0;
++            attributeDescriptions[1].location = 1;
++            attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
++            attributeDescriptions[1].offset = offsetof(Vertex, color);
++
++            return attributeDescriptions;
++        }
++    };
++    inline static const std::vector<Vertex> vertices = {
++        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
++        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
++        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
++    };
++    /////////////////////////////////////////////////////////////////
+ };
+ 
+ int main() {

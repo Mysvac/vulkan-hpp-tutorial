@@ -54,3 +54,6 @@ nav:
       - 渲染和呈现: md/0132_rendering.md
       - 飞行中的帧: md/0133_flightframe.md
     - 重建交换链: md/0140_recreateswapchain.md
+  - 顶点缓冲:
+    - 顶点输入描述: md/0200_vertexinput.md
+    - 创建顶点缓冲: md/0201_vertexbuffer.md
