@@ -87,6 +87,8 @@ m_graphicsPipeline = m_device.createGraphicsPipeline( nullptr, pipelineInfo );
 
 现在运行你的程序，确认我们已经可以成功创建管线！
 
+---
+
 我们已经非常接近在屏幕上看到一些东西弹出来了。
 在接下来的几章中，我们将从交换链图像中设置实际的帧缓冲，并准备绘制命令。
 

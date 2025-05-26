@@ -194,6 +194,8 @@ m_renderPass = m_device.createRenderPass(renderPassInfo);
 
 现在可以运行程序，请保证没有错误发生。
 
+---
+
 这有很多工作，但在下一章中，我们会将所有内容都结合在一起，最终创建图形管线对象！
 
 ---

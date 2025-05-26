@@ -214,38 +214,39 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 `VKAPI_ATTR` 和 `VKAPI_CALL` 确保该函数具有 Vulkan 调用它的正确签名。
 
 
-第一个参数指定消息的严重性，具有以下可能：
+第一个参数指定消息的严重性，枚举值在`vk::DebugUtilsMessageSeverityFlagBitsEXT`中，具有以下可能：
 
-- `vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose`：诊断消息
-
-- `vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo`：信息性消息，例如资源的创建
-
-- `vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning`：关于警告行为的消息，该行为不一定是错误，但很可能是你的应用程序中的错误
-
-- `vk::DebugUtilsMessageSeverityFlagBitsEXT::eError`：关于错误行为的消息，可能会导致崩溃
+| 位枚举 | 含义 |  
+|---------------------|--------------------|
+| `eVerbose` | 诊断消息 |  
+| `eInfo` | 信息性消息，例如资源的创建 |  
+| `eWarning` | 关于警告行为的消息 |  
+| `eError` | 关于错误行为的消息，可能会导致崩溃 |  
 
 你可以使用比较操作来检查消息严重性，例如
+
 ```c++
 if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
     // Message is important enough to show
 }
 ```
 
-第二个参数 MessageType 可以具有以下值
+第二个参数 MessageType 可以具有以下值，枚举值在`vk::DebugUtilsMessageTypeFlagsEXT`中：
 
-- `vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral`：发生了一些与规范或性能无关的事件
+| 枚举 | 含义 |  
+|---------------------|--------------------|
+| `eGeneral` | 发生了一些与规范或性能无关的事件 |  
+| `eValidation` | 发生了一些违反规范或可能错误的事情 |  
+| `ePerformance` | Vulkan 的潜在非最佳使用 |  
 
-- `vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation`：发生了一些违反规范或表明可能错误的事情
 
-- `vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance`：Vulkan 的潜在非最佳使用
+第三个参数 pCallbackData 是一个结构体的指针，此结构体包含消息本身的详细信息，最重要的成员如下
 
-第三个参数 pCallbackData 是一个结构体的指针，此结构体包含消息本身的详细信息，最重要的成员是
-
-- `pMessage`：作为空终止字符串的调试消息
-
-- `pObjects`：与消息相关的 Vulkan 对象句柄数组
-
-- `objectCount`：数组中对象的数量
+| 成员 | 含义 |  
+|---------------------|--------------------|
+| `pMessage` | ：作为空终止字符串的调试消息 |  
+| `pMessage` | 与消息相关的 Vulkan 对象句柄数组 |  
+| `objectCount` | ：数组中对象的数量 |  
 
 
 最后的参数 `pUserData` 参数包含一个指针，供用户自己使用，可以传入任意内容。
@@ -368,6 +369,10 @@ if (enableValidationLayers) {
 现在尝试编译运行程序，应该没有报错，且或许能看到一些加载动态库之类的调试信息输出。
 
 ![示例](../images/validation.PNG)
+
+---
+
+下一章我们会寻找合适的GPU用于渲染图像。
 
 ---
 

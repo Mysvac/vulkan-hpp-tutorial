@@ -49,10 +49,12 @@ vk::CommandPoolCreateInfo poolInfo(
 );
 ```
 
-命令池至少有两个可能的标志:
+命令池至少有两个可能的标志(`flags`):
 
-- `vk::CommandPoolCreateFlagBits::eTransient`：提示命令缓冲区非常频繁地用新命令重新记录（可能会改变内存分配行为）
-- `vk::CommandPoolCreateFlagBits::eResetCommandBuffer`：允许单独重新记录命令缓冲区，如果没有此标志，则必须将它们全部一起重置
+| 位枚举 | 含义 |
+|------|------|
+| `eTransient` | 提示命令缓冲区非常频繁地用新命令重新记录（可能会改变内存分配行为） |  
+| `eResetCommandBuffer` | 允许单独重新记录命令缓冲区，如果没有此标志，则必须将它们全部一起重置 | 
 
 我们将每帧记录一个命令缓冲区，所以我们希望能够重置并重新记录它。因此我们需要设置 `eResetCommandBuffer` 标志位。
 
@@ -114,10 +116,12 @@ void createCommandBuffer() {
 }
 ```
 
-level 参数指定分配的命令缓冲区是主命令缓冲区还是辅助命令缓冲区。
+`level` 参数指定分配的命令缓冲区是主命令缓冲区还是辅助命令缓冲区：
 
-- `vk::CommandBufferLevel::ePrimary`：可以提交到队列以执行，但不能从其他命令缓冲区调用。
-- `vk::CommandBufferLevel::eSecondary`：不能直接提交，但可以从主命令缓冲区调用。
+| 枚举 |  含义  |
+|------|--------|
+| `ePrimary` | 可以提交到队列以执行，但不能从其他命令缓冲区调用。 |  
+| `eSecondary` | 不能直接提交，但可以从主命令缓冲区调用。 |
 
 
 由于我们只分配一个命令缓冲区，因此 `commandBufferCount` 参数仅为 `1` 。
@@ -142,9 +146,12 @@ commandBuffer.begin( beginInfo );
 
 `vk::CommandBufferBeginInfo` 的 `flags` 参数指定我们将如何使用命令缓冲区。以下值可用
 
-- `vk::CommandBufferUsageFlagBits::eOneTimeSubmit`：命令缓冲区将在执行一次后立即重新记录。
-- `vk::CommandBufferUsageFlagBits::eRenderPassContinue`：这是一个辅助命令缓冲区，它将完全在单个渲染通道内。
-- `vk::CommandBufferUsageFlagBits::eSimultaneousUse`：命令缓冲区可以在已经挂起执行的同时重新提交。
+| 位枚举 | 含义 |
+|--------|------|
+| `eOneTimeSubmit` | 命令缓冲区将在执行一次后立即重新记录。 |  
+| `eRenderPassContinue` | 这是一个辅助命令缓冲区，它将完全在单个渲染通道内。 |  
+| `eSimultaneousUse` | 命令缓冲区可以在已经挂起执行的同时重新提交。 |
+
 
 这些标志目前都不适用于我们。
 
@@ -196,8 +203,10 @@ commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
 最后一个参数控制渲染通道内的绘制命令将如何提供。它至少可以是以下两个值之一
 
-- `vk::SubpassContents::eInline`：渲染通道命令将嵌入在主命令缓冲区本身中，并且不会执行辅助命令缓冲区。
-- `vk::SubpassContents::eSecondaryCommandBuffers`：渲染通道命令将从辅助命令缓冲区执行。
+| 枚举 | 含义 |
+|-----|-------|
+| `eInline` | 渲染通道命令将嵌入在主命令缓冲区本身中，并且不会执行辅助命令缓冲区。 |  
+| `eSecondaryCommandBuffers` | 渲染通道命令将从辅助命令缓冲区执行。 |
 
 我们不使用辅助命令缓冲区，所以选择第一个选项。
 
@@ -262,6 +271,8 @@ commandBuffer.end();
 ## 测试
 
 现在运行程序保证没有出错。
+
+---
 
 在下一章中，我们将编写主循环的代码，它将从交换链获取图像，记录和执行命令缓冲区，然后将完成的图像返回到交换链。
 

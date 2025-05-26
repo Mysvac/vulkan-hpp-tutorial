@@ -59,13 +59,16 @@ vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 
 输入装配创建信息描述了两件事：将从顶点绘制哪种类型的几何图形，以及是否应启用图元重启。
 
-前者在 `topology` 成员中指定，枚举位于 `vk::PrimitiveTopology` 命名空间，常见的值有这些
+前者在 `topology` 成员中指定，枚举位于 `vk::PrimitiveTopology` 类中，常见的值有这些
 
-- `ePointList`：点集，点来自顶点
-- `eLineList`：每 2 个顶点绘制一条线，不重复使用顶点
-- `eLineStrip`：每条线的结束顶点用作下一条线的起始顶点
-- `eTriangleList`：每 3 个顶点绘制一个三角形，不重复使用顶点
-- `eTriangleStrip`：每个三角形的第二/三个顶点用作下一个三角形的前两个顶点
+
+|        枚举           |                 含义                              |  
+|-----------------------|--------------------------------------------------|
+| `ePointList`          | 点集，点来自顶点                                   |  
+| `eLineList`           | 每 2 个顶点绘制一条线，不重复使用顶点               |  
+| `eLineStrip`          | 每条线的结束顶点用作下一条线的起始顶点               |  
+| `eTriangleList`       | 每 3 个顶点绘制一个三角形，不重复使用顶点            |  
+| `eTriangleStrip`      | 每个三角形的第二/三个顶点用作下一个三角形的前两个顶点 |  
 
 
 通常，顶点按索引顺序从顶点缓冲区加载，但使用元素缓冲区，您可以自己指定要使用的索引。
@@ -162,9 +165,11 @@ rasterizer.polygonMode = vk::PolygonMode::eFill;
 
 `polygonMode` 确定如何为几何图形生成片段，至少有三种常见模式可用
 
-- `vk::PolygonMode::eFill`：用片段填充多边形区域
-- `vk::PolygonMode::eLine`：多边形边缘绘制为线条
-- `vk::PolygonMode::ePoint`：多边形顶点绘制为点
+| 枚举 | 功能 |  
+|---------------------------|--------------------| 
+| `vk::PolygonMode::eFill`  | 用片段填充多边形区域 |  
+| `vk::PolygonMode::eLine`  | 多边形边缘绘制为线条 |  
+| `vk::PolygonMode::ePoint` | 多边形顶点绘制为点   |  
 
 使用 `eFill` 填充以外的任何模式都需要启用 GPU 功能。
 

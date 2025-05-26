@@ -176,6 +176,9 @@ void drawFrame() {
 要通过示例了解有关同步的更多信息，请查看 Khronos 提供的 [这份全面的概述](https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples#swapchain-image-acquire-and-present)。
 
 现在构建和运行程序，保证程序正常。
+
+---
+
 在下一章中，我们将处理使 Vulkan 程序良好运行所需的另一件小事。
 
 ---

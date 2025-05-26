@@ -444,7 +444,11 @@ std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo
 
 ## 测试
 
-这就是描述管线的可编程阶段的全部内容，你可以尝试运行程序，不应报错。在下一章中，我们将研究固定功能阶段。
+这就是描述管线的可编程阶段的全部内容，你可以尝试运行程序，不应报错。
+
+---
+
+在下一章中，我们将研究固定功能阶段。
 
 ---
 

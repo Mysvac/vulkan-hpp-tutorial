@@ -58,10 +58,11 @@ void recreateSwapChain() {
 
 枚举的可能类型有很多，这里只介绍我们需要的三种：
 
-- `vk::Result::eSuccess` 表示完全成功
-- `vk::Result::eSuboptimalKHR` 表示还能使用，但已经不是最佳
-- `vk::Result::eErrorOutOfDateKHR` 已经过期且无法再使用
-
+| 返回值 | 含义 |
+|-------|------|
+| `vk::Result::eSuccess` | 完全成功 |  
+| `vk::Result::eSuboptimalKHR` | 还能使用，但已经不是最佳 |  
+| `vk::Result::eErrorOutOfDateKHR` | 已经过期且无法再使用 |
 
 过期时需要立刻重建，成功时自不必说。
 特殊的是次优时我们认为可以继续使用，因为我们已经获得到了需要的图像。

@@ -153,9 +153,13 @@ vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormat
 
 每个 `vk::SurfaceFormatKHR` 条目都包含一个 `format` 和一个 `colorSpace` 成员：
 
-- `format` 成员指定颜色通道和类型。例如，`vk::Format::eB8G8R8A8Srgb` 表示BGRA四通道且每通道占8位。
+| 成员 | 作用 |
+|-----|-------|
+| `format` | 指定颜色通道和类型 |  
+| | 例如，`vk::Format::eB8G8R8A8Srgb` 表示BGRA四通道且每通道占8位。 |  
+| `colorSpace` | 指定色彩空间 |  
+| | 例如，SRGB使用 `vk::ColorSpaceKHR::eSrgbNonlinear`。 |  
 
-- `colorSpace` 成员指示是否支持 SRGB 色彩空间，使用 `vk::ColorSpaceKHR::eSrgbNonlinear` 标志。
 
 让我们浏览列表，看看首选组合是否可用
 
@@ -183,18 +187,18 @@ vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormat
 
 ### 2. 呈现模式
 
-呈现模式可以说是交换链最重要的设置，它表示将图像显示到屏幕的条件。Vulkan 中有多种可用模式，下面介绍常见的四种
+呈现模式可以说是交换链最重要的设置，它表示将图像显示到屏幕的条件。Vulkan 中有多种可用模式，都位于`vk::PresentModeKHR`中，下面介绍常见的四种
 
-- `vk::PresentModeKHR::eImmediate` ：图像会立即传输到屏幕，可能会导致图像撕裂。
+| 枚举 | 含义 |
+|------|-----|
+| `eImmediate` | 图像会立即传输到屏幕，可能会导致图像撕裂。 |  
+| `eFifo` | 先进先出的队列。若队列已满，则程序必须等待。 |  
+| | 这与现代游戏中的垂直同步最相似。、显示刷新的时刻称为“垂直消隐”。 |  
+| `eFifoRelaxed` | 第二种的变体，图像在最终到达时立即传输，可能会导致明显的撕裂。 |  
+| | 仅当应用程序迟到且队列在上次垂直消隐时为空，此模式才与前一种模式不同。 |  
+| `eMailbox` | 第二种的变体，队列已满时将已排队的图像简单地替换为较新的图像。 |
+| | 模式可用于尽可能快地渲染帧，通常被称为“三重缓冲”。 |  
 
-- `vk::PresentModeKHR::eFifo` ：交换链是一个先进先出的队列。若队列已满，则程序必须等待。这与现代游戏中的垂直同步最相似。显示刷新的时刻称为“垂直消隐”。
-
-- `vk::PresentModeKHR::eFifoRelaxed` ：仅当应用程序迟到并且队列在上次垂直消隐时为空时，此模式才与前一种模式不同。
-图像不会等待下一个垂直消隐，而是在最终到达时立即传输。这可能会导致明显的撕裂。
-
-- `vk::PresentModeKHR::eMailbox` ：这也是第二种模式的变体。当队列已满时，不会阻止应用程序，而是将已排队的图像简单地替换为较新的图像。
-此模式可用于尽可能快地渲染帧，同时仍然避免撕裂，从而减少延迟问题，而非标准垂直同步。
-这通常被称为“三重缓冲”。
 
 只有 `vk::PresentModeKHR::eFifo` 模式保证可用，因此我们将再次编写一个函数，以查找可用的最佳模式
 
@@ -204,8 +208,8 @@ vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& 
 }
 ```
 
-如果能耗不是问题，那么 `vk::PresentModeKHR::eMailbox` 是一个较好的折衷方案。
-在能耗更重要的移动设备上，您可能需要改用 `vk::PresentModeKHR::eFifo`。
+如果能耗不是问题，那么 `eMailbox` 是一个较好的折衷方案。
+在能耗更重要的移动设备上，您可能需要改用 `eFifo`。
 
 ```cpp
 vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) {
@@ -218,7 +222,7 @@ vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& 
 }
 ```
 
-现在，让我们浏览列表，看看 `vk::PresentModeKHR::eMailbox` 是否可用
+现在，让我们浏览列表，看看 `eMailbox` 是否可用
 
 ### 3. 交换范围
 
@@ -343,9 +347,12 @@ vk::SwapchainCreateInfoKHR createInfo(
 
 有两种方法可以处理从多个队列访问的图像
 
-- `vk::SharingMode::eExclusive` ：图像一次由一个队列族拥有，并且必须显式传输所有权，然后才能在另一个队列族中使用它。此选项提供最佳性能。
+| 枚举 | 含义 |
+|------|------|
+| `vk::SharingMode::eExclusive` | 图像一次由一个队列族拥有，并且必须显式传输所有权，然后才能在另一个队列族中使用它。此选项提供最佳性能。 |  
+| `vk::SharingMode::eConcurrent` | 图像可以在多个队列族之间使用，而无需显式的所有权传输。 |  
 
-- `vk::SharingMode::eConcurrent` ：图像可以在多个队列族之间使用，而无需显式的所有权传输。
+
 
 如果队列族不同，那么我们将在本教程中使用并发模式。
 如果图形队列族和呈现队列族相同（大多数硬件都是这种情况），那么我们应该使用独占模式，因为并发模式要求您指定至少两个不同的队列族。
@@ -466,6 +473,8 @@ m_swapChainExtent = extent;
 ## 测试
 
 现在运行代码保证程序正常。
+
+---
 
 我们现在有一组可以绘制并可以呈现到窗口的图像。下一章将开始介绍如何将图像设置为渲染目标，然后我们将开始研究实际的图形管线和绘制命令！
 

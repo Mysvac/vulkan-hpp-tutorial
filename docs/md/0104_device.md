@@ -122,6 +122,8 @@ m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
 
 现在运行程序，确保没有报错。
 
+---
+
 有了逻辑设备和队列句柄，我们现在实际上可以开始使用显卡来做事了！在接下来的几章中，我们将设置资源以将结果呈现到窗口系统。
 
 ---

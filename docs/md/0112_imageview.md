@@ -88,6 +88,8 @@ m_swapChainImageViews.emplace_back( m_device.createImageView(createInfo) );
 
 现在运行程序保证没有异常。
 
+---
+
 图像视图足以将图像用作纹理，但它还不能完全用作渲染目标。这需要一个额外的间接步骤，称为帧缓冲。但我们还需先设置图形管线。
 
 ---

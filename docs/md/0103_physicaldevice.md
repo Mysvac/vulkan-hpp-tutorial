@@ -67,9 +67,9 @@ if(m_physicalDevice == nullptr){
 }
 ```
 
-> 注意到`vk::raii::PhysicalDevice`可以直接拷贝，这很特殊。
-> 因为物理设备资源实际由`vk::Instance`管理，所以`vk::raii::PhysicalDevice`销毁时没有调用任何`vkDestory`。
->
+注意到`vk::raii::PhysicalDevice`可以直接拷贝，这很特殊。
+因为物理设备资源实际由`vk::Instance`管理，所以`vk::raii::PhysicalDevice`销毁时没有调用任何`vkDestory`。
+
 > 作者认为此处API设计有误，它应该直接返回`vk::PhysicalDevice`，不应携带`raii::`。
 
 ## 设备评估标准
@@ -281,6 +281,8 @@ for (int i = 0; const auto& queueFamily : queueFamilies) {
 ## 测试
 
 现在构建与运行代码，虽然程序还是和之前一样的效果，但不应报错。
+
+---
 
 太棒了，这就是我们现在找到合适的物理设备所需的一切！下一步是创建逻辑设备以与之交互。
 
