@@ -148,7 +148,7 @@ m_device.resetFences( *m_inFlightFences[currentFrame] );
 尽管大多数的驱动和平台都可以在窗口大小变化后自动触发`Result::eErrorOutOfDateKHR`，但只是大多数而非全部。
 我们需要一些额外操作，显式处理窗口尺寸的变化。
 
-首先我们添加一个新的成员变量，用于记录尺寸是否发送了变化：
+首先我们添加一个新的成员变量，用于记录尺寸是否发生了变化：
 
 ```cpp
 bool m_framebufferResized = false;

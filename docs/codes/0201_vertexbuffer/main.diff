@@ -1,0 +1,159 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 7880e6c..b33d274 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -57,6 +57,8 @@ private:
+     vk::raii::Device m_device{ nullptr };
+     vk::raii::Queue m_graphicsQueue{ nullptr };
+     vk::raii::Queue m_presentQueue{ nullptr };
++    vk::raii::Buffer m_vertexBuffer{ nullptr };
++    vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
+     vk::raii::SwapchainKHR m_swapChain{ nullptr };
+     std::vector<vk::Image> m_swapChainImages;
+     vk::Format m_swapChainImageFormat;
+@@ -102,6 +104,7 @@ private:
+         createGraphicsPipeline();
+         createFramebuffers();
+         createCommandPool();
++        createVertexBuffer();
+         createCommandBuffers();
+         createSyncObjects();
+     }
+@@ -726,7 +729,11 @@ private:
+         );
+         commandBuffer.setScissor(0, scissor);
+ 
+-        commandBuffer.draw(3, 1, 0, 0);
++        vk::Buffer vertexBuffers[] = { m_vertexBuffer };
++        vk::DeviceSize offsets[] = { 0 };
++        commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
++
++        commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+ 
+         commandBuffer.endRenderPass();
+         commandBuffer.end();
+@@ -761,20 +768,29 @@ private:
+             0x1 // single GPU
+         );
+ 
+-        // std::pair<vk::Result, uint32_t>
+-        auto pair = m_device.acquireNextImage2KHR(nextImageInfo);
+-        switch(pair.first){
+-            case vk::Result::eSuccess:
+-            case vk::Result::eSuboptimalKHR: 
+-                break;
+-            case vk::Result::eErrorOutOfDateKHR: 
++        uint32_t imageIndex;
++
++        try{
++            auto [res, idx] = m_device.acquireNextImage2KHR(nextImageInfo);
++            switch(res){
++                case vk::Result::eSuccess:
++                case vk::Result::eSuboptimalKHR: 
++                    break;
++                case vk::Result::eErrorOutOfDateKHR: 
++                    m_framebufferResized = false;
++                    recreateSwapChain();
++                    return;
++                default: throw std::runtime_error("failed to acquire swap chain image!");
++            }
++            imageIndex = idx;
++        } catch (const vk::OutOfDateKHRError&){
+                 m_framebufferResized = false;
+                 recreateSwapChain();
+                 return;
+-            default:
+-                throw std::runtime_error("failed to acquire swap chain image!");
++        } catch (const std::exception&){
++            throw std::runtime_error("failed to acquire swap chain image!");
+         }
+-        uint32_t imageIndex = pair.second;
++
+         // Only reset the fence if we are submitting work
+         m_device.resetFences( *m_inFlightFences[currentFrame] );
+ 
+@@ -799,17 +815,22 @@ private:
+         presentInfo.setSwapchains( *m_swapChain );
+         presentInfo.pImageIndices = &imageIndex;
+ 
+-        switch( m_presentQueue.presentKHR(presentInfo) ){
+-            case vk::Result::eSuccess:
+-                break;
+-            case vk::Result::eErrorOutOfDateKHR:
+-            case vk::Result::eSuboptimalKHR:
++        try{
++            auto res = m_presentQueue.presentKHR(presentInfo);
++            if( res == vk::Result::eSuboptimalKHR || 
++                res == vk::Result::eErrorOutOfDateKHR) {
+                 m_framebufferResized = false;
+                 recreateSwapChain();
+-                break;
+-            default:
++            } else if (res != vk::Result::eSuccess) {
+                 throw std::runtime_error("failed to acquire swap chain image!");
++            }
++        } catch (const vk::OutOfDateKHRError&){
++                m_framebufferResized = false;
++                recreateSwapChain();
++        } catch (const std::exception&){
++            throw std::runtime_error("failed to acquire swap chain image!");
+         }
++
+         if( m_framebufferResized ){
+             m_framebufferResized = false;
+             recreateSwapChain();
+@@ -881,11 +902,53 @@ private:
+         }
+     };
+     inline static const std::vector<Vertex> vertices = {
+-        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
++        {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+         {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+         {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+     };
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// create vertex buffer
++    void createVertexBuffer() {
++        vk::BufferCreateInfo bufferInfo;
++        bufferInfo.size = sizeof(vertices[0]) * vertices.size();
++        bufferInfo.usage = vk::BufferUsageFlagBits::eVertexBuffer;
++        bufferInfo.sharingMode = vk::SharingMode::eExclusive;
++
++        m_vertexBuffer = m_device.createBuffer(bufferInfo);
++
++        vk::MemoryRequirements memRequirements = m_vertexBuffer.getMemoryRequirements();
++
++        vk::MemoryAllocateInfo allocInfo;
++        allocInfo.allocationSize = memRequirements.size;
++        allocInfo.memoryTypeIndex = findMemoryType( memRequirements.memoryTypeBits,
++            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent 
++        );
++
++        m_vertexBufferMemory = m_device.allocateMemory( allocInfo );
++
++        m_vertexBuffer.bindMemory(m_vertexBufferMemory, 0);
++
++        void* data;
++        data = m_vertexBufferMemory.mapMemory(0, bufferInfo.size);
++        memcpy(data, vertices.data(), static_cast<size_t>(bufferInfo.size));
++        m_vertexBufferMemory.unmapMemory();
++    }
++    uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
++        // vk::PhysicalDeviceMemoryProperties
++        auto memProperties = m_physicalDevice.getMemoryProperties();
++
++        for(uint32_t i = 0; i < memProperties.memoryTypeCount; ++i){
++            if( (typeFilter & (1 << i)) &&
++                (memProperties.memoryTypes[i].propertyFlags & properties ) == properties ) {
++                return i;
++            }
++        }
++        throw std::runtime_error("failed to find suitable memory type!");
++        return 0; // optional
++    }
++    /////////////////////////////////////////////////////////////////
+ };
+ 
+ int main() {
