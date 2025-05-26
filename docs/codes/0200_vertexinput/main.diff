@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index e51eb7f..7880e6c 100644
+index a9ee442..ed84bbb 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -1,6 +1,7 @@
@@ -22,8 +22,8 @@ index e51eb7f..7880e6c 100644
          vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
              {},                                     // flags
              vk::PrimitiveTopology::eTriangleList,   // topology
-@@ -842,6 +848,44 @@ private:
-         createFramebuffers();
+@@ -825,6 +831,44 @@ private:
+         m_framebufferResized = false;
      }
      /////////////////////////////////////////////////////////////////
 +

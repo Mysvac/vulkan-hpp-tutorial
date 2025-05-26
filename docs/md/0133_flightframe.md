@@ -92,15 +92,7 @@ void drawFrame() {
     m_device.waitForFences( *m_inFlightFences[currentFrame], true, UINT64_MAX );
     m_device.resetFences( *m_inFlightFences[currentFrame] );
 
-    vk::AcquireNextImageInfoKHR nextImageInfo(
-        m_swapChain,
-        UINT64_MAX,
-        m_imageAvailableSemaphores[currentFrame],
-        {}, // fence
-        0x1 // single GPU
-    );
-
-    uint32_t imageIndex = m_device.acquireNextImage2KHR(nextImageInfo).second;
+    uint32_t imageIndex = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[currentFrame]).second;
 
     m_commandBuffers[currentFrame].reset();
     recordCommandBuffer(m_commandBuffers[currentFrame], imageIndex);
@@ -144,7 +136,7 @@ void drawFrame() {
 你可能注意到，在编译时会有两个警告信息 `放弃具有 [[nodiscard]] 属性的函数的返回值` 。
 
 这两个函数返回的是`vk::Result`类型的枚举，表示成功或错误的类型。
-成功类型较少，但是错误的种类非常多，我们暂时只判断`vk::Result::eSuccess`，下一章会有其他情况。
+成功类型较少，但是错误的种类非常多，我们暂时只判断`vk::Result::eSuccess`，下一章会具体进行错误处理。
 
 ```cpp
 void drawFrame() {

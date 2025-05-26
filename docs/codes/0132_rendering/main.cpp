@@ -739,15 +739,7 @@ private:
         m_device.waitForFences( *m_inFlightFence, true, UINT64_MAX );
         m_device.resetFences( *m_inFlightFence );
 
-        vk::AcquireNextImageInfoKHR nextImageInfo(
-            m_swapChain,
-            UINT64_MAX,
-            m_imageAvailableSemaphore,
-            {}, // fence
-            0x1 // single GPU
-        );
-
-        uint32_t imageIndex = m_device.acquireNextImage2KHR(nextImageInfo).second;
+        uint32_t imageIndex = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphore).second;
 
         m_commandBuffers[0].reset();
         recordCommandBuffer(m_commandBuffers[0], imageIndex);

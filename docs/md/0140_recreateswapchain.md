@@ -66,40 +66,38 @@ void recreateSwapChain() {
 
 过期时需要立刻重建，成功时自不必说。
 特殊的是次优时我们认为可以继续使用，因为我们已经获得到了需要的图像。
-所以可以这样写：
+
+非常特殊的一点，虽然此处返回了`vk::Result`，但返回码不为`eSuccess`和`eSuboptimalKHR`时，它依然会抛出异常（除非你全局禁用异常）。
+
+所以我们依然需要使用异常处理的方式进行操作：
 
 ```cpp
-// std::pair<vk::Result, uint32_t>
-auto pair = m_device.acquireNextImage2KHR(nextImageInfo);
-switch(pair.first){
-    case vk::Result::eSuccess:
-    case vk::Result::eSuboptimalKHR: 
-        break;
-    case vk::Result::eErrorOutOfDateKHR: 
+uint32_t imageIndex;
+try{
+    // std::pair<vk::Result, uint32_t>
+    auto [res, idx] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[currentFrame]);
+    imageIndex = idx;
+} catch (const vk::OutOfDateKHRError&){
         recreateSwapChain();
         return;
-    default:
-        throw std::runtime_error("failed to acquire swap chain image!");
-}
-uint32_t imageIndex = pair.second;
+} // Do not catch other exceptions
 ```
 
-> 你也可以在次优时也选择重建交换链。
+> 如果你禁用了全局异常，那么你应该通过判断`res`决定是否重建交换链。
+
 
 `presentKHR`函数也返回一个`vk::Result`，我们进行同样的判断。
 由于我们已经绘制完毕了，次优时直接重建交换链即可。
 
 ```cpp
-switch( m_presentQueue.presentKHR(presentInfo) ){
-    case vk::Result::eSuccess:
-        break;
-    case vk::Result::eErrorOutOfDateKHR:
-    case vk::Result::eSuboptimalKHR:
+try{
+    auto res = m_presentQueue.presentKHR(presentInfo);
+    if( res == vk::Result::eSuboptimalKHR ) {
         recreateSwapChain();
-        break;
-    default:
-        throw std::runtime_error("failed to acquire swap chain image!");
-}
+    }
+} catch (const vk::OutOfDateKHRError&){
+    recreateSwapChain();
+} // Do not catch other exceptions
 
 currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 ```
@@ -118,27 +116,16 @@ if( auto res = m_device.waitForFences( *m_inFlightFences[currentFrame], true, UI
     throw std::runtime_error{"waitForFences error"};
 }
 
-vk::AcquireNextImageInfoKHR nextImageInfo(
-    m_swapChain,
-    UINT64_MAX,
-    m_imageAvailableSemaphores[currentFrame],
-    {}, // fence
-    0x1 // single GPU
-);
-
-// std::pair<vk::Result, uint32_t>
-auto pair = m_device.acquireNextImage2KHR(nextImageInfo);
-switch(pair.first){
-    case vk::Result::eSuccess:
-    case vk::Result::eSuboptimalKHR: 
-        break;
-    case vk::Result::eErrorOutOfDateKHR: 
+uint32_t imageIndex;
+try{
+    // std::pair<vk::Result, uint32_t>
+    auto [res, idx] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[currentFrame]);
+    imageIndex = idx;
+} catch (const vk::OutOfDateKHRError&){
         recreateSwapChain();
         return;
-    default:
-        throw std::runtime_error("failed to acquire swap chain image!");
-}
-uint32_t imageIndex = pair.second;
+} // Do not catch other exceptions
+
 // Only reset the fence if we are submitting work
 m_device.resetFences( *m_inFlightFences[currentFrame] );
 ```
@@ -154,42 +141,41 @@ m_device.resetFences( *m_inFlightFences[currentFrame] );
 bool m_framebufferResized = false;
 ```
 
-然后我们可以调整呈现的反馈判断：
+然后我们修改`recreateSwapChain`，在末尾重置`m_framebufferResized`状态：
 
 ```cpp
-auto pair = m_device.acquireNextImage2KHR(nextImageInfo);
-switch(pair.first){
-    case vk::Result::eSuccess:
-    case vk::Result::eSuboptimalKHR: 
-        break;
-    case vk::Result::eErrorOutOfDateKHR: 
-        m_framebufferResized = false;
-        recreateSwapChain();
-        return;
-    default:
-        throw std::runtime_error("failed to acquire swap chain image!");
-}
+void recreateSwapChain() {
+    // ......
+    createSwapChain();
+    createImageViews();
+    createFramebuffers();
 
-// ......
-
-switch( m_presentQueue.presentKHR(presentInfo) ){
-    case vk::Result::eSuccess:
-        break;
-    case vk::Result::eErrorOutOfDateKHR:
-    case vk::Result::eSuboptimalKHR:
-        m_framebufferResized = false;
-        recreateSwapChain();
-        break;
-    default:
-        throw std::runtime_error("failed to acquire swap chain image!");
-}
-if( m_framebufferResized ){
     m_framebufferResized = false;
-    recreateSwapChain();
 }
 ```
 
-我们使用GLFW框架提供的回调函数`glfwSetFramebufferSizeCallback`来修改窗口大小变化。
+然后再`drawFrame`末尾添加一个判断，用于显式重建交换链：
+
+```cpp
+// ......
+try{
+    auto res = m_presentQueue.presentKHR(presentInfo);
+    if( res == vk::Result::eSuboptimalKHR ) {
+        recreateSwapChain();
+    }
+} catch (const vk::OutOfDateKHRError&){
+    recreateSwapChain();
+}
+if( m_framebufferResized ){
+    recreateSwapChain();
+}
+
+currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+```
+
+我们还需要在窗口尺寸变化时将`m_framebufferResized`修改为`true`，
+可以使用GLFW框架提供的回调函数`glfwSetFramebufferSizeCallback`实现。
+修改`initWindow`函数，注册回调函数：
 
 ```cpp
 void initWindow() {
@@ -249,7 +235,7 @@ void recreateSwapChain() {
 }
 ```
 
-我们循环等待，知道窗口大小不为0，也就是结束最小化状态。
+我们循环等待，直到窗口大小不为0，也就是最小化状态结束。
 
 ## 最后
 

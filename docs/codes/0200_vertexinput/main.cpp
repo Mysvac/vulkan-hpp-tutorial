@@ -753,28 +753,16 @@ private:
             throw std::runtime_error{"waitForFences error"};
         }
 
-        vk::AcquireNextImageInfoKHR nextImageInfo(
-            m_swapChain,
-            UINT64_MAX,
-            m_imageAvailableSemaphores[currentFrame],
-            {}, // fence
-            0x1 // single GPU
-        );
-
-        // std::pair<vk::Result, uint32_t>
-        auto pair = m_device.acquireNextImage2KHR(nextImageInfo);
-        switch(pair.first){
-            case vk::Result::eSuccess:
-            case vk::Result::eSuboptimalKHR: 
-                break;
-            case vk::Result::eErrorOutOfDateKHR: 
-                m_framebufferResized = false;
+        uint32_t imageIndex;
+        try{
+            // std::pair<vk::Result, uint32_t>
+            auto [res, idx] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[currentFrame]);
+            imageIndex = idx;
+        } catch (const vk::OutOfDateKHRError&){
                 recreateSwapChain();
                 return;
-            default:
-                throw std::runtime_error("failed to acquire swap chain image!");
-        }
-        uint32_t imageIndex = pair.second;
+        } // Do not catch other exceptions
+
         // Only reset the fence if we are submitting work
         m_device.resetFences( *m_inFlightFences[currentFrame] );
 
@@ -799,19 +787,15 @@ private:
         presentInfo.setSwapchains( *m_swapChain );
         presentInfo.pImageIndices = &imageIndex;
 
-        switch( m_presentQueue.presentKHR(presentInfo) ){
-            case vk::Result::eSuccess:
-                break;
-            case vk::Result::eErrorOutOfDateKHR:
-            case vk::Result::eSuboptimalKHR:
-                m_framebufferResized = false;
+        try{
+            auto res = m_presentQueue.presentKHR(presentInfo);
+            if( res == vk::Result::eSuboptimalKHR ) {
                 recreateSwapChain();
-                break;
-            default:
-                throw std::runtime_error("failed to acquire swap chain image!");
+            }
+        } catch (const vk::OutOfDateKHRError&){
+            recreateSwapChain();
         }
         if( m_framebufferResized ){
-            m_framebufferResized = false;
             recreateSwapChain();
         }
 
@@ -825,12 +809,6 @@ private:
         auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
         app->m_framebufferResized = true;
     }
-    void cleanupSwapChain() {
-        m_swapChainFramebuffers.clear();
-        m_swapChainImageViews.clear();
-        // m_swapChainImages.clear(); // optional
-        m_swapChain = nullptr;
-    }
     void recreateSwapChain() {
         int width = 0, height = 0;
         glfwGetFramebufferSize(m_window, &width, &height);
@@ -841,11 +819,16 @@ private:
 
         m_device.waitIdle();
 
-        cleanupSwapChain();
+        m_swapChainFramebuffers.clear();
+        m_swapChainImageViews.clear();
+        // m_swapChainImages.clear(); // optional
+        m_swapChain = nullptr;
 
         createSwapChain();
         createImageViews();
         createFramebuffers();
+
+        m_framebufferResized = false;
     }
     /////////////////////////////////////////////////////////////////
 

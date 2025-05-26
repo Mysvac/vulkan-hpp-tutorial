@@ -169,7 +169,7 @@ allocInfo.memoryTypeIndex = findMemoryType( memRequirements.memoryTypeBits,
 
 `eHostVisible`表示可以被CPU访问，`eHostCoherent`表示内存自动同步。
 
-分配内存非常简单，我们首先在`m_vertexBuffer`创建一个新变量，然后使用`allocateMemory`分配资源：
+分配内存非常简单，我们首先在`m_vertexBuffer`下方创建一个新变量，然后使用`allocateMemory`分配资源：
 
 ```cpp
 vk::raii::Buffer m_vertexBuffer{ nullptr };

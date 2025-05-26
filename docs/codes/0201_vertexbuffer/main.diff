@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 7880e6c..b33d274 100644
+index ed84bbb..9d5b045 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -57,6 +57,8 @@ private:
@@ -32,77 +32,7 @@ index 7880e6c..b33d274 100644
  
          commandBuffer.endRenderPass();
          commandBuffer.end();
-@@ -761,20 +768,29 @@ private:
-             0x1 // single GPU
-         );
- 
--        // std::pair<vk::Result, uint32_t>
--        auto pair = m_device.acquireNextImage2KHR(nextImageInfo);
--        switch(pair.first){
--            case vk::Result::eSuccess:
--            case vk::Result::eSuboptimalKHR: 
--                break;
--            case vk::Result::eErrorOutOfDateKHR: 
-+        uint32_t imageIndex;
-+
-+        try{
-+            auto [res, idx] = m_device.acquireNextImage2KHR(nextImageInfo);
-+            switch(res){
-+                case vk::Result::eSuccess:
-+                case vk::Result::eSuboptimalKHR: 
-+                    break;
-+                case vk::Result::eErrorOutOfDateKHR: 
-+                    m_framebufferResized = false;
-+                    recreateSwapChain();
-+                    return;
-+                default: throw std::runtime_error("failed to acquire swap chain image!");
-+            }
-+            imageIndex = idx;
-+        } catch (const vk::OutOfDateKHRError&){
-                 m_framebufferResized = false;
-                 recreateSwapChain();
-                 return;
--            default:
--                throw std::runtime_error("failed to acquire swap chain image!");
-+        } catch (const std::exception&){
-+            throw std::runtime_error("failed to acquire swap chain image!");
-         }
--        uint32_t imageIndex = pair.second;
-+
-         // Only reset the fence if we are submitting work
-         m_device.resetFences( *m_inFlightFences[currentFrame] );
- 
-@@ -799,17 +815,22 @@ private:
-         presentInfo.setSwapchains( *m_swapChain );
-         presentInfo.pImageIndices = &imageIndex;
- 
--        switch( m_presentQueue.presentKHR(presentInfo) ){
--            case vk::Result::eSuccess:
--                break;
--            case vk::Result::eErrorOutOfDateKHR:
--            case vk::Result::eSuboptimalKHR:
-+        try{
-+            auto res = m_presentQueue.presentKHR(presentInfo);
-+            if( res == vk::Result::eSuboptimalKHR || 
-+                res == vk::Result::eErrorOutOfDateKHR) {
-                 m_framebufferResized = false;
-                 recreateSwapChain();
--                break;
--            default:
-+            } else if (res != vk::Result::eSuccess) {
-                 throw std::runtime_error("failed to acquire swap chain image!");
-+            }
-+        } catch (const vk::OutOfDateKHRError&){
-+                m_framebufferResized = false;
-+                recreateSwapChain();
-+        } catch (const std::exception&){
-+            throw std::runtime_error("failed to acquire swap chain image!");
-         }
-+
-         if( m_framebufferResized ){
-             m_framebufferResized = false;
-             recreateSwapChain();
-@@ -881,11 +902,53 @@ private:
+@@ -864,11 +871,53 @@ private:
          }
      };
      inline static const std::vector<Vertex> vertices = {

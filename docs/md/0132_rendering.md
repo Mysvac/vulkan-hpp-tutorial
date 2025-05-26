@@ -201,29 +201,14 @@ vk::FenceCreateInfo fenceInfo(
 ## 从交换链获取图像
 
 我们在 `drawFrame` 函数中需要做的下一件事是从交换链获取图像。
-回想一下，交换链是一项扩展功能，因此我们必须使用带有 `vk*KHR` 命名约定的函数
-
-`raii::`封装没有提供旧式的接口，需要使用`acquireNextImage2KHR`，传入配置信息结构体。
 
 ```cpp
-vk::AcquireNextImageInfoKHR nextImageInfo(
-    m_swapChain,
-    UINT64_MAX,
-    m_imageAvailableSemaphore,
-    {}, // fence
-    0x1 // single GPU
-);
-
-uint32_t imageIndex = m_device.acquireNextImage2KHR(nextImageInfo).second;
+uint32_t imageIndex = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphore).second;
 ```
 
-第一个参数是我们希望从中获取图像的交换链。
+第一个参数指定图像变为可用的超时时间（以纳秒为单位）。使用 64 位无符号整数的最大值意味着我们有效地禁用了超时。
 
-第二个参数指定图像变为可用的超时时间（以纳秒为单位）。使用 64 位无符号整数的最大值意味着我们有效地禁用了超时。
-
-接下来的两个参数指定在呈现引擎完成使用图像后要发出信号的同步对象。这是我们可以开始绘制到图像的时间点。可以指定信号量、围栏或两者。我们在这里将使用我们的 `imageAvailableSemaphore` ，忽略了第四个参数围栏。
-
-最后一个参数指定GPU的情况，我们使用单个GPU而非集群，输入`1`使用第一个。
+接下来的两个参数指定在呈现引擎完成使用图像后要发出信号的同步对象。可以指定信号量和围栏或两者。我们在这里将使用我们的 `imageAvailableSemaphore` ，忽略了第三个参数围栏。
 
 他的返回值是一个 `std::pair<vk::Result, uint32_t>`， 有多种可能失败的原因，我们会在后面讨论，这里假设他一定成功。
 
