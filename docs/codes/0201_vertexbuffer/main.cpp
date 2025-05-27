@@ -57,8 +57,8 @@ private:
     vk::raii::Device m_device{ nullptr };
     vk::raii::Queue m_graphicsQueue{ nullptr };
     vk::raii::Queue m_presentQueue{ nullptr };
-    vk::raii::Buffer m_vertexBuffer{ nullptr };
     vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
+    vk::raii::Buffer m_vertexBuffer{ nullptr };
     vk::raii::SwapchainKHR m_swapChain{ nullptr };
     std::vector<vk::Image> m_swapChainImages;
     vk::Format m_swapChainImageFormat;
