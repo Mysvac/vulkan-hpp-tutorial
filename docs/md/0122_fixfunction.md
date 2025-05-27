@@ -124,17 +124,30 @@ vk::Rect2D scissor(
 这使得此管线的视口和裁剪矩形不可变。对这些值进行的任何更改都需要创建具有新值的新管线。
 
 
-而我们启用了动态状态，只需要在管线创建时指定它们的计数
+而我们启用了动态状态，只需要在管线创建时指定它们的计数，无需创建`scissor`和`viewport`：
 
 ```cpp
+// 不需要创建scissor和viewport
+vk::PipelineViewportStateCreateInfo viewportState;
+viewportState.viewportCount = 1;
+viewportState.scissorCount = 1;
+```
+
+当然，即使启用了动态状态，也可以像静态状态那样指定:
+
+```cpp
+// 需要创建了scissor和viewport
 vk::PipelineViewportStateCreateInfo viewportState;
 viewportState.setViewports( viewport );
 viewportState.setScissors( scissor );
 ```
 
+但是此时`setter`设置的两个参数实际只有`count`有效，开始指针是无效的。
+所以上面创建的`scissor`和`viewport`的具体参数是无效的。
+
 使用动态状态，甚至可以在单个命令缓冲区中指定不同的视口和/或裁剪矩形。
 
-无论您如何设置它们，都可以在某些显卡上使用多个视口和裁剪矩形，结构成员引用它们的数组。
+无论您如何设置它们，都可以在某些显卡上使用多个视口和裁剪矩形，通过结构成员引用它们的数组。
 使用多个需要启用 GPU 功能（请参阅逻辑设备创建）。
 
 ## 光栅化器

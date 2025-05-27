@@ -2,8 +2,6 @@
 
 ## RAII上下文初始化
 
-### 1. 创建Context对象
-
 `vk::raii::Context` 的作用是 初始化 Vulkan 的动态加载层（Loader），并提供 Vulkan 函数指针的加载功能。它是 RAII 封装的基础。
 
 **要求：**
@@ -50,7 +48,7 @@ void createInstance(){
 }
 ```
 
-> 上面提到大部分 `raii` 资源不支持无参构造，要使用 `nullptr` 初始化表示无效值
+> 之前提到大部分 `raii` 资源不支持无参构造，要使用 `nullptr` 初始化表示无效值
 
 ### 2. 添加应用程序信息
 
@@ -81,7 +79,7 @@ applicationInfo.setApplicationVersion(1);   // or use setter()
 
 ### 2. 配置基础创建信息
 
-前面提到，Vulkan中资源的创建都依赖对应的 `CreateInfo` 结构体，我们必须先填写它。
+Vulkan中资源的创建都依赖对应的 `CreateInfo` 结构体，我们必须先填写它。
 
 ```cpp
 vk::InstanceCreateInfo createInfo( 
@@ -124,7 +122,7 @@ m_instance = vk::raii::Instance( m_context, createInfo );
 
 Vulkan 是一个平台无关的 API，这意味着您需要一个扩展来处理窗口系统接口。
 
-### 1. 获取所需扩展与修改CreateInfo
+### 1. 获取所需扩展
 
 GLFW 有一个方便的内置函数，可以返回它需要的扩展，我们可以将其传递给结构体
 
@@ -143,7 +141,7 @@ createInfo.setPEnabledExtensionNames( requiredExtensions );
 ```cpp
 // 扩展的数量
 createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-// 扩展名数组，每个扩展名都是个字符串字面量
+// 扩展名数组首地址指针
 createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 ```
 
@@ -187,13 +185,11 @@ vulkan-hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::Ar
 
 通常代码可能如下所示
 ```cpp
-// ......
 std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
 requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
 createInfo.setPEnabledExtensionNames( requiredExtensions );
 createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
-// ......
 ```
 
 现在重新尝试构建与运行项目，不应该出现错误。
@@ -201,7 +197,7 @@ createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
 ## 检查扩展支持
 
-不支持扩展时，创建 `instance` 就会抛出异常，异常代码为 `vk::Result::eErrorExtensionNotPresent`。
+有扩展不支持时，创建实例会抛出异常，异常代码为 `vk::Result::eErrorExtensionNotPresent`。
 
 我们可以主动检查哪些扩展是支持的，使用 `enumerateInstanceExtensionProperties` 函数，会返回一个 `std::vector` ，表示支持的扩展类型。
 
@@ -247,7 +243,7 @@ for (const auto& extension : extensions) {
 
 ---
 
-在继续实例创建之后更复杂的步骤之前，是时候通过查看验证层来评估我们的调试选项了。
+在继续实例创建之后更复杂的步骤之前，是时候通过验证层来评估我们的程序了。
 
 ---
 

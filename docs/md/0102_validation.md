@@ -7,7 +7,7 @@ Vulkan API 的设计理念: **尽量减少驱动程序开销**
 这导致 **默认情况下 API 中的错误检查非常有限**。
 
 Vulkan要求你对所做的一切都非常明确，因此很容易犯许多小错误，例如使用新的 GPU 功能，却忘记在逻辑设备创建时请求它。  
-但是及时像将 "错误的枚举值" 或 "错误的空指针" 这样简单的错误，通常也不会被显式处理，只会导致崩溃或未定义的行为。
+即使像 "错误的枚举值" 或 "错误的空指针" 这样简单的错误，通常也不会被显式处理，只会导致崩溃或未定义的行为。
 
 Vulkan 引入了一个优雅的系统来实现程序检查，称为验证层 \( Validation Layer \)。
 
@@ -88,8 +88,8 @@ static constexpr std::array<const char*,1> validationLayers {
 
 > `NDEBUG` 宏是 C++ 标准的一部分，意思是“非调试”。
 >
-> 常量静态成员与静态数据成员的内容，此处不介绍，可参考[cppref-静态成员](https://zh.cppreference.com/w/cpp/language/static)。  
-> 你也可以全部使用`constexpr`，自带内联，保证是常量对象可ODR使用。
+> 常量静态成员的内容，此处不介绍，可参考[cppref-静态成员](https://zh.cppreference.com/w/cpp/language/static)。  
+> 你也可以全部使用`inline static const`，保证是常量对象可ODR使用。
 
 ### 2. 验证层可用性检查
 
@@ -177,7 +177,7 @@ std::vector<const char*> getRequiredExtensions() {
 }
 ```
 
-> 此处使用了 `VK_EXT_DEBUG_UTILS_EXTENSION_NAME` 宏，它等于字符串 `"VK_EXT_debug_utils"` 。
+> 此处使用了 `VK_EXT_DEBUG_UTILS_EXTENSION_NAME` 宏，它等于字符串 `"VK_EXT_debug_utils"`
 
 现在可以在 `createInstance` 中使用此函数简化代码：
 

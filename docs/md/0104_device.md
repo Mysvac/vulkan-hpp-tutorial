@@ -112,7 +112,7 @@ m_device = m_physicalDevice.createDevice( createInfo );
 vk::raii::Queue m_graphicsQueue{ nullptr };
 ```
 
-我们可以使用 `device->getQueue` 成员函数来检索每个队列族的队列句柄。
+我们可以使用 `getQueue` 成员函数来获取每个队列族的队列句柄。
 参数是队列族和队列索引。因为我们只从此队列族创建一个队列，所以简单地使用索引 `0`。
 ```c++
 m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
