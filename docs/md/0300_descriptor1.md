@@ -157,6 +157,14 @@ layoutInfo.setBindings( uboLayoutBinding );
 m_descriptorSetLayout = m_device.createDescriptorSetLayout( layoutInfo );
 ```
 
+我们需要再管线创建期间指定描述符布局，现在回到 `createGraphicsPipeline` 函数修改 `PipelineLayoutCreateInfo` 以引用布局对象：
+
+```cpp
+vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
+m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
+```
+
 ## 统一缓冲区
 
 在下一章中，我们将指定包含UBO数据的缓冲区，但我们先创建uniform缓冲区。
@@ -170,8 +178,8 @@ m_descriptorSetLayout = m_device.createDescriptorSetLayout( layoutInfo );
 ```cpp
 vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
 vk::raii::Buffer m_indexBuffer{ nullptr };
-std::vector<vk::raii::Buffer> m_uniformBuffers;
 std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
+std::vector<vk::raii::Buffer> m_uniformBuffers;
 std::vector<void*> m_uniformBuffersMapped;
 ```
 
@@ -237,6 +245,9 @@ void drawFrame() {
     ...
 
     updateUniformBuffer(currentFrame);
+
+    m_commandBuffers[currentFrame].reset();
+    recordCommandBuffer(m_commandBuffers[currentFrame], imageIndex);
 
     ...
 

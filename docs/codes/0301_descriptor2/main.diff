@@ -1,0 +1,135 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index c67449f..c6ac2c2 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -64,8 +64,8 @@ private:
+     vk::raii::Buffer m_vertexBuffer{ nullptr };
+     vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
+     vk::raii::Buffer m_indexBuffer{ nullptr };
+-    std::vector<vk::raii::Buffer> m_uniformBuffers;
+     std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
++    std::vector<vk::raii::Buffer> m_uniformBuffers;
+     std::vector<void*> m_uniformBuffersMapped;
+     vk::raii::SwapchainKHR m_swapChain{ nullptr };
+     std::vector<vk::Image> m_swapChainImages;
+@@ -74,6 +74,8 @@ private:
+     std::vector<vk::raii::ImageView> m_swapChainImageViews;
+     vk::raii::RenderPass m_renderPass{ nullptr };
+     vk::raii::DescriptorSetLayout m_descriptorSetLayout{ nullptr };
++    vk::raii::DescriptorPool m_descriptorPool{ nullptr };
++    std::vector<vk::raii::DescriptorSet> m_descriptorSets;
+     vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
+     vk::raii::Pipeline m_graphicsPipeline{ nullptr };
+     std::vector<vk::raii::Framebuffer> m_swapChainFramebuffers;
+@@ -117,6 +119,8 @@ private:
+         createVertexBuffer();
+         createIndexBuffer();
+         createUniformBuffers();
++        createDescriptorPool();
++        createDescriptorSets();
+         createCommandBuffers();
+         createSyncObjects();
+     }
+@@ -620,7 +624,7 @@ private:
+         rasterizer.polygonMode = vk::PolygonMode::eFill;
+         rasterizer.lineWidth = 1.0f;
+         rasterizer.cullMode = vk::CullModeFlagBits::eBack;
+-        rasterizer.frontFace = vk::FrontFace::eClockwise;
++        rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
+         rasterizer.depthBiasEnable = false;
+ 
+         vk::PipelineMultisampleStateCreateInfo multisampling(
+@@ -648,6 +652,7 @@ private:
+         colorBlending.setAttachments( colorBlendAttachment );
+ 
+         vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
++        pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
+         m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
+ 
+         vk::GraphicsPipelineCreateInfo pipelineInfo;
+@@ -750,7 +755,14 @@ private:
+         commandBuffer.bindVertexBuffers( 0, *m_vertexBuffer, vk::DeviceSize{0} );
+         commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint16 );
+ 
+-        // commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
++        commandBuffer.bindDescriptorSets(
++            vk::PipelineBindPoint::eGraphics, 
++            m_pipelineLayout,
++            0,
++            *m_descriptorSets[currentFrame],
++            nullptr
++        );
++
+         commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+ 
+         commandBuffer.endRenderPass();
+@@ -791,11 +803,11 @@ private:
+         // Only reset the fence if we are submitting work
+         m_device.resetFences( *m_inFlightFences[currentFrame] );
+ 
++        updateUniformBuffer(currentFrame);
++
+         m_commandBuffers[currentFrame].reset();
+         recordCommandBuffer(m_commandBuffers[currentFrame], imageIndex);
+ 
+-        updateUniformBuffer(currentFrame);
+-
+         vk::SubmitInfo submitInfo;
+ 
+         submitInfo.setWaitSemaphores( *m_imageAvailableSemaphores[currentFrame] );
+@@ -1026,7 +1038,7 @@ private:
+ 
+     /////////////////////////////////////////////////////////////////
+     /// descriptor layout and buffer
+-    struct UniformBufferObject {
++    struct alignas(16) UniformBufferObject {
+         glm::mat4 model;
+         glm::mat4 view;
+         glm::mat4 proj;
+@@ -1096,6 +1108,46 @@ private:
+         memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+     }
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// descriptor pool and sets
++    void createDescriptorPool(){
++        vk::DescriptorPoolSize poolSize;
++        poolSize.type = vk::DescriptorType::eUniformBuffer;
++        poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
++
++        vk::DescriptorPoolCreateInfo poolInfo;
++        poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
++        poolInfo.setPoolSizes( poolSize );
++        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
++
++        m_descriptorPool = m_device.createDescriptorPool(poolInfo);
++    }
++    void createDescriptorSets() {
++        std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, *m_descriptorSetLayout); 
++        vk::DescriptorSetAllocateInfo allocInfo;
++        allocInfo.descriptorPool = m_descriptorPool;
++        allocInfo.setSetLayouts( layouts );
++
++        m_descriptorSets = m_device.allocateDescriptorSets(allocInfo);
++
++        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
++            vk::DescriptorBufferInfo bufferInfo;
++            bufferInfo.buffer = m_uniformBuffers[i];
++            bufferInfo.offset = 0;
++            bufferInfo.range = sizeof(UniformBufferObject);
++
++            vk::WriteDescriptorSet descriptorWrite;
++            descriptorWrite.dstSet = m_descriptorSets[i];
++            descriptorWrite.dstBinding = 0;
++            descriptorWrite.dstArrayElement = 0;
++            descriptorWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
++            descriptorWrite.setBufferInfo(bufferInfo);
++
++            m_device.updateDescriptorSets(descriptorWrite, nullptr);
++        }
++    }
++    /////////////////////////////////////////////////////////////////
+ };
+ 
+ int main() {

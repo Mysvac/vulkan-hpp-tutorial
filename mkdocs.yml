@@ -61,3 +61,4 @@ nav:
     - 索引缓冲: md/0203_indexbuffer.md
   - uniform缓冲: 
     - 描述符布局与缓冲: md/0300_descriptor1.md
+    - 描述符池与集合: md/0301_descriptor2.md

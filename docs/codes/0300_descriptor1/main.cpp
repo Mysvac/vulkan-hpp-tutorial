@@ -64,8 +64,8 @@ private:
     vk::raii::Buffer m_vertexBuffer{ nullptr };
     vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
     vk::raii::Buffer m_indexBuffer{ nullptr };
-    std::vector<vk::raii::Buffer> m_uniformBuffers;
     std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
+    std::vector<vk::raii::Buffer> m_uniformBuffers;
     std::vector<void*> m_uniformBuffersMapped;
     vk::raii::SwapchainKHR m_swapChain{ nullptr };
     std::vector<vk::Image> m_swapChainImages;
@@ -648,6 +648,7 @@ private:
         colorBlending.setAttachments( colorBlendAttachment );
 
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+        pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
         m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 
         vk::GraphicsPipelineCreateInfo pipelineInfo;
@@ -791,10 +792,10 @@ private:
         // Only reset the fence if we are submitting work
         m_device.resetFences( *m_inFlightFences[currentFrame] );
 
+        updateUniformBuffer(currentFrame);
+
         m_commandBuffers[currentFrame].reset();
         recordCommandBuffer(m_commandBuffers[currentFrame], imageIndex);
-
-        updateUniformBuffer(currentFrame);
 
         vk::SubmitInfo submitInfo;
 
