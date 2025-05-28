@@ -1,8 +1,8 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index f548833..40da7f4 100644
+index 9ec5002..cbea83a 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -83,6 +83,7 @@ private:
+@@ -78,6 +78,7 @@ private:
          createLogicalDevice();
          createSwapChain();
          createImageViews();
@@ -10,7 +10,7 @@ index f548833..40da7f4 100644
      }
  
      void mainLoop() {
-@@ -439,6 +440,13 @@ private:
+@@ -424,6 +425,13 @@ private:
          }
      }
      /////////////////////////////////////////////////////////////////

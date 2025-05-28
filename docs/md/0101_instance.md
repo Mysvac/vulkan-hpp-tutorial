@@ -227,11 +227,11 @@ for (const auto& extension : extensions) {
 
 - 我们使用了 `vk::raii`，不需要在 `cleanup` 中手动清理资源。
 
+- 可以使用`.destory()`成员函数显式销毁资源。
 
+**注意：**
 
-**注意！！**
-
-1. 依靠RAII的析构释放资源，将按照声明顺序反序析构。
+1. 本文档依靠RAII的析构释放资源，将按照声明顺序反序析构。
 
 2. 建议保证析构时先析构子实例，再析构父实例。 
 
@@ -250,3 +250,5 @@ for (const auto& extension : extensions) {
 **[C++代码](../codes/0101_instance/main.cpp)**
 
 **[C++代码差异](../codes/0101_instance/main.diff)**
+
+**[CMake代码](../codes/0100_base/CMakeLists.txt)**

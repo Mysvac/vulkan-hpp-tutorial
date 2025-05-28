@@ -1,16 +1,16 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index b19b5cf..f548833 100644
+index 88b5efb..9ec5002 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -57,6 +57,7 @@ private:
+@@ -56,6 +56,7 @@ private:
      std::vector<vk::Image> m_swapChainImages;
      vk::Format m_swapChainImageFormat;
      vk::Extent2D m_swapChainExtent;
 +    std::vector<vk::raii::ImageView> m_swapChainImageViews;
      /////////////////////////////////////////////////////////////////
-     
+ 
      /////////////////////////////////////////////////////////////////
-@@ -81,6 +82,7 @@ private:
+@@ -76,6 +77,7 @@ private:
          pickPhysicalDevice();
          createLogicalDevice();
          createSwapChain();
@@ -18,22 +18,19 @@ index b19b5cf..f548833 100644
      }
  
      void mainLoop() {
-@@ -415,6 +417,28 @@ private:
-         m_swapChainExtent = extent;
+@@ -403,6 +405,25 @@ private:
      }
      /////////////////////////////////////////////////////////////////
-+
+ 
 +    /////////////////////////////////////////////////////////////////
 +    /// imageview
 +    void createImageViews() {
 +        m_swapChainImageViews.reserve( m_swapChainImages.size() );
 +        for (size_t i = 0; i < m_swapChainImages.size(); i++) {
-+            vk::ImageViewCreateInfo createInfo(
-+                {},                     // flags
-+                m_swapChainImages[i],   // vk::Image
-+                vk::ImageViewType::e2D, // ImageViewType
-+                m_swapChainImageFormat  // format
-+            );
++            vk::ImageViewCreateInfo createInfo;
++            createInfo.image = m_swapChainImages[i];
++            createInfo.viewType = vk::ImageViewType::e2D;
++            createInfo.format = m_swapChainImageFormat;
 +            createInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 +            createInfo.subresourceRange.baseMipLevel = 0;
 +            createInfo.subresourceRange.levelCount = 1;

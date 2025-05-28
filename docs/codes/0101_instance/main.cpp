@@ -7,7 +7,6 @@
 #include <memory>
 #include <stdexcept>
 
-
 class HelloTriangleApplication {
 public:
     void run() {
@@ -20,8 +19,8 @@ public:
 private:
     /////////////////////////////////////////////////////////////////
     /// static values
-    static const uint32_t WIDTH = 800;
-    static const uint32_t HEIGHT = 600;
+    static constexpr uint32_t WIDTH = 800;
+    static constexpr uint32_t HEIGHT = 600;
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
@@ -30,19 +29,15 @@ private:
     vk::raii::Context m_context;
     vk::raii::Instance m_instance{ nullptr };
     /////////////////////////////////////////////////////////////////
-    
+
     /////////////////////////////////////////////////////////////////
     /// run()
     void initWindow() {
-        // initialize glfw lib
         glfwInit();
-        
-        // Configure GLFW to not use OpenGL
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        // Temporarily disable window resizing to simplify operations
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        
-        // Create window
+
         m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     }
 
@@ -63,7 +58,7 @@ private:
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
-    /// create instance
+    /// instance creation
     void createInstance(){
         vk::ApplicationInfo applicationInfo( 
             "Hello Triangle",   // pApplicationName
@@ -72,30 +67,28 @@ private:
             1,                  // engineVersion
             VK_API_VERSION_1_1  // apiVersion
         );
-
+        
         vk::InstanceCreateInfo createInfo( 
             {},                 // vk::InstanceCreateFlags
             &applicationInfo    // vk::ApplicationInfo*
         );
 
-        // std::vector<vk::ExtensionProperties>
+        uint32_t glfwExtensionCount = 0;
+        const char** glfwExtensions;
+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
+
+        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+
+        createInfo.setPEnabledExtensionNames( requiredExtensions );
+        createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
+
         auto extensions = m_context.enumerateInstanceExtensionProperties();
         std::cout << "available extensions:\n";
 
         for (const auto& extension : extensions) {
             std::cout << '\t' << extension.extensionName << std::endl;
         }
-
-        uint32_t glfwExtensionCount = 0;
-        const char** glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        
-        std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
-        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-
-        // special setter
-        createInfo.setPEnabledExtensionNames( requiredExtensions );
-        createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
         m_instance = m_context.createInstance( createInfo );
     }

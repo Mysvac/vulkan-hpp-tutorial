@@ -46,27 +46,23 @@ void createLogicalDevice() {
 ```cpp
 QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
 
-vk::DeviceQueueCreateInfo queueCreateInfo(
-    {},                             // flags
-    indices.graphicsFamily.value(), // queueFamilyIndex
-    1                               // queueCount
-);
+vk::DeviceQueueCreateInfo queueCreateInfo;
+queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
 ```
 
-- `queueFamilyIndex`：从物理设备查询获得的队列族索引
-- `queueCount`：要从队列族创建的队列数
-
-> 当前只允许您为每个队列族创建少量队列，但其实一个就够了。因为您可以在多个线程上创建命令缓冲区，然后使用主线程一次性提交它们。
-
-
-Vulkan 允许您使用介于 `0.0` 和 `1.0` 之间的浮点数为队列分配优先级，以影响命令缓冲区执行的调度。即使只有一个队列，这也是必需的。 
+我们还需要指定队列的数量，以及使用 `0.0` 和 `1.0` 之间的浮点数为队列分配优先级，以影响命令缓冲区执行的调度。即使只有一个队列，这也是必需的。 
 
 ```cpp
 float queuePriority = 1.0f;
-queueCreateInfo.pQueuePriorities = &queuePriority;
+queueCreateInfo.setQueuePriorities( queuePriority );
 ```
 
-> 注意传入的是浮点数指针，你需要保证使用时指针有效。我也不知道为什么这么设计。
+此函数实际上填写了两个字段：`queueCount` 和 `pQueuePriorities`，分别需要创建的队列数和优先级数组的开始指针。
+我们使用1个float，它自动包装成了单元素数组，将`queueCount`设为了1并返回了自身的指针。
+
+> 注意内部使用了浮点数的指针，所以不能传入浮点字面量。
+> 
+> 当前只允许您为每个队列族创建少量队列，但其实一个就够了。因为您可以在多个线程上创建命令缓冲区，然后使用主线程一次性提交它们。
 
 ## 指定设备特性
 
@@ -131,3 +127,5 @@ m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
 **[C++代码](../codes/0104_device/main.cpp)**
 
 **[C++代码差异](../codes/0104_device/main.diff)**
+
+**[CMake代码](../codes/0100_base/CMakeLists.txt)**

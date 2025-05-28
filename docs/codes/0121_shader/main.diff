@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 40da7f4..f4f77fa 100644
+index cbea83a..bab6484 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -3,6 +3,7 @@
@@ -10,7 +10,7 @@ index 40da7f4..f4f77fa 100644
  #include <vector>
  #include <array>
  #include <set>
-@@ -443,8 +444,52 @@ private:
+@@ -428,8 +429,45 @@ private:
  
      /////////////////////////////////////////////////////////////////
      /// pipeline
@@ -20,9 +20,9 @@ index 40da7f4..f4f77fa 100644
 +        if (!file.is_open()) {
 +            throw std::runtime_error("failed to open file!");
 +        }
-+
 +        size_t fileSize = (size_t) file.tellg();
 +        std::vector<char> buffer(fileSize);
++
 +        file.seekg(0);
 +        file.read(buffer.data(), fileSize);
 +        file.close();
@@ -30,13 +30,10 @@ index 40da7f4..f4f77fa 100644
 +        return buffer;
 +    }
 +    vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) {
-+        vk::ShaderModuleCreateInfo createInfo(
-+            {},             // flags
-+            code.size(),    // codeSize
-+            reinterpret_cast<const uint32_t*>(code.data()) // pCode
-+        );
-+
-+        return m_device.createShaderModule( createInfo );
++        vk::ShaderModuleCreateInfo createInfo;
++        createInfo.codeSize = code.size();
++        createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
++        return m_device.createShaderModule(createInfo);
 +    }
      void createGraphicsPipeline() {
 +        auto vertShaderCode = readFile("shaders/vert.spv");
@@ -45,19 +42,15 @@ index 40da7f4..f4f77fa 100644
 +        vk::raii::ShaderModule vertShaderModule = createShaderModule(vertShaderCode);
 +        vk::raii::ShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 +
-+        vk::PipelineShaderStageCreateInfo vertShaderStageInfo(
-+            {},                                 // flags
-+            vk::ShaderStageFlagBits::eVertex,   // stage
-+            vertShaderModule,                   // ShaderModule
-+            "main"                              // pName
-+        );
++        vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
++        vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
++        vertShaderStageInfo.module = vertShaderModule;
++        vertShaderStageInfo.pName = "main";
 +
-+        vk::PipelineShaderStageCreateInfo fragShaderStageInfo(
-+            {},                                 // flags
-+            vk::ShaderStageFlagBits::eFragment, // stage
-+            fragShaderModule,                   // ShaderModule
-+            "main"                              // pName
-+        );
++        vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
++        fragShaderStageInfo.stage = vk::ShaderStageFlagBits::eFragment;
++        fragShaderStageInfo.module = fragShaderModule;
++        fragShaderStageInfo.pName = "main";
  
 +        std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo, fragShaderStageInfo };
      }

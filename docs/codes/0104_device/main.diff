@@ -1,17 +1,17 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 9146825..a75c863 100644
+index f075504..be62e61 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -44,6 +44,8 @@ private:
+@@ -46,6 +46,8 @@ private:
      vk::raii::Instance m_instance{ nullptr };
      vk::raii::DebugUtilsMessengerEXT m_debugMessenger{ nullptr };
      vk::raii::PhysicalDevice m_physicalDevice{ nullptr };
 +    vk::raii::Device m_device{ nullptr };
 +    vk::raii::Queue m_graphicsQueue{ nullptr };
      /////////////////////////////////////////////////////////////////
-     
+ 
      /////////////////////////////////////////////////////////////////
-@@ -65,6 +67,7 @@ private:
+@@ -63,6 +65,7 @@ private:
          createInstance();
          setupDebugMessenger();
          pickPhysicalDevice();
@@ -19,28 +19,21 @@ index 9146825..a75c863 100644
      }
  
      void mainLoop() {
-@@ -226,10 +229,38 @@ private:
- 
-             ++i;
-         }
--        
-+
+@@ -225,6 +228,32 @@ private:
          return indices;
      }
      /////////////////////////////////////////////////////////////////
-+    
++
 +    /////////////////////////////////////////////////////////////////
 +    /// logical device
 +    void createLogicalDevice() {
 +        QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
 +
-+        vk::DeviceQueueCreateInfo queueCreateInfo(
-+            {},                             // flags
-+            indices.graphicsFamily.value(), // queueFamilyIndex
-+            1                               // queueCount
-+        );
++        vk::DeviceQueueCreateInfo queueCreateInfo;
++        queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
++
 +        float queuePriority = 1.0f;
-+        queueCreateInfo.pQueuePriorities = &queuePriority;
++        queueCreateInfo.setQueuePriorities( queuePriority );
 +
 +        vk::PhysicalDeviceFeatures deviceFeatures;
 +

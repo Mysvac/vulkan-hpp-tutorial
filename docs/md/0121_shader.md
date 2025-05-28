@@ -312,7 +312,7 @@ static std::vector<char> readFile(const std::string& filename) {
 }
 ```
 
-`readFile` 函数将从指定文件中读取所有字节，并将它们作为由 `std::vector` 管理的字节数组返回。我们首先使用两个标志打开文件
+`readFile` 函数将从指定文件中读取所有字节，并将它们作为由 `std::vector` 管理的数组返回。我们首先使用两个标志打开文件
 
 - `ate`：从文件末尾开始读取
 - `binary`：将文件作为二进制文件读取（避免文本转换）
@@ -324,7 +324,7 @@ size_t fileSize = (size_t) file.tellg();
 std::vector<char> buffer(fileSize);
 ```
 
-之后，我们可以seek回到文件开头并一次读取所有字节
+之后，我们可以seek回到文件开头并一次读取所有字节。
 
 ```cpp
 file.seekg(0);
@@ -374,16 +374,16 @@ vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) {
 此信息在 `vk::ShaderModuleCreateInfo` 结构中指定。
 需要注意的一点是，字节码的大小以字节为单位指定，但字节码指针是 uint32_t 指针，而不是 char 指针。
 因此，我们需要使用 `reinterpret_cast` 强制转换指针，如下所示。
-当您执行这样的强制转换时，还需要确保数据满足 uint32_t 的对齐要求。
+当您执行这样的强制转换时，还需要确保数据满足 `uint32_t` 的对齐要求。
 幸运的是，数据存储在 `std::vector` 中，其中默认分配器已经确保数据满足最坏情况的对齐要求。
 
 ```cpp
-vk::ShaderModuleCreateInfo createInfo(
-    {},             // flags
-    code.size(),    // codeSize
-    reinterpret_cast<const uint32_t*>(code.data()) // pCode
-);
+vk::ShaderModuleCreateInfo createInfo;
+createInfo.codeSize = code.size();
+createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 ```
+
+> 你无法使用`setCode()`，它接受`uint32_t`类型的代理数组。
 
 然后我们创建 `vk::raii::ShaderModule` 并返回即可。
 
@@ -415,12 +415,10 @@ void createGraphicsPipeline() {
 我们将从填充顶点着色器的结构开始，同样在 `createGraphicsPipeline` 函数中。
 
 ```cpp
-vk::PipelineShaderStageCreateInfo vertShaderStageInfo(
-    {},                                 // flags
-    vk::ShaderStageFlagBits::eVertex,   // stage
-    vertShaderModule,                   // ShaderModule
-    "main"                              // pName
-);
+vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
+vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
+vertShaderStageInfo.module = vertShaderModule;
+vertShaderStageInfo.pName = "main";
 ```
 
 `stage` 字段指定了着色器在哪个阶段工作。
@@ -436,12 +434,10 @@ vk::PipelineShaderStageCreateInfo vertShaderStageInfo(
 片段着色器和上面的代码差不多，记得修改 `stage` 字段。
 
 ```cpp
-vk::PipelineShaderStageCreateInfo fragShaderStageInfo(
-    {},                                 // flags
-    vk::ShaderStageFlagBits::eFragment, // stage
-    fragShaderModule,                   // ShaderModule
-    "main"                              // pName
-);
+vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
+fragShaderStageInfo.stage = vk::ShaderStageFlagBits::eFragment;
+fragShaderStageInfo.module = fragShaderModule;
+fragShaderStageInfo.pName = "main";
 ```
 
 最后，定义一个包含这两个结构的数组，我们稍后将在实际的管线创建步骤中使用它来引用它们。

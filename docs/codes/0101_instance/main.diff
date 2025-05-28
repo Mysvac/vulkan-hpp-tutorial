@@ -1,17 +1,21 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 91f3142..5f58927 100644
+index 28b69ae..334c6ed 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -27,6 +27,8 @@ private:
+@@ -26,8 +26,12 @@ private:
      /////////////////////////////////////////////////////////////////
      /// class member
      GLFWwindow* m_window{ nullptr };
 +    vk::raii::Context m_context;
 +    vk::raii::Instance m_instance{ nullptr };
      /////////////////////////////////////////////////////////////////
-     
-     /////////////////////////////////////////////////////////////////
-@@ -45,7 +47,7 @@ private:
+ 
++    /////////////////////////////////////////////////////////////////
++    /// run()
+     void initWindow() {
+         glfwInit();
+ 
+@@ -38,7 +42,7 @@ private:
      }
  
      void initVulkan() {
@@ -20,13 +24,14 @@ index 91f3142..5f58927 100644
      }
  
      void mainLoop() {
-@@ -59,6 +61,45 @@ private:
+@@ -51,8 +55,44 @@ private:
+         glfwDestroyWindow( m_window );
          glfwTerminate();
      }
-     /////////////////////////////////////////////////////////////////
++    /////////////////////////////////////////////////////////////////
 +
 +    /////////////////////////////////////////////////////////////////
-+    /// create instance
++    /// instance creation
 +    void createInstance(){
 +        vk::ApplicationInfo applicationInfo( 
 +            "Hello Triangle",   // pApplicationName
@@ -35,30 +40,29 @@ index 91f3142..5f58927 100644
 +            1,                  // engineVersion
 +            VK_API_VERSION_1_1  // apiVersion
 +        );
-+
++        
 +        vk::InstanceCreateInfo createInfo( 
 +            {},                 // vk::InstanceCreateFlags
 +            &applicationInfo    // vk::ApplicationInfo*
 +        );
 +
-+        // std::vector<vk::ExtensionProperties>
++        uint32_t glfwExtensionCount = 0;
++        const char** glfwExtensions;
++        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
++        std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
++
++        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+ 
+-    
++        createInfo.setPEnabledExtensionNames( requiredExtensions );
++        createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
++
 +        auto extensions = m_context.enumerateInstanceExtensionProperties();
 +        std::cout << "available extensions:\n";
 +
 +        for (const auto& extension : extensions) {
 +            std::cout << '\t' << extension.extensionName << std::endl;
 +        }
-+
-+        uint32_t glfwExtensionCount = 0;
-+        const char** glfwExtensions;
-+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-+        
-+        std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
-+        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-+
-+        // special setter
-+        createInfo.setPEnabledExtensionNames( requiredExtensions );
-+        createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 +
 +        m_instance = m_context.createInstance( createInfo );
 +    }

@@ -1,8 +1,18 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index a75c863..0efa108 100644
+index be62e61..e592d98 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -43,9 +43,11 @@ private:
+@@ -22,9 +22,6 @@ public:
+ private:
+     /////////////////////////////////////////////////////////////////
+     /// static values
+-    #include <array>
+-    // ......
+-
+     static constexpr uint32_t WIDTH = 800;
+     static constexpr uint32_t HEIGHT = 600;
+ 
+@@ -45,9 +42,11 @@ private:
      vk::raii::Context m_context;
      vk::raii::Instance m_instance{ nullptr };
      vk::raii::DebugUtilsMessengerEXT m_debugMessenger{ nullptr };
@@ -12,9 +22,9 @@ index a75c863..0efa108 100644
      vk::raii::Queue m_graphicsQueue{ nullptr };
 +    vk::raii::Queue m_presentQueue{ nullptr };
      /////////////////////////////////////////////////////////////////
-     
+ 
      /////////////////////////////////////////////////////////////////
-@@ -66,6 +68,7 @@ private:
+@@ -64,6 +63,7 @@ private:
      void initVulkan() {
          createInstance();
          setupDebugMessenger();
@@ -22,8 +32,8 @@ index a75c863..0efa108 100644
          pickPhysicalDevice();
          createLogicalDevice();
      }
-@@ -208,9 +211,10 @@ private:
-     }
+@@ -182,9 +182,10 @@ private:
+     /// physical device
      struct QueueFamilyIndices {
          std::optional<uint32_t> graphicsFamily;
 +        std::optional<uint32_t> presentFamily;
@@ -33,8 +43,8 @@ index a75c863..0efa108 100644
 +            return graphicsFamily.has_value() && presentFamily.has_value();
          }
      };
-     QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
-@@ -223,6 +227,9 @@ private:
+     bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
+@@ -218,6 +219,9 @@ private:
              if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
                  indices.graphicsFamily = i;
              }
@@ -44,28 +54,23 @@ index a75c863..0efa108 100644
              if (indices.isComplete()) {
                  break;
              }
-@@ -239,18 +246,24 @@ private:
+@@ -234,16 +238,22 @@ private:
      void createLogicalDevice() {
          QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
  
--        vk::DeviceQueueCreateInfo queueCreateInfo(
--            {},                             // flags
--            indices.graphicsFamily.value(), // queueFamilyIndex
--            1                               // queueCount
--        );
+-        vk::DeviceQueueCreateInfo queueCreateInfo;
+-        queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
 +        std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 +        // isDeviceSuitable() ensure queue availability
 +        std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
-+
+ 
          float queuePriority = 1.0f;
--        queueCreateInfo.pQueuePriorities = &queuePriority;
+-        queueCreateInfo.setQueuePriorities( queuePriority );
 +        for (uint32_t queueFamily : uniqueQueueFamilies) {
-+            queueCreateInfos.emplace_back( vk::DeviceQueueCreateInfo(
-+                {},                             // flags
-+                indices.graphicsFamily.value(), // queueFamilyIndex
-+                1,                              // queueCount
-+                &queuePriority    
-+            ));
++            vk::DeviceQueueCreateInfo queueCreateInfo;
++            queueCreateInfo.queueFamilyIndex = queueFamily;
++            queueCreateInfo.setQueuePriorities( queuePriority );
++            queueCreateInfos.emplace_back( queueCreateInfo );
 +        }
  
          vk::PhysicalDeviceFeatures deviceFeatures;
@@ -76,7 +81,7 @@ index a75c863..0efa108 100644
          createInfo.pEnabledFeatures = &deviceFeatures;
  
          if (enableValidationLayers) {
-@@ -259,6 +272,19 @@ private:
+@@ -252,6 +262,19 @@ private:
  
          m_device = m_physicalDevice.createDevice( createInfo );
          m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );

@@ -10,7 +10,6 @@
 #include <optional>
 #include <stdexcept>
 
-
 class HelloTriangleApplication {
 public:
     void run() {
@@ -23,17 +22,17 @@ public:
 private:
     /////////////////////////////////////////////////////////////////
     /// static values
-    static const uint32_t WIDTH = 800;
-    static const uint32_t HEIGHT = 600;
+    static constexpr uint32_t WIDTH = 800;
+    static constexpr uint32_t HEIGHT = 600;
 
-    static constexpr std::array<const char*,1> validationLayers {
+    inline static const std::vector<const char*> validationLayers {
         "VK_LAYER_KHRONOS_validation"
     };
 
     #ifdef NDEBUG
-        static const bool enableValidationLayers = false;
+        static constexpr bool enableValidationLayers = false;
     #else
-        static const bool enableValidationLayers = true;
+        static constexpr bool enableValidationLayers = true;
     #endif
     /////////////////////////////////////////////////////////////////
 
@@ -49,19 +48,15 @@ private:
     vk::raii::Queue m_graphicsQueue{ nullptr };
     vk::raii::Queue m_presentQueue{ nullptr };
     /////////////////////////////////////////////////////////////////
-    
+
     /////////////////////////////////////////////////////////////////
     /// run()
     void initWindow() {
-        // initialize glfw lib
         glfwInit();
-        
-        // Configure GLFW to not use OpenGL
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        // Temporarily disable window resizing to simplify operations
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        
-        // Create window
+
         m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     }
 
@@ -86,7 +81,7 @@ private:
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
-    /// create instance
+    /// instance creation
     std::vector<const char*> getRequiredExtensions() {
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions;
@@ -101,7 +96,6 @@ private:
 
         return extensions;
     }
-
     void createInstance(){
         if (enableValidationLayers && !checkValidationLayerSupport()) {
             throw std::runtime_error("validation layers requested, but not available!");
@@ -114,19 +108,11 @@ private:
             1,                  // engineVersion
             VK_API_VERSION_1_1  // apiVersion
         );
-
+        
         vk::InstanceCreateInfo createInfo( 
             {},                 // vk::InstanceCreateFlags
             &applicationInfo    // vk::ApplicationInfo*
         );
-
-        // std::vector<vk::ExtensionProperties>
-        auto extensions = m_context.enumerateInstanceExtensionProperties();
-        std::cout << "available extensions:\n";
-
-        for (const auto& extension : extensions) {
-            std::cout << '\t' << extension.extensionName << std::endl;
-        }
 
         std::vector<const char*> requiredExtensions = getRequiredExtensions();
         // special setter
@@ -138,6 +124,13 @@ private:
         if (enableValidationLayers) {
             createInfo.setPEnabledLayerNames( validationLayers );
             createInfo.pNext = &debugMessengerCreateInfo;
+        }
+
+        auto extensions = m_context.enumerateInstanceExtensionProperties();
+        std::cout << "available extensions:\n";
+
+        for (const auto& extension : extensions) {
+            std::cout << '\t' << extension.extensionName << std::endl;
         }
 
         m_instance = m_context.createInstance( createInfo );
@@ -187,6 +180,14 @@ private:
 
     /////////////////////////////////////////////////////////////////
     /// physical device
+    struct QueueFamilyIndices {
+        std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
+
+        bool isComplete() {
+            return graphicsFamily.has_value() && presentFamily.has_value();
+        }
+    };
     bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
@@ -209,20 +210,11 @@ private:
             throw std::runtime_error("failed to find a suitable GPU!");
         }
     }
-    struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily;
-        std::optional<uint32_t> presentFamily;
-
-        bool isComplete() {
-            return graphicsFamily.has_value() && presentFamily.has_value();
-        }
-    };
     QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
         QueueFamilyIndices indices;
 
         // std::vector<vk::QueueFamilyProperties>
         auto queueFamilies = physicalDevice.getQueueFamilyProperties();
-
         for (int i = 0; const auto& queueFamily : queueFamilies) {
             if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
                 indices.graphicsFamily = i;
@@ -240,7 +232,7 @@ private:
         return indices;
     }
     /////////////////////////////////////////////////////////////////
-    
+
     /////////////////////////////////////////////////////////////////
     /// logical device
     void createLogicalDevice() {
@@ -252,12 +244,10 @@ private:
 
         float queuePriority = 1.0f;
         for (uint32_t queueFamily : uniqueQueueFamilies) {
-            queueCreateInfos.emplace_back( vk::DeviceQueueCreateInfo(
-                {},                             // flags
-                indices.graphicsFamily.value(), // queueFamilyIndex
-                1,                              // queueCount
-                &queuePriority    
-            ));
+            vk::DeviceQueueCreateInfo queueCreateInfo;
+            queueCreateInfo.queueFamilyIndex = queueFamily;
+            queueCreateInfo.setQueuePriorities( queuePriority );
+            queueCreateInfos.emplace_back( queueCreateInfo );
         }
 
         vk::PhysicalDeviceFeatures deviceFeatures;

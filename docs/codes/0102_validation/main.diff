@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 5f58927..06c048f 100644
+index 334c6ed..a61fb67 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -4,6 +4,8 @@
@@ -11,32 +11,34 @@ index 5f58927..06c048f 100644
  #include <memory>
  #include <stdexcept>
  
-@@ -22,6 +24,16 @@ private:
+@@ -19,8 +21,21 @@ public:
+ private:
+     /////////////////////////////////////////////////////////////////
      /// static values
-     static const uint32_t WIDTH = 800;
-     static const uint32_t HEIGHT = 600;
+     static constexpr uint32_t WIDTH = 800;
+     static constexpr uint32_t HEIGHT = 600;
 +
-+    static constexpr std::array<const char*,1> validationLayers {
++    inline static const std::vector<const char*> validationLayers {
 +        "VK_LAYER_KHRONOS_validation"
 +    };
 +
 +    #ifdef NDEBUG
-+        static const bool enableValidationLayers = false;
++        static constexpr bool enableValidationLayers = false;
 +    #else
-+        static const bool enableValidationLayers = true;
++        static constexpr bool enableValidationLayers = true;
 +    #endif
      /////////////////////////////////////////////////////////////////
  
      /////////////////////////////////////////////////////////////////
-@@ -29,6 +41,7 @@ private:
+@@ -28,6 +43,7 @@ private:
      GLFWwindow* m_window{ nullptr };
      vk::raii::Context m_context;
      vk::raii::Instance m_instance{ nullptr };
 +    vk::raii::DebugUtilsMessengerEXT m_debugMessenger{ nullptr };
      /////////////////////////////////////////////////////////////////
-     
+ 
      /////////////////////////////////////////////////////////////////
-@@ -48,6 +61,7 @@ private:
+@@ -43,6 +59,7 @@ private:
  
      void initVulkan() {
          createInstance();
@@ -44,10 +46,10 @@ index 5f58927..06c048f 100644
      }
  
      void mainLoop() {
-@@ -64,7 +78,26 @@ private:
+@@ -59,7 +76,25 @@ private:
  
      /////////////////////////////////////////////////////////////////
-     /// create instance
+     /// instance creation
 +    std::vector<const char*> getRequiredExtensions() {
 +        uint32_t glfwExtensionCount = 0;
 +        const char** glfwExtensions;
@@ -62,7 +64,6 @@ index 5f58927..06c048f 100644
 +
 +        return extensions;
 +    }
-+
      void createInstance(){
 +        if (enableValidationLayers && !checkValidationLayerSupport()) {
 +            throw std::runtime_error("validation layers requested, but not available!");
@@ -71,19 +72,19 @@ index 5f58927..06c048f 100644
          vk::ApplicationInfo applicationInfo( 
              "Hello Triangle",   // pApplicationName
              1,                  // applicationVersion
-@@ -86,20 +119,62 @@ private:
-             std::cout << '\t' << extension.extensionName << std::endl;
-         }
+@@ -73,16 +108,18 @@ private:
+             &applicationInfo    // vk::ApplicationInfo*
+         );
  
 -        uint32_t glfwExtensionCount = 0;
 -        const char** glfwExtensions;
 -        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
--        
 -        std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
+-
 -        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 -
 +        std::vector<const char*> requiredExtensions = getRequiredExtensions();
-         // special setter
++        // special setter
          createInfo.setPEnabledExtensionNames( requiredExtensions );
          createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
  
@@ -94,6 +95,10 @@ index 5f58927..06c048f 100644
 +            createInfo.pNext = &debugMessengerCreateInfo;
 +        }
 +
+         auto extensions = m_context.enumerateInstanceExtensionProperties();
+         std::cout << "available extensions:\n";
+ 
+@@ -93,6 +130,47 @@ private:
          m_instance = m_context.createInstance( createInfo );
      }
      /////////////////////////////////////////////////////////////////

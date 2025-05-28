@@ -20,7 +20,7 @@
 首先声明一个必需的设备扩展列表，类似于要启用的验证层列表。
 
 ```cpp
-static constexpr std::array<const char*,1> deviceExtensions {
+inline static const std::vector<const char*> deviceExtensions {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 ```
@@ -80,7 +80,7 @@ createInfo.setPEnabledExtensionNames( deviceExtensions );
 - 表面格式（像素格式，色彩空间）
 - 可用呈现模式
 
-### 1. 交换链信息纯储
+### 1. 交换链信息存储
 
 我们创建一个结构来存储和传递这些详细信息
 
@@ -322,16 +322,14 @@ if (swapChainSupport.capabilities.maxImageCount > 0 &&
 然后创建我们熟悉的 `CreateInfo`
 
 ```cpp
-vk::SwapchainCreateInfoKHR createInfo(
-    {},                         // flags
-    m_surface,                  // vk::Surface
-    imageCount,                 // minImageCount
-    surfaceFormat.format,       // Format
-    surfaceFormat.colorSpace,   // ColorSpaceKHR
-    extent,                     // Extent2D
-    1,                          // imageArrayLayers
-    vk::ImageUsageFlagBits::eColorAttachment    // imageUsage
-);
+vk::SwapchainCreateInfoKHR createInfo;
+createInfo.surface = m_surface;
+createInfo.minImageCount = imageCount;
+createInfo.imageFormat = surfaceFormat.format;
+createInfo.imageColorSpace = surfaceFormat.colorSpace;
+createInfo.imageExtent = extent;
+createInfo.imageArrayLayers = 1;
+createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 ```
 
 - `imageArrayLayers` 指定每个图像由多少层组成。除非您正在开发立体 3D 应用程序，否则这始终为 `1`。
@@ -483,3 +481,5 @@ m_swapChainExtent = extent;
 **[C++代码](../codes/0111_swapchain/main.cpp)**
 
 **[C++代码差异](../codes/0111_swapchain/main.diff)**
+
+**[CMake代码](../codes/0100_base/CMakeLists.txt)**

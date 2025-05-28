@@ -3,5 +3,6 @@
 .idea/
 
 build/
+shaders_copy/
 shaders/*.spv
 site/

@@ -53,15 +53,13 @@ for (size_t i = 0; i < m_swapChainImages.size(); i++) {
 图像视图创建的参数在 `vk::ImageViewCreateInfo` 结构中指定。前几个参数很简单。
 
 ```cpp
-vk::ImageViewCreateInfo createInfo(
-    {},                     // flags
-    m_swapChainImages[i],   // vk::Image
-    vk::ImageViewType::e2D, // ImageViewType
-    m_swapChainImageFormat  // format
-);
+    vk::ImageViewCreateInfo createInfo;
+    createInfo.image = m_swapChainImages[i];
+    createInfo.viewType = vk::ImageViewType::e2D;
+    createInfo.format = m_swapChainImageFormat;
 ```
 
-- `ImageViewType` 参数允许您将图像视为 1D 纹理、2D 纹理、3D 纹理和立方体贴图。
+- `viewType` 参数允许您将图像视为 1D 纹理、2D 纹理、3D 纹理和立方体贴图。
 
 - `components` 字段我们未设置（默认），他允许您调换颜色通道。例如，您可以将所有通道映射到红色通道以获得单色纹理。
 
@@ -97,3 +95,5 @@ m_swapChainImageViews.emplace_back( m_device.createImageView(createInfo) );
 **[C++代码](../codes/0112_imageview/main.cpp)**
 
 **[C++代码差异](../codes/0112_imageview/main.diff)**
+
+**[CMake代码](../codes/0100_base/CMakeLists.txt)**

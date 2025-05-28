@@ -7,7 +7,6 @@
 #include <memory>
 #include <stdexcept>
 
-
 class HelloTriangleApplication {
 public:
     void run() {
@@ -20,27 +19,21 @@ public:
 private:
     /////////////////////////////////////////////////////////////////
     /// static values
-    static const uint32_t WIDTH = 800;
-    static const uint32_t HEIGHT = 600;
+    static constexpr uint32_t WIDTH = 800;
+    static constexpr uint32_t HEIGHT = 600;
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
     /// class member
     GLFWwindow* m_window{ nullptr };
     /////////////////////////////////////////////////////////////////
-    
-    /////////////////////////////////////////////////////////////////
-    /// run()
+
     void initWindow() {
-        // initialize glfw lib
         glfwInit();
-        
-        // Configure GLFW to not use OpenGL
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        // Temporarily disable window resizing to simplify operations
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        
-        // Create window
+
         m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     }
 
@@ -58,7 +51,8 @@ private:
         glfwDestroyWindow( m_window );
         glfwTerminate();
     }
-    /////////////////////////////////////////////////////////////////
+
+    
 };
 
 int main() {

@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 0efa108..b19b5cf 100644
+index e592d98..88b5efb 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -6,6 +6,8 @@
@@ -11,17 +11,17 @@ index 0efa108..b19b5cf 100644
  #include <memory>
  #include <optional>
  #include <stdexcept>
-@@ -29,6 +31,9 @@ private:
-     static constexpr std::array<const char*,1> validationLayers {
+@@ -28,6 +30,9 @@ private:
+     inline static const std::vector<const char*> validationLayers {
          "VK_LAYER_KHRONOS_validation"
      };
-+    static constexpr std::array<const char*,1> deviceExtensions {
++    inline static const std::vector<const char*> deviceExtensions {
 +        VK_KHR_SWAPCHAIN_EXTENSION_NAME
 +    };
  
      #ifdef NDEBUG
-         static const bool enableValidationLayers = false;
-@@ -48,6 +53,10 @@ private:
+         static constexpr bool enableValidationLayers = false;
+@@ -47,6 +52,10 @@ private:
      vk::raii::Device m_device{ nullptr };
      vk::raii::Queue m_graphicsQueue{ nullptr };
      vk::raii::Queue m_presentQueue{ nullptr };
@@ -30,9 +30,9 @@ index 0efa108..b19b5cf 100644
 +    vk::Format m_swapChainImageFormat;
 +    vk::Extent2D m_swapChainExtent;
      /////////////////////////////////////////////////////////////////
-     
+ 
      /////////////////////////////////////////////////////////////////
-@@ -71,6 +80,7 @@ private:
+@@ -66,6 +75,7 @@ private:
          createSurface();
          pickPhysicalDevice();
          createLogicalDevice();
@@ -40,10 +40,10 @@ index 0efa108..b19b5cf 100644
      }
  
      void mainLoop() {
-@@ -187,10 +197,27 @@ private:
- 
-     /////////////////////////////////////////////////////////////////
-     /// physical device
+@@ -188,10 +198,27 @@ private:
+             return graphicsFamily.has_value() && presentFamily.has_value();
+         }
+     };
 +    bool checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice) {
 +        // std::vector<vk::ExtensionProperties>
 +        auto availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
@@ -69,16 +69,16 @@ index 0efa108..b19b5cf 100644
      }
      void pickPhysicalDevice() {
          // std::vector<vk::raii::PhysicalDevice>
-@@ -270,6 +297,8 @@ private:
-             createInfo.setPEnabledLayerNames( validationLayers );
-         }
+@@ -256,6 +283,8 @@ private:
+         createInfo.setQueueCreateInfos( queueCreateInfos );
+         createInfo.pEnabledFeatures = &deviceFeatures;
  
 +        createInfo.setPEnabledExtensionNames( deviceExtensions );
 +
-         m_device = m_physicalDevice.createDevice( createInfo );
-         m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
-         m_presentQueue = m_device.getQueue( indices.presentFamily.value(), 0 );
-@@ -287,6 +316,105 @@ private:
+         if (enableValidationLayers) {
+             createInfo.setPEnabledLayerNames( validationLayers );
+         }
+@@ -277,6 +306,103 @@ private:
          m_surface = vk::raii::SurfaceKHR( m_instance, cSurface );
      }
      /////////////////////////////////////////////////////////////////
@@ -142,22 +142,19 @@ index 0efa108..b19b5cf 100644
 +        vk::Extent2D extent = chooseSwapExtent( swapChainSupport.capabilities );
 +
 +        uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-+
 +        if (swapChainSupport.capabilities.maxImageCount > 0 && 
 +            imageCount > swapChainSupport.capabilities.maxImageCount) {
 +            imageCount = swapChainSupport.capabilities.maxImageCount;
 +        }
 +
-+        vk::SwapchainCreateInfoKHR createInfo(
-+            {},                         // flags
-+            m_surface,                  // vk::Surface
-+            imageCount,                 // minImageCount
-+            surfaceFormat.format,       // Format
-+            surfaceFormat.colorSpace,   // ColorSpaceKHR
-+            extent,                     // Extent2D
-+            1,                          // imageArrayLayers
-+            vk::ImageUsageFlagBits::eColorAttachment    // imageUsage
-+        );
++        vk::SwapchainCreateInfoKHR createInfo;
++        createInfo.surface = m_surface;
++        createInfo.minImageCount = imageCount;
++        createInfo.imageFormat = surfaceFormat.format;
++        createInfo.imageColorSpace = surfaceFormat.colorSpace;
++        createInfo.imageExtent = extent;
++        createInfo.imageArrayLayers = 1;
++        createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 +
 +        QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
 +        std::vector<uint32_t> queueFamilyIndices { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -181,6 +178,7 @@ index 0efa108..b19b5cf 100644
 +        m_swapChainExtent = extent;
 +    }
 +    /////////////////////////////////////////////////////////////////
++
  };
  
  int main() {

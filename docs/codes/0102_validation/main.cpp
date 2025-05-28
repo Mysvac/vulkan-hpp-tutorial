@@ -9,7 +9,6 @@
 #include <memory>
 #include <stdexcept>
 
-
 class HelloTriangleApplication {
 public:
     void run() {
@@ -22,17 +21,17 @@ public:
 private:
     /////////////////////////////////////////////////////////////////
     /// static values
-    static const uint32_t WIDTH = 800;
-    static const uint32_t HEIGHT = 600;
+    static constexpr uint32_t WIDTH = 800;
+    static constexpr uint32_t HEIGHT = 600;
 
-    static constexpr std::array<const char*,1> validationLayers {
+    inline static const std::vector<const char*> validationLayers {
         "VK_LAYER_KHRONOS_validation"
     };
 
     #ifdef NDEBUG
-        static const bool enableValidationLayers = false;
+        static constexpr bool enableValidationLayers = false;
     #else
-        static const bool enableValidationLayers = true;
+        static constexpr bool enableValidationLayers = true;
     #endif
     /////////////////////////////////////////////////////////////////
 
@@ -43,19 +42,15 @@ private:
     vk::raii::Instance m_instance{ nullptr };
     vk::raii::DebugUtilsMessengerEXT m_debugMessenger{ nullptr };
     /////////////////////////////////////////////////////////////////
-    
+
     /////////////////////////////////////////////////////////////////
     /// run()
     void initWindow() {
-        // initialize glfw lib
         glfwInit();
-        
-        // Configure GLFW to not use OpenGL
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        // Temporarily disable window resizing to simplify operations
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        
-        // Create window
+
         m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     }
 
@@ -77,7 +72,7 @@ private:
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
-    /// create instance
+    /// instance creation
     std::vector<const char*> getRequiredExtensions() {
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions;
@@ -92,7 +87,6 @@ private:
 
         return extensions;
     }
-
     void createInstance(){
         if (enableValidationLayers && !checkValidationLayerSupport()) {
             throw std::runtime_error("validation layers requested, but not available!");
@@ -105,19 +99,11 @@ private:
             1,                  // engineVersion
             VK_API_VERSION_1_1  // apiVersion
         );
-
+        
         vk::InstanceCreateInfo createInfo( 
             {},                 // vk::InstanceCreateFlags
             &applicationInfo    // vk::ApplicationInfo*
         );
-
-        // std::vector<vk::ExtensionProperties>
-        auto extensions = m_context.enumerateInstanceExtensionProperties();
-        std::cout << "available extensions:\n";
-
-        for (const auto& extension : extensions) {
-            std::cout << '\t' << extension.extensionName << std::endl;
-        }
 
         std::vector<const char*> requiredExtensions = getRequiredExtensions();
         // special setter
@@ -129,6 +115,13 @@ private:
         if (enableValidationLayers) {
             createInfo.setPEnabledLayerNames( validationLayers );
             createInfo.pNext = &debugMessengerCreateInfo;
+        }
+
+        auto extensions = m_context.enumerateInstanceExtensionProperties();
+        std::cout << "available extensions:\n";
+
+        for (const auto& extension : extensions) {
+            std::cout << '\t' << extension.extensionName << std::endl;
         }
 
         m_instance = m_context.createInstance( createInfo );

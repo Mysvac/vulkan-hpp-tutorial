@@ -123,12 +123,10 @@ std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indice
 
 float queuePriority = 1.0f;
 for (uint32_t queueFamily : uniqueQueueFamilies) {
-    queueCreateInfos.emplace_back( vk::DeviceQueueCreateInfo(
-        {},                             // flags
-        indices.graphicsFamily.value(), // queueFamilyIndex
-        1,                              // queueCount
-        &queuePriority    
-    ));
+    vk::DeviceQueueCreateInfo queueCreateInfo;
+    queueCreateInfo.queueFamilyIndex = queueFamily;
+    queueCreateInfo.setQueuePriorities( queuePriority );
+    queueCreateInfos.emplace_back( queueCreateInfo );
 }
 ```
 
@@ -161,3 +159,5 @@ m_presentQueue = m_device.getQueue( indices.presentFamily.value(), 0 );
 **[C++代码](../codes/0110_surface/main.cpp)**
 
 **[C++代码差异](../codes/0110_surface/main.diff)**
+
+**[CMake代码](../codes/0100_base/CMakeLists.txt)**

@@ -71,25 +71,25 @@ VkResult vkCreateInstance_WithValidation(
 #include <array>
 // ......
 
-static const uint32_t WIDTH = 800;
-static const uint32_t HEIGHT = 600;
+static constexpr uint32_t WIDTH = 800;
+static constexpr uint32_t HEIGHT = 600;
 
-static constexpr std::array<const char*,1> validationLayers {
+inline static const std::vector<const char*> validationLayers {
     "VK_LAYER_KHRONOS_validation"
 };
 
 // 根据编译模式自动启用
 #ifdef NDEBUG
-    static const bool enableValidationLayers = false;
+    static constexpr bool enableValidationLayers = false;
 #else
-    static const bool enableValidationLayers = true;
+    static constexpr bool enableValidationLayers = true;
 #endif
 ```
 
 > `NDEBUG` 宏是 C++ 标准的一部分，意思是“非调试”。
 >
-> 常量静态成员的内容，此处不介绍，可参考[cppref-静态成员](https://zh.cppreference.com/w/cpp/language/static)。  
-> 你也可以全部使用`inline static const`，保证是常量对象可ODR使用。
+> 此处不介绍常量静态成员的语法，可参考[cppref-静态成员](https://zh.cppreference.com/w/cpp/language/static)。  
+
 
 ### 2. 验证层可用性检查
 
@@ -379,3 +379,5 @@ if (enableValidationLayers) {
 **[C++代码](../codes/0102_validation/main.cpp)**
 
 **[C++代码差异](../codes/0102_validation/main.diff)**
+
+**[CMake代码](../codes/0100_base/CMakeLists.txt)**
