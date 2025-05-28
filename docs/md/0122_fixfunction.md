@@ -136,10 +136,10 @@ viewportState.scissorCount = 1;
 当然，即使启用了动态状态，也可以像静态状态那样指定:
 
 ```cpp
-// 需要创建了scissor和viewport
+// 需要创建了scissor和viewport，第一个参数是开始序号
 vk::PipelineViewportStateCreateInfo viewportState;
-viewportState.setViewports( viewport );
-viewportState.setScissors( scissor );
+viewportState.setViewports( 0, viewport );
+viewportState.setScissors( 0, scissor );
 ```
 
 但是此时`setter`设置的两个参数实际只有`count`有效，开始指针是无效的。

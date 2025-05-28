@@ -31,6 +31,8 @@
 
 **文档网站：<https://mysvac.github.io/vulkan-hpp-tutorial>**
 
+备用\(更新滞后\)：<https://vulkan.mysvac.com>
+
 **注意：文档正在制作、重构与改善中。**
 
 ### 教程简介

@@ -58,3 +58,4 @@ nav:
     - 顶点输入描述: md/0200_vertexinput.md
     - 创建顶点缓冲: md/0201_vertexbuffer.md
     - 暂存缓冲: md/0202_stagingbuffer.md
+    - 索引缓冲: md/0203_indexbuffer.md
