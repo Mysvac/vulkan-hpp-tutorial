@@ -59,3 +59,5 @@ nav:
     - 创建顶点缓冲: md/0201_vertexbuffer.md
     - 暂存缓冲: md/0202_stagingbuffer.md
     - 索引缓冲: md/0203_indexbuffer.md
+  - uniform缓冲: 
+    - 描述符布局与缓冲: md/0300_descriptor1.md
