@@ -24,8 +24,8 @@
 
 在我们完成管线的创建之前，我们需要告诉 Vulkan 将在渲染时使用的帧缓冲附件。
 我们还需要指定将有多少颜色和深度缓冲，每个缓冲使用多少个采样，以及它们的内容在整个渲染操作中应如何处理。
-所有这些信息都封装在一个渲染通道对象中，我们需要为此创建一个新的 `createRenderPass` 函数。
 
+所有这些信息都封装在一个渲染通道对象中，我们需要为此创建一个新的 `createRenderPass` 函数。
 在 `createGraphicsPipeline` **之前**从 `initVulkan` 调用此函数：
 
 ```cpp
@@ -53,24 +53,27 @@ void createRenderPass() {
 在我们的例子中，我们将只有一个颜色缓冲附件，由交换链中的一个图像表示。
 
 ```cpp
-vk::AttachmentDescription colorAttachment(
-    {},                                 // flags
-    m_swapChainImageFormat,             // format
-    vk::SampleCountFlagBits::e1,        // samples
-    vk::AttachmentLoadOp::eClear,       // loadOp
-    vk::AttachmentStoreOp::eStore,      // storeOp
-    vk::AttachmentLoadOp::eDontCare,    // stencilLoadOp 
-    vk::AttachmentStoreOp::eDontCare,   // stencilStoreOp 
-    vk::ImageLayout::eUndefined,        // initialLayout 
-    vk::ImageLayout::ePresentSrcKHR     // finalLayout 
-);
+vk::AttachmentDescription colorAttachment;
 ```
 
-### 1. 颜色附件格式（Format）
+### 1. 颜色附件格式
 
 **必须与交换链图像格式一致**，确保渲染输出与显示兼容。所以我们使用`m_swapChainImageFormat`。
 
-### 2. 数据加载与存储操作（LoadOp/StoreOp）
+```cpp
+colorAttachment.format = m_swapChainImageFormat;
+```
+
+### 2. 采样方式
+
+和之前的多重采样一样，设置`e1`即可：
+
+```cpp
+colorAttachment.samples = vk::SampleCountFlagBits::e1;
+```
+
+### 3. 数据加载与存储操作
+
 
 | **操作类型**       | **常见选项**                       | **用途**                                                                 |
 |--------------------|-----------------------------------|--------------------------------------------------------------------------|
@@ -83,10 +86,17 @@ vk::AttachmentDescription colorAttachment(
 对于 `loadOp`，我们将使用清除操作在绘制新帧之前将帧缓冲清除为黑色。对于 `storeOp`，
 我们有兴趣在屏幕上看到渲染的三角形，因此我们在这里使用存储操作。
 
+```cpp
+colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+```
+
 深度/模板附件的配置与此类似，但使用 `stencilLoadOp`/`stencilStoreOp`（模板缓冲未使用时设为 `eDontCare`）。
 
 
-### 3. 图像布局（Image Layout）
+### 4. 图像布局
 
 Vulkan 中的纹理和帧缓冲由 `vk::Image` 对象表示，这些对象具有特定的像素格式。
 Vulkan 要求图像按操作类型切换布局以优化内存访问：
@@ -99,6 +109,11 @@ Vulkan 要求图像按操作类型切换布局以优化内存访问：
 | `vk::ImageLayout::eTransferDstOptimal`     | 作为数据拷贝目标时使用（如纹理上传）。        |
 
 我们将在纹理章节中更深入地讨论这个主题，但现在重要的是要知道图像需要转换为特定的布局，这些布局适合它们接下来要参与的操作。
+
+```cpp
+colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
+colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+```
 
 - `initialLayout` 指定图像在渲染通道开始之前将具有的布局。
 - `finalLayout` 指定渲染通道完成时自动转换到的布局。
@@ -116,14 +131,14 @@ Vulkan 要求图像按操作类型切换布局以优化内存访问：
 - 定义帧缓冲中每个图像视图（如颜色、深度缓冲）的格式（`VkFormat`）、加载/存储操作（Load/Store Op）。
 
 ```cpp
-vk::AttachmentReference colorAttachmentRef(
-    0,      // attachment  and   layout 
-    vk::ImageLayout::eColorAttachmentOptimal
-);
+vk::AttachmentReference colorAttachmentRef;
+colorAttachmentRef.attachment = 0;
+colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
 ```
 
 `attachment` 参数通过其在附件描述数组中的索引来指定要引用的附件。
 我们的数组由单个 `vk::AttachmentDescription` 组成，因此其索引为 `0`。
+
 `layout` 指定我们希望附件在使用此引用的子通道期间具有的布局，当子通道启动时，Vulkan 将自动将附件转换为此布局。
 我们打算使用该附件充当颜色缓冲，并使用 `vk::ImageLayout::eColorAttachmentOptimal` 布局提供最佳性能。
 
@@ -203,3 +218,11 @@ m_renderPass = m_device.createRenderPass(renderPassInfo);
 **[C++代码](../codes/0123_renderpass/main.cpp)**
 
 **[C++代码差异](../codes/0123_renderpass/main.diff)**
+
+**[根项目CMake代码](../codes/0121_shader/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0121_shader/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0121_shader/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0121_shader/shaders/shader.frag)**

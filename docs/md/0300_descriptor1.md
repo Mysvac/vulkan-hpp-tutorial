@@ -157,7 +157,7 @@ layoutInfo.setBindings( uboLayoutBinding );
 m_descriptorSetLayout = m_device.createDescriptorSetLayout( layoutInfo );
 ```
 
-我们需要再管线创建期间指定描述符布局，现在回到 `createGraphicsPipeline` 函数修改 `PipelineLayoutCreateInfo` 以引用布局对象：
+我们需要在管线创建期间指定描述符布局，现在回到 `createGraphicsPipeline` 函数修改 `PipelineLayoutCreateInfo` 以引用布局对象：
 
 ```cpp
 vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
@@ -244,10 +244,10 @@ void cleanup() {
 void drawFrame() {
     ...
 
-    updateUniformBuffer(currentFrame);
+    updateUniformBuffer(m_currentFrame);
 
-    m_commandBuffers[currentFrame].reset();
-    recordCommandBuffer(m_commandBuffers[currentFrame], imageIndex);
+    m_commandBuffers[m_currentFrame].reset();
+    recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
 
     ...
 
@@ -362,6 +362,14 @@ memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 
 **[C++代码差异](../codes/0300_descriptor1/main.diff)**
 
-**[shader-vert代码](../codes/0300_descriptor1/shader.vert)**
+**[根项目CMake代码](../codes/0300_descriptor1/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0300_descriptor1/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0300_descriptor1/shaders/shader.vert)**
+
+**[shader-vert代码差异](../codes/0300_descriptor1/shaders/vert.diff)**
+
+**[shader-frag代码](../codes/0300_descriptor1/shaders/shader.frag)**
 
 

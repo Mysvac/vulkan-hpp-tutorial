@@ -1,40 +1,37 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 52cd070..a9ee442 100644
+index e91e70e..b27c341 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -71,6 +71,7 @@ private:
+@@ -70,17 +70,19 @@ private:
      std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
      std::vector<vk::raii::Fence> m_inFlightFences;
-     uint32_t currentFrame = 0;
+     uint32_t m_currentFrame = 0;
 +    bool m_framebufferResized = false;
      /////////////////////////////////////////////////////////////////
-     
+ 
      /////////////////////////////////////////////////////////////////
-@@ -81,11 +82,11 @@ private:
-         
-         // Configure GLFW to not use OpenGL
+     /// run()
+     void initWindow() {
+         glfwInit();
+-
++        
          glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
--        // Temporarily disable window resizing to simplify operations
 -        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-         
-         // Create window
+ 
          m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
 +        glfwSetWindowUserPointer(m_window, this);
 +        glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
      }
  
      void initVulkan() {
-@@ -745,9 +746,19 @@ private:
-             res != vk::Result::eSuccess){
-             throw std::runtime_error{"waitForFences error"};
+@@ -694,10 +696,19 @@ private:
+             throw std::runtime_error{ "waitForFences in drawFrame was failed" };
          }
--        m_device.resetFences( *m_inFlightFences[currentFrame] );
  
--        uint32_t imageIndex = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[currentFrame]).second;
 +        uint32_t imageIndex;
 +        try{
 +            // std::pair<vk::Result, uint32_t>
-+            auto [res, idx] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[currentFrame]);
++            auto [res, idx] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame]);
 +            imageIndex = idx;
 +        } catch (const vk::OutOfDateKHRError&){
 +                recreateSwapChain();
@@ -42,17 +39,20 @@ index 52cd070..a9ee442 100644
 +        } // Do not catch other exceptions
 +
 +        // Only reset the fence if we are submitting work
-+        m_device.resetFences( *m_inFlightFences[currentFrame] );
+         m_device.resetFences( *m_inFlightFences[m_currentFrame] );
  
-         m_commandBuffers[currentFrame].reset();
-         recordCommandBuffer(m_commandBuffers[currentFrame], imageIndex);
-@@ -770,14 +781,50 @@ private:
+-        auto [nxtRes, imageIndex] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame]);
+-
+         m_commandBuffers[m_currentFrame].reset();
+         recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
+ 
+@@ -717,14 +728,51 @@ private:
          presentInfo.setSwapchains( *m_swapChain );
          presentInfo.pImageIndices = &imageIndex;
  
 -        if( auto res = m_presentQueue.presentKHR( presentInfo );
 -            res != vk::Result::eSuccess) {
--            throw std::runtime_error{"presentKHR error"};
+-            throw std::runtime_error{ "presentKHR in drawFrame was failed" };
 +        try{
 +            auto res = m_presentQueue.presentKHR(presentInfo);
 +            if( res == vk::Result::eSuboptimalKHR ) {
@@ -60,12 +60,13 @@ index 52cd070..a9ee442 100644
 +            }
 +        } catch (const vk::OutOfDateKHRError&){
 +            recreateSwapChain();
-+        }
++        } // Do not catch other exceptions
++
 +        if( m_framebufferResized ){
 +            recreateSwapChain();
          }
  
-         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+         m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
      }
      /////////////////////////////////////////////////////////////////
 +
@@ -87,7 +88,7 @@ index 52cd070..a9ee442 100644
 +
 +        m_swapChainFramebuffers.clear();
 +        m_swapChainImageViews.clear();
-+        // m_swapChainImages.clear(); // optional
++        m_swapChainImages.clear(); // optional
 +        m_swapChain = nullptr;
 +
 +        createSwapChain();

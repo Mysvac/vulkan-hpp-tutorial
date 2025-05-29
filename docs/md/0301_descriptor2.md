@@ -107,7 +107,7 @@ m_descriptorSets = m_device.allocateDescriptorSets(allocInfo);
 描述符集合现在已经分配，但是描述符任然需要配置，现在添加一个循环来填充每个描述符：
 
 ```cpp
-for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 
 }
 ```
@@ -115,7 +115,7 @@ for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 使用 `vk::DescriptorBufferInfo` 结构体配置描述符缓冲，指定缓冲区以及数据区域：
 
 ```cpp
-for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
     vk::DescriptorBufferInfo bufferInfo;
     bufferInfo.buffer = m_uniformBuffers[i];
     bufferInfo.offset = 0;
@@ -166,7 +166,7 @@ commandBuffer.bindDescriptorSets(
     vk::PipelineBindPoint::eGraphics, 
     m_pipelineLayout,
     0,
-    *m_descriptorSets[currentFrame],
+    *m_descriptorSets[m_currentFrame],
     nullptr
 );
 
@@ -333,5 +333,15 @@ layout(set = 0, binding = 0) uniform UniformBufferObject { ... }
 
 ---
 
-**[C++代码](../codes/0300_descriptor1/main.cpp)**
+**[C++代码](../codes/0301_descriptor2/main.cpp)**
+
+**[C++代码差异](../codes/0301_descriptor2/main.diff)**
+
+**[根项目CMake代码](../codes/0300_descriptor1/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0300_descriptor1/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0300_descriptor1/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0300_descriptor1/shaders/shader.frag)**
 

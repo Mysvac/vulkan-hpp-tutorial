@@ -1,16 +1,16 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 0496574..8a599ce 100644
+index 27b2215..f82410f 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -59,6 +59,7 @@ private:
+@@ -58,6 +58,7 @@ private:
      vk::Format m_swapChainImageFormat;
      vk::Extent2D m_swapChainExtent;
      std::vector<vk::raii::ImageView> m_swapChainImageViews;
 +    vk::raii::RenderPass m_renderPass{ nullptr };
      vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
      /////////////////////////////////////////////////////////////////
-     
-@@ -85,6 +86,7 @@ private:
+ 
+@@ -80,6 +81,7 @@ private:
          createLogicalDevice();
          createSwapChain();
          createImageViews();
@@ -18,29 +18,26 @@ index 0496574..8a599ce 100644
          createGraphicsPipeline();
      }
  
-@@ -443,6 +445,38 @@ private:
+@@ -428,6 +430,35 @@ private:
      }
      /////////////////////////////////////////////////////////////////
  
 +    /////////////////////////////////////////////////////////////////
 +    /// render pass
 +    void createRenderPass() {
-+        vk::AttachmentDescription colorAttachment(
-+            {},                                 // flags
-+            m_swapChainImageFormat,             // format
-+            vk::SampleCountFlagBits::e1,        // samples
-+            vk::AttachmentLoadOp::eClear,       // loadOp
-+            vk::AttachmentStoreOp::eStore,      // storeOp
-+            vk::AttachmentLoadOp::eDontCare,    // stencilLoadOp 
-+            vk::AttachmentStoreOp::eDontCare,   // stencilStoreOp 
-+            vk::ImageLayout::eUndefined,        // initialLayout 
-+            vk::ImageLayout::ePresentSrcKHR     // finalLayout 
-+        );
++        vk::AttachmentDescription colorAttachment;
++        colorAttachment.format = m_swapChainImageFormat;
++        colorAttachment.samples = vk::SampleCountFlagBits::e1;
++        colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
++        colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
++        colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
++        colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
++        colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
++        colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 +
-+        vk::AttachmentReference colorAttachmentRef(
-+            0,      // attachment  and   layout 
-+            vk::ImageLayout::eColorAttachmentOptimal
-+        );
++        vk::AttachmentReference colorAttachmentRef;
++        colorAttachmentRef.attachment = 0;
++        colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
 +
 +        vk::SubpassDescription subpass;
 +        subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
@@ -49,7 +46,7 @@ index 0496574..8a599ce 100644
 +        vk::RenderPassCreateInfo renderPassInfo;
 +        renderPassInfo.setAttachments( colorAttachment );
 +        renderPassInfo.setSubpasses( subpass );
-+        
++
 +        m_renderPass = m_device.createRenderPass(renderPassInfo);
 +    }
 +    /////////////////////////////////////////////////////////////////

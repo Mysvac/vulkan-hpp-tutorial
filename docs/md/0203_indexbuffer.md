@@ -134,3 +134,10 @@ commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 **[C++代码差异](../codes/0203_indexbuffer/main.diff)**
 
+**[根项目CMake代码](../codes/0200_vertexinput/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0200_vertexinput/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0200_vertexinput/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0200_vertexinput/shaders/shader.frag)**

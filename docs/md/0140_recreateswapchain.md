@@ -32,7 +32,7 @@ void recreateSwapChain() {
 
     m_swapChainFramebuffers.clear();
     m_swapChainImageViews.clear();
-    // m_swapChainImages.clear(); // optional
+    m_swapChainImages.clear(); // optional
     m_swapChain = nullptr;
 
     createSwapChain();
@@ -46,8 +46,7 @@ void recreateSwapChain() {
 所以`m_swapChainImages`可以不手动清理，`createSwapChain`中会处理。
 `m_swapChainExtent`和`m_swapChainImageFormat`也是这样。
 
-这就是重建交换链所需的全部！
-然而，这种方法的缺点是，我们需要在创建新的交换链之前停止所有渲染。
+这种方法的缺点是，我们需要在创建新的交换链之前停止所有渲染。
 其实我们可以在旧交换链图像上的绘制命令仍在进行时创建新的交换链。
 您需要将之前的交换链传递给 `vk::SwapchainCreateInfoKHR` 结构体中的 `oldSwapChain` 字段，并在完成使用旧交换链后立即销毁它。
 
@@ -67,15 +66,15 @@ void recreateSwapChain() {
 过期时需要立刻重建，成功时自不必说。
 特殊的是次优时我们认为可以继续使用，因为我们已经获得到了需要的图像。
 
-非常特殊的一点，虽然此处返回了`vk::Result`，但返回码不为`eSuccess`和`eSuboptimalKHR`时，它依然会抛出异常（除非你全局禁用异常）。
+> 虽然此处返回了`vk::Result`，它不为`eSuccess`和`eSuboptimalKHR`时，依然会抛出异常（除非你全局禁用异常）。
 
-所以我们依然需要使用异常处理的方式进行操作：
+我们依然需要使用异常处理的方式进行操作：
 
 ```cpp
 uint32_t imageIndex;
 try{
     // std::pair<vk::Result, uint32_t>
-    auto [res, idx] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[currentFrame]);
+    auto [res, idx] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame]);
     imageIndex = idx;
 } catch (const vk::OutOfDateKHRError&){
         recreateSwapChain();
@@ -99,27 +98,27 @@ try{
     recreateSwapChain();
 } // Do not catch other exceptions
 
-currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 ```
 
 ## 修复死锁
 
 如果你现在运行代码，可能会遇到死锁问题。
-调试或观察带可以发现，这是因为我们可能重置了我们的围栏`fench`，但是才获取下一个图像时重建交换链然后退出了函数。
-没有执行图形管线的提交，所以`fench`不会被补充，下次进入时会无限等待。
+调试或观察带可以发现，这是因为我们先重置了围栏`fench`，但是在获取下一个图像时可能重建交换链然后退出了函数。
+此时没有执行图形管线的提交，所以`fench`不会被补充，下次进入时会无限等待。
 
 一种简单的修复方式是将`resetFences`后移，移动到`acquireNextImage2KHR`的判断之后：
 
 ```cpp
-if( auto res = m_device.waitForFences( *m_inFlightFences[currentFrame], true, UINT64_MAX );
-    res != vk::Result::eSuccess){
-    throw std::runtime_error{"waitForFences error"};
+if( auto res = m_device.waitForFences( *m_inFlightFences[m_currentFrame], true, UINT64_MAX );
+    res != vk::Result::eSuccess ){
+    throw std::runtime_error{ "waitForFences in drawFrame was failed" };
 }
 
 uint32_t imageIndex;
 try{
     // std::pair<vk::Result, uint32_t>
-    auto [res, idx] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[currentFrame]);
+    auto [res, idx] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame]);
     imageIndex = idx;
 } catch (const vk::OutOfDateKHRError&){
         recreateSwapChain();
@@ -127,13 +126,15 @@ try{
 } // Do not catch other exceptions
 
 // Only reset the fence if we are submitting work
-m_device.resetFences( *m_inFlightFences[currentFrame] );
+m_device.resetFences( *m_inFlightFences[m_currentFrame] );
 ```
 
 ## 显式处理尺寸变化
 
 尽管大多数的驱动和平台都可以在窗口大小变化后自动触发`Result::eErrorOutOfDateKHR`，但只是大多数而非全部。
 我们需要一些额外操作，显式处理窗口尺寸的变化。
+
+> 作者的台式机正常，但笔记本就没触发，还是比较新的款式。
 
 首先我们添加一个新的成员变量，用于记录尺寸是否发生了变化：
 
@@ -165,12 +166,13 @@ try{
     }
 } catch (const vk::OutOfDateKHRError&){
     recreateSwapChain();
-}
+} // Do not catch other exceptions
+
 if( m_framebufferResized ){
     recreateSwapChain();
 }
 
-currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 ```
 
 我们还需要在窗口尺寸变化时将`m_framebufferResized`修改为`true`，
@@ -193,7 +195,7 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 }
 ```
 
-注意我们还删除掉了`glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);`，表示我们现在会处理尺寸变化。
+注意我们还删除掉了`glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);`，现在可以调整窗口大小了。
 
 我们的函数是静态的，但是我们需要修改成员变量，所以需要给GLFW当前类对象的指针：
 
@@ -218,7 +220,7 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 
 还有另一种情况，交换链可能会过期，那是一种特殊的窗口大小调整：窗口最小化。
 这种情况很特殊，因为它会导致帧缓冲区大小为 `0`。
-在本教程中，我们将通过暂停直到窗口再次位于前台来处理这种情况。现在方扩展 recreateSwapChain 函数
+在本教程中，我们将通过暂停直到窗口再次位于前台来处理这种情况。现在扩展 `recreateSwapChain` 函数
 
 ```cpp
 void recreateSwapChain() {
@@ -246,3 +248,11 @@ void recreateSwapChain() {
 **[C++代码](../codes/0140_recreateswapchain/main.cpp)**
 
 **[C++代码差异](../codes/0140_recreateswapchain/main.diff)**
+
+**[根项目CMake代码](../codes/0121_shader/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0121_shader/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0121_shader/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0121_shader/shaders/shader.frag)**

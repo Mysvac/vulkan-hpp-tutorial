@@ -1,16 +1,16 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index 96c5d42..3b5cbd2 100644
+index ea1e843..41a9409 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -62,6 +62,7 @@ private:
+@@ -61,6 +61,7 @@ private:
      vk::raii::RenderPass m_renderPass{ nullptr };
      vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
      vk::raii::Pipeline m_graphicsPipeline{ nullptr };
 +    std::vector<vk::raii::Framebuffer> m_swapChainFramebuffers;
      /////////////////////////////////////////////////////////////////
-     
+ 
      /////////////////////////////////////////////////////////////////
-@@ -89,6 +90,7 @@ private:
+@@ -84,6 +85,7 @@ private:
          createImageViews();
          createRenderPass();
          createGraphicsPipeline();
@@ -18,7 +18,7 @@ index 96c5d42..3b5cbd2 100644
      }
  
      void mainLoop() {
-@@ -618,6 +620,24 @@ private:
+@@ -572,6 +574,23 @@ private:
          m_graphicsPipeline = m_device.createGraphicsPipeline( nullptr, pipelineInfo );
      }
      /////////////////////////////////////////////////////////////////
@@ -27,7 +27,6 @@ index 96c5d42..3b5cbd2 100644
 +    /// frame buffer
 +    void createFramebuffers() {
 +        m_swapChainFramebuffers.reserve( m_swapChainImageViews.size() );
-+
 +        for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
 +            vk::FramebufferCreateInfo framebufferInfo;
 +            framebufferInfo.renderPass = m_renderPass;

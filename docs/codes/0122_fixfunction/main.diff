@@ -1,20 +1,20 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index f4f77fa..dc1d57e 100644
+index bab6484..27b2215 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -59,6 +59,7 @@ private:
+@@ -58,6 +58,7 @@ private:
      vk::Format m_swapChainImageFormat;
      vk::Extent2D m_swapChainExtent;
      std::vector<vk::raii::ImageView> m_swapChainImageViews;
 +    vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
      /////////////////////////////////////////////////////////////////
-     
+ 
      /////////////////////////////////////////////////////////////////
-@@ -490,6 +491,75 @@ private:
-         );
+@@ -468,6 +469,53 @@ private:
+         fragShaderStageInfo.pName = "main";
  
          std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo, fragShaderStageInfo };
-+    
++
 +        std::vector<vk::DynamicState> dynamicStates = {
 +            vk::DynamicState::eViewport,
 +            vk::DynamicState::eScissor
@@ -25,27 +25,13 @@ index f4f77fa..dc1d57e 100644
 +
 +        vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 +
-+        vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
-+            {},                                     // flags
-+            vk::PrimitiveTopology::eTriangleList,   // topology
-+            false                                   // primitiveRestartEnable - default false
-+        );
-+
-+        vk::Viewport viewport(
-+            0.0f, 0.0f,                                     // x y
-+            static_cast<float>(m_swapChainExtent.width),    // width
-+            static_cast<float>(m_swapChainExtent.height),   // height
-+            0.0f, 1.0f                                      // minDepth maxDepth
-+        );
-+
-+        vk::Rect2D scissor(
-+            {0, 0},             // offset
-+            m_swapChainExtent   // Extent2D
-+        );
++        vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
++        inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
++        inputAssembly.primitiveRestartEnable = false; // default
 +
 +        vk::PipelineViewportStateCreateInfo viewportState;
-+        viewportState.setViewports( viewport );
-+        viewportState.setScissors( scissor );
++        viewportState.viewportCount = 1;
++        viewportState.scissorCount = 1;
 +
 +        vk::PipelineRasterizationStateCreateInfo rasterizer;
 +        rasterizer.depthClampEnable = false;
@@ -56,23 +42,16 @@ index f4f77fa..dc1d57e 100644
 +        rasterizer.frontFace = vk::FrontFace::eClockwise;
 +        rasterizer.depthBiasEnable = false;
 +
-+        vk::PipelineMultisampleStateCreateInfo multisampling(
-+            {},                             // flags
-+            vk::SampleCountFlagBits::e1,    //  rasterizationSamples
-+            false                           // sampleShadingEnable
-+        );
++        vk::PipelineMultisampleStateCreateInfo multisampling;
++        multisampling.rasterizationSamples =  vk::SampleCountFlagBits::e1;
++        multisampling.sampleShadingEnable = false;  // default
 +
-+        vk::PipelineColorBlendAttachmentState colorBlendAttachment(
-+            false,                      // blendEnable 
-+            vk::BlendFactor::eOne,      // srcColorBlendFactor - optional
-+            vk::BlendFactor::eZero,     // dstColorBlendFactor - optional
-+            vk::BlendOp::eAdd,          // colorBlendOp - optional
-+            vk::BlendFactor::eOne,      // srcAlphaBlendFactor - optional
-+            vk::BlendFactor::eZero,     // dstAlphaBlendFactor - optional
-+            vk::BlendOp::eAdd,          // alphaBlendOp - optional
-+            vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
++        vk::PipelineColorBlendAttachmentState colorBlendAttachment;
++        colorBlendAttachment.blendEnable = false; // default
++        // colorBlendAttachment.colorWriteMask = vk::FlagTraits<vk::ColorComponentFlagBits>::allFlags;
++        colorBlendAttachment.colorWriteMask = (
++            vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | 
 +            vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-+            // colorWriteMask - default is RGBA
 +        );
 +
 +        vk::PipelineColorBlendStateCreateInfo colorBlending;

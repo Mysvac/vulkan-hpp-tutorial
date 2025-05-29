@@ -97,3 +97,11 @@ m_graphicsPipeline = m_device.createGraphicsPipeline( nullptr, pipelineInfo );
 **[C++代码](../codes/0124_conclusion/main.cpp)**
 
 **[C++代码差异](../codes/0124_conclusion/main.diff)**
+
+**[根项目CMake代码](../codes/0121_shader/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0121_shader/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0121_shader/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0121_shader/shaders/shader.frag)**

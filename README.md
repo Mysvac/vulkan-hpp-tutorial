@@ -93,7 +93,7 @@ Vulkan SDK本身由C编写，这带来更好的跨语言能力，可以其他语
 
 
 
-### 项目参考资料
+### 参考资料
 
 Vulkan-hpp文档 [vulkan-hpp](https://github.com/KhronosGroup/Vulkan-Hpp) 。
 

@@ -2,6 +2,7 @@
 
 旧的图形 API 为图形管线的大部分阶段提供了默认状态。
 但在 Vulkan 中，您必须显式地指定大多数管线状态，因为它们将被烘焙到不可变的管线状态对象中。
+
 在本章中，我们将填写下列所有结构以配置这些固定功能操作。
 
 - 动态状态
@@ -53,7 +54,7 @@ dynamicState.setDynamicStates( dynamicStates );
 vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 ```
 
-> 具体配置将在后续顶点章节详细说明*
+> 具体配置将在后续顶点章节详细说明
 
 ## 输入装配
 
@@ -78,14 +79,14 @@ vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 我们打算在本教程中绘制三角形，因此以下结构数据
 
 ```cpp
-vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
-    {},                                     // flags
-    vk::PrimitiveTopology::eTriangleList,   // topology
-    false                                   // primitiveRestartEnable - default false
-);
+vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
+inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
+inputAssembly.primitiveRestartEnable = false; // default
 ```
 
 ## 视口和裁剪矩形
+
+### 1. 静态状态时
 
 视口基本上描述了将渲染输出的帧缓冲区域。这几乎总是 `(0, 0)` 到 `(width, height)`，在本教程中也将是这种情况。
 
@@ -106,10 +107,11 @@ vk::Viewport viewport(
 如果您没有做任何特殊的事情，那么您应该坚持使用 `0.0f` 和 `1.0f` 的标准值。
 
 虽然视口定义了从图像到帧缓冲的转换，但裁剪矩形定义了实际存储像素的区域。
-光栅化器将丢弃裁剪矩形之外的任何像素。它们的功能类似于过滤器，而不是转换。下图说明了差异。
-请注意，左侧的裁剪矩形只是导致该图像的众多可能性之一，只要它大于视口即可。
+光栅化器将丢弃裁剪矩形之外的任何像素。它们的功能类似于过滤器，而不是转换，下图说明了差异：
 
 ![scissor](../images/viewports_scissors.png)
+
+请注意，左侧的裁剪矩形只是导致该图像的众多可能性之一，只要它大于视口即可。
 
 因此，如果我们想绘制到整个帧缓冲，我们将指定一个覆盖它的裁剪矩形
 
@@ -120,11 +122,20 @@ vk::Rect2D scissor(
 );
 ```
 
-在没有动态状态的情况下，需要使用 `vk::PipelineViewportStateCreateInfo` 结构在管线中设置视口和裁剪矩形。
-这使得此管线的视口和裁剪矩形不可变。对这些值进行的任何更改都需要创建具有新值的新管线。
+需要使用 `vk::PipelineViewportStateCreateInfo` 结构在管线中设置视口和裁剪矩形。
 
+```cpp
+// 第一个参数是开始序号
+vk::PipelineViewportStateCreateInfo viewportState;
+viewportState.setViewports( 0, viewport );
+viewportState.setScissors( 0, scissor );
+```
 
-而我们启用了动态状态，只需要在管线创建时指定它们的计数，无需创建`scissor`和`viewport`：
+静态状态使得此管线的视口和裁剪矩形不可变，对这些值进行的任何更改都需要创建具有新值的新管线。
+
+### 2. 动态状态时
+
+我们启用了动态状态，可以在绘制时指定视口和裁剪矩形，而现在只需指定它们的计数，**此时无需创建 `scissor` 和 `viewport`** ：
 
 ```cpp
 // 不需要创建scissor和viewport
@@ -133,17 +144,14 @@ viewportState.viewportCount = 1;
 viewportState.scissorCount = 1;
 ```
 
-当然，即使启用了动态状态，也可以像静态状态那样指定:
+当然，即使启用了动态状态，也可以像静态状态那样指定，但它们的内容会被忽略，只有数量有效：
 
 ```cpp
-// 需要创建了scissor和viewport，第一个参数是开始序号
+// 需要创建了scissor和viewport，但结构体内容被忽略
 vk::PipelineViewportStateCreateInfo viewportState;
 viewportState.setViewports( 0, viewport );
 viewportState.setScissors( 0, scissor );
 ```
-
-但是此时`setter`设置的两个参数实际只有`count`有效，开始指针是无效的。
-所以上面创建的`scissor`和`viewport`的具体参数是无效的。
 
 使用动态状态，甚至可以在单个命令缓冲区中指定不同的视口和/或裁剪矩形。
 
@@ -210,26 +218,24 @@ rasterizer.depthBiasEnable = false;
 
 ## 多重采样
 
-使用 `vk::PipelineMultisampleStateCreateInfo` 结构配置多重采样，这是执行 抗锯齿 的方法之一。
-它的工作原理是组合光栅化到同一像素的多个多边形的片段着色器结果。
-这主要发生在边缘，这也是最明显的锯齿伪影发生的地方。
-因为它不需要多次运行片段着色器（如果只有一个多边形映射到一个像素），所以它比简单地渲染到更高的分辨率然后缩小分辨率要便宜得多。
-启用它需要启用 GPU 功能。
+使用 `vk::PipelineMultisampleStateCreateInfo` 结构配置多重采样，这是执行 **抗锯齿** 的方法之一，需要启用 GPU 功能。
+
+它的工作原理非常简单，将三角形边缘的单个像素拆分成多个区域，对每个区域分别采样然后取平均值。
+
+因为它不需要多次运行片段着色器（如果只有一个多边形映射到一个像素），所以它比简单地渲染到更高的分辨率然后缩小分辨率要高效得多。
 
 ```cpp
-vk::PipelineMultisampleStateCreateInfo multisampling(
-    {},                             // flags
-    vk::SampleCountFlagBits::e1,    //  rasterizationSamples
-    false                           // sampleShadingEnable
-);
+vk::PipelineMultisampleStateCreateInfo multisampling;
+multisampling.rasterizationSamples =  vk::SampleCountFlagBits::e1;
+multisampling.sampleShadingEnable = false;
 ```
 
 > 我们将在后面的章节中重新讨论多重采样，现在让我们保持最简单的单采样状态。
 
 ## 深度和模板测试
 
-如果您正在使用深度和/或模板缓冲，那么您还需要使用 `vk::PipelineDepthStencilStateCreateInfo` 配置深度和模板测试。
-我们现在没有，所以我们后面会简单地传递一个 `nullptr` 而不是指向此类结构的指针。
+如果您正在使用深度或模板缓冲，那么您需要使用 `vk::PipelineDepthStencilStateCreateInfo` 配置深度和模板测试。
+我们现在没有，所以后面会简单地传递一个 `nullptr` 代替它。
 
 > 我们将在后面的深度缓冲章节重新讨论它。
 
@@ -240,27 +246,26 @@ vk::PipelineMultisampleStateCreateInfo multisampling(
 - 混合旧值和新值以产生最终颜色
 - 使用按位运算组合旧值和新值
 
-有两种类型的结构体可以配置颜色混合。第一个结构体 `vk::PipelineColorBlendAttachmentState` 包含每个附加帧缓冲的配置，
-第二个结构体 `vk::PipelineColorBlendStateCreateInfo` 包含全局颜色混合设置。
+有两种类型的结构体可以配置颜色混合。第一个 `vk::PipelineColorBlendAttachmentState` 包含每个附加帧缓冲的配置，
+第二个 `vk::PipelineColorBlendStateCreateInfo` 包含全局颜色混合设置。
 在我们的例子中，我们只有一个帧缓冲
 
 ```cpp
-vk::PipelineColorBlendAttachmentState colorBlendAttachment(
-    false,                      // blendEnable 
-    vk::BlendFactor::eOne,      // srcColorBlendFactor - optional
-    vk::BlendFactor::eZero,     // dstColorBlendFactor - optional
-    vk::BlendOp::eAdd,          // colorBlendOp - optional
-    vk::BlendFactor::eOne,      // srcAlphaBlendFactor - optional
-    vk::BlendFactor::eZero,     // dstAlphaBlendFactor - optional
-    vk::BlendOp::eAdd,          // alphaBlendOp - optional
-    vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+vk::PipelineColorBlendAttachmentState colorBlendAttachment;
+colorBlendAttachment.blendEnable = false; // default
+colorBlendAttachment.colorWriteMask = (
+    vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | 
     vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-    // colorWriteMask - default is RGBA
 );
 ```
+
+> 第二个参数手动指定了全部的位掩码，实际上Vulkan-hpp提供了一个`vk::FlagTraits`模板用于定义“全量”掩码，可以这样使用：  
+> `colorWriteMask = vk::FlagTraits<vk::ColorComponentFlagBits>::allFlags;`
+
+
 此逐帧缓冲结构允许您配置第一种颜色混合方式。将要执行的操作最好使用以下伪代码进行演示
 
-```
+```cpp
 if (blendEnable) {
     finalColor.rgb = (srcColorBlendFactor * newColor.rgb) <colorBlendOp> (dstColorBlendFactor * oldColor.rgb);
     finalColor.a = (srcAlphaBlendFactor * newColor.a) <alphaBlendOp> (dstAlphaBlendFactor * oldColor.a);
@@ -311,6 +316,7 @@ colorBlending.setAttachments( colorBlendAttachment );
 然后可以在 `logicOp` 字段中指定按位运算。
 请注意，这将自动禁用第一种方法，就好像您已为每个附加的帧缓冲将 `blendEnable` 设置为 `false` 一样！
 `colorWriteMask` 也将在此模式下使用，以确定帧缓冲中的哪些通道将实际受到影响。
+
 也可以禁用两种模式，就像我们在这里所做的那样，在这种情况下，片段颜色将未经修改地写入帧缓冲。
 
 ## 管线布局
@@ -327,7 +333,7 @@ colorBlending.setAttachments( colorBlendAttachment );
 vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
 ```
 
-然后在 `createGraphicsPipeline` 函数中创建对象
+然后在 `createGraphicsPipeline` 函数中直接创建对象
 
 ```cpp
 vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
@@ -350,3 +356,12 @@ m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 **[C++代码](../codes/0122_fixfunction/main.cpp)**
 
 **[C++代码差异](../codes/0122_fixfunction/main.diff)**
+
+**[根项目CMake代码](../codes/0121_shader/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0121_shader/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0121_shader/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0121_shader/shaders/shader.frag)**
+

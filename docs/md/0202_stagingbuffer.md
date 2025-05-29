@@ -181,7 +181,7 @@ commandBuffer.copyBuffer(srcBuffer, dstBuffer, copyRegion);
 commandBuffer.end();
 ```
 
-与绘制命令不同，我们不需要等待的事件发生，只希望它立刻执行内存传输命令。
+与绘制命令不同，我们只希望它立刻执行内存传输命令。
 我们至少有两种方式等待内存传输完成，使用围栏`Fence`进行同步或直接`waitIdle`，我们使用后者。
 
 ```cpp
@@ -220,3 +220,10 @@ copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
 
 **[C++代码差异](../codes/0202_stagingbuffer/main.diff)**
 
+**[根项目CMake代码](../codes/0200_vertexinput/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0200_vertexinput/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0200_vertexinput/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0200_vertexinput/shaders/shader.frag)**

@@ -71,7 +71,7 @@ for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
 如您所见，帧缓冲的创建非常简单。我们首先需要指定帧缓冲需要与哪个 `renderPass` 兼容。
 您只能将帧缓冲与它兼容的渲染通道一起使用，这大致意味着它们使用相同数量和类型的附件。
 
-`attachmentCount` 和 `pAttachments` 参数指定应绑定到渲染通道 `pAttachment` 数组中相应附件描述的 `vk::ImageView` 对象。
+`setAttachments()`设置了`attachmentCount` 和 `pAttachments` 参数，指定了应绑定到渲染通道 `pAttachment` 数组中相应附件描述的 `vk::ImageView` 对象。
 
 `width` 和 `height` 参数无需说明，`layers` 指的是图像数组中的层数。我们的交换链图像是单张图像，因此层数是 `1`。
 
@@ -88,3 +88,11 @@ for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
 **[C++代码](../codes/0130_framebuffer/main.cpp)**
 
 **[C++代码差异](../codes/0130_framebuffer/main.diff)**
+
+**[根项目CMake代码](../codes/0121_shader/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0121_shader/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0121_shader/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0121_shader/shaders/shader.frag)**

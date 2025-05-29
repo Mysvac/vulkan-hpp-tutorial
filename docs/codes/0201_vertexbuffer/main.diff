@@ -1,8 +1,8 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index ed84bbb..9d5b045 100644
+index 592d73a..5ef4ecf 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -57,6 +57,8 @@ private:
+@@ -56,6 +56,8 @@ private:
      vk::raii::Device m_device{ nullptr };
      vk::raii::Queue m_graphicsQueue{ nullptr };
      vk::raii::Queue m_presentQueue{ nullptr };
@@ -11,7 +11,7 @@ index ed84bbb..9d5b045 100644
      vk::raii::SwapchainKHR m_swapChain{ nullptr };
      std::vector<vk::Image> m_swapChainImages;
      vk::Format m_swapChainImageFormat;
-@@ -102,6 +104,7 @@ private:
+@@ -98,6 +100,7 @@ private:
          createGraphicsPipeline();
          createFramebuffers();
          createCommandPool();
@@ -19,20 +19,20 @@ index ed84bbb..9d5b045 100644
          createCommandBuffers();
          createSyncObjects();
      }
-@@ -726,7 +729,11 @@ private:
+@@ -676,7 +679,11 @@ private:
          );
          commandBuffer.setScissor(0, scissor);
  
 -        commandBuffer.draw(3, 1, 0, 0);
-+        vk::Buffer vertexBuffers[] = { m_vertexBuffer };
-+        vk::DeviceSize offsets[] = { 0 };
++        std::array<vk::Buffer,1> vertexBuffers { m_vertexBuffer };
++        std::array<vk::DeviceSize,1> offsets { 0 };
 +        commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
 +
 +        commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
  
          commandBuffer.endRenderPass();
          commandBuffer.end();
-@@ -864,11 +871,53 @@ private:
+@@ -812,13 +819,52 @@ private:
          }
      };
      inline static const std::vector<Vertex> vertices = {
@@ -42,7 +42,7 @@ index ed84bbb..9d5b045 100644
          {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
      };
      /////////////////////////////////////////////////////////////////
-+
+ 
 +    /////////////////////////////////////////////////////////////////
 +    /// create vertex buffer
 +    void createVertexBuffer() {
@@ -62,9 +62,8 @@ index ed84bbb..9d5b045 100644
 +        );
 +
 +        m_vertexBufferMemory = m_device.allocateMemory( allocInfo );
-+
 +        m_vertexBuffer.bindMemory(m_vertexBufferMemory, 0);
-+
+ 
 +        void* data;
 +        data = m_vertexBufferMemory.mapMemory(0, bufferInfo.size);
 +        memcpy(data, vertices.data(), static_cast<size_t>(bufferInfo.size));

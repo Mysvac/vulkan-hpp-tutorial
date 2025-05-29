@@ -157,7 +157,7 @@ for(uint32_t i = 0; i < memProperties.memoryTypeCount; ++i){
 
 ## 内存分配
 
-现在我们有办法找到正确的内存类型了，将这些信息都记入`vk::MemoryAllocateInfo`结构体中。
+现在我们有办法找到正确的内存类型了，将这些信息都记入 `vk::MemoryAllocateInfo` 结构体中。
 
 ```cpp
 vk::MemoryAllocateInfo allocInfo;
@@ -167,20 +167,20 @@ allocInfo.memoryTypeIndex = findMemoryType( memRequirements.memoryTypeBits,
 );
 ```
 
-`eHostVisible`表示可以被CPU访问，`eHostCoherent`表示内存自动同步。
+`eHostVisible` 表示可以被CPU访问， `eHostCoherent` 表示内存自动同步。
 
-分配内存非常简单，我们首先在`m_vertexBuffer`上方创建一个新变量，然后使用`allocateMemory`分配资源：
+分配内存非常简单，我们首先在 `m_vertexBuffer` **上方**创建一个新变量，然后使用 `allocateMemory` 分配资源：
 
 ```cpp
 vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
 vk::raii::Buffer m_vertexBuffer{ nullptr };
 
-// ......
+......
 
 m_vertexBufferMemory = m_device.allocateMemory( allocInfo );
 ```
 
-> `Buffer`依赖`DeviceMemory`，所以`Buffer`后声明，优先销毁。
+> `Buffer` 依赖 `DeviceMemory` ，所以 `Buffer` 后声明，优先销毁。
 
 内存分配成功后，还需要将内存和缓冲绑定：
 
@@ -234,8 +234,8 @@ GPU上的数据转移是个隐含的过程，规范只[告诉我们](https://www
 ```cpp
 // ......
 
-vk::Buffer vertexBuffers[] = { m_vertexBuffer };
-vk::DeviceSize offsets[] = { 0 };
+std::array<vk::Buffer,1> vertexBuffers { m_vertexBuffer };
+std::array<vk::DeviceSize,1> offsets { 0 };
 commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
 
 commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
@@ -261,6 +261,8 @@ inline static const std::vector<Vertex> vertices = {
 };
 ```
 
+> 记得重新编译着色器，旧的删了再Build！！
+
 再次构建运行，应该看到这样的三角形：
 
 ![白色三角](../images/triangle_white.png)
@@ -275,4 +277,10 @@ inline static const std::vector<Vertex> vertices = {
 
 **[C++代码差异](../codes/0201_vertexbuffer/main.diff)**
 
+**[根项目CMake代码](../codes/0200_vertexinput/CMakeLists.txt)**
 
+**[shader-CMake代码](../codes/0200_vertexinput/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0200_vertexinput/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0200_vertexinput/shaders/shader.frag)**

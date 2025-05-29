@@ -43,10 +43,9 @@ void createCommandPool() {
 ```cpp
 QueueFamilyIndices queueFamilyIndices = findQueueFamilies( m_physicalDevice );
 
-vk::CommandPoolCreateInfo poolInfo(
-    vk::CommandPoolCreateFlagBits::eResetCommandBuffer, // flags
-    queueFamilyIndices.graphicsFamily.value()
-);
+vk::CommandPoolCreateInfo poolInfo;
+poolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+poolInfo.queueFamilyIndex =  queueFamilyIndices.graphicsFamily.value();
 ```
 
 命令池至少有两个可能的标志(`flags`):
@@ -107,11 +106,11 @@ void createCommandBuffer() {
 
 ```cpp
 void createCommandBuffer() {
-    vk::CommandBufferAllocateInfo allocInfo(
-        m_commandPool,                      // command pool
-        vk::CommandBufferLevel::ePrimary,   // level
-        1                                   // commandBufferCount
-    );
+    vk::CommandBufferAllocateInfo allocInfo;
+    allocInfo.commandPool = m_commandPool;
+    allocInfo.level = vk::CommandBufferLevel::ePrimary;
+    allocInfo.commandBufferCount = 1;
+
     m_commandBuffers = m_device.allocateCommandBuffers(allocInfo);
 }
 ```
@@ -167,10 +166,9 @@ commandBuffer.begin( beginInfo );
 
 
 ```cpp
-vk::RenderPassBeginInfo renderPassInfo(
-    m_renderPass,                       // renderPass
-    m_swapChainFramebuffers[imageIndex] // framebuffer
-);
+vk::RenderPassBeginInfo renderPassInfo;
+renderPassInfo.renderPass = m_renderPass;
+renderPassInfo.framebuffer = m_swapChainFramebuffers[imageIndex];
 ```
 
 - `m_renderPass`：预先创建的渲染通道，定义了附件和子通道结构。
@@ -234,7 +232,6 @@ vk::Viewport viewport(
 );
 commandBuffer.setViewport(0, viewport);
 
-
 vk::Rect2D scissor(
     vk::Offset2D{0, 0}, // offset
     m_swapChainExtent   // extent
@@ -281,3 +278,11 @@ commandBuffer.end();
 **[C++代码](../codes/0131_commandbuffer/main.cpp)**
 
 **[C++代码差异](../codes/0131_commandbuffer/main.diff)**
+
+**[根项目CMake代码](../codes/0121_shader/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0121_shader/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0121_shader/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0121_shader/shaders/shader.frag)**

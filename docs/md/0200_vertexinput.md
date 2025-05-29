@@ -3,8 +3,9 @@
 ## 前言
 
 在后面几章，我们将使用内存中的顶点缓冲数据代替Shader中的硬编码数据。
-我们将最简单的方式开始，创建CPU可见缓冲然后直接用`memcpy`将顶点数据复制进去。
-之后我们将了解如何使用暂存缓冲将顶点数据复制进高性能内存中。
+
+我们将从最简单的方式开始，创建CPU可见缓冲然后直接用`memcpy`将顶点数据复制进去。
+之后我们将了解如何使用暂存缓冲将顶点数据复制进高性能显存中。
 
 ## 顶点着色器
 
@@ -25,7 +26,7 @@ void main() {
 }
 ```
 
-`inPosition` 和 `inColor` 是顶点参数，是每个顶点在顶点缓冲中指定的属性。现在请重新编译顶点着色器！
+`inPosition` 和 `inColor` 是顶点参数，是每个顶点在顶点缓冲中指定的属性。
 
 我们之前提过，一个`location`只能放一个资源，所以我们的位置和颜色信息需要放在不同的`location`中。
 我们通过输入接收了资源，所以`location = 0`暂时空了，可以用于输出。
@@ -188,13 +189,20 @@ vertexInputInfo.setVertexAttributeDescriptions(attributeDescriptions);
 
 但是如果你启用验证层并运行，会看到它提示没有绑定顶点缓冲。下一节我们将创建顶点缓冲并将数据移入，保证GPU可以正常访问它。
 
+> 如果你忘记重新编译着色器，可能没有报错。
+
 ---
 
 **[C++代码](../codes/0200_vertexinput/main.cpp)**
 
 **[C++代码差异](../codes/0200_vertexinput/main.diff)**
 
-**[顶点着色器代码](../codes/0200_vertexinput/shaders/shader.vert)**
+**[根项目CMake代码](../codes/0200_vertexinput/CMakeLists.txt)**
 
-**[顶点着色器代码差异](../codes/0200_vertexinput/shaders/vert.diff)**
+**[shader-CMake代码](../codes/0200_vertexinput/shaders/CMakeLists.txt)**
 
+**[shader-vert代码](../codes/0200_vertexinput/shaders/shader.vert)**
+
+**[shader-vert代码差异](../codes/0200_vertexinput/shaders/vert.diff)**
+
+**[shader-frag代码](../codes/0200_vertexinput/shaders/shader.frag)**

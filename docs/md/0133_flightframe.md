@@ -42,16 +42,16 @@ std::vector<vk::raii::Fence> m_inFlightFences;
 
 ```cpp
 void createCommandBuffers() {
-    vk::CommandBufferAllocateInfo allocInfo(
-        m_commandPool,                      // command pool
-        vk::CommandBufferLevel::ePrimary,   // level
-        MAX_FRAMES_IN_FLIGHT                // commandBufferCount
-    );
+    vk::CommandBufferAllocateInfo allocInfo;
+    allocInfo.commandPool = m_commandPool;
+    allocInfo.level = vk::CommandBufferLevel::ePrimary;
+    allocInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
+
     m_commandBuffers = m_device.allocateCommandBuffers(allocInfo);
 }
 ```
 
-通样，还需要修改 `createSyncObjects` 函数：
+同样，还需要修改 `createSyncObjects` 函数：
 
 ```cpp
 void createSyncObjects() {
@@ -82,82 +82,59 @@ m_inFlightFences.emplace_back( m_device.createFence(fenceInfo) );
 我们需要定义一个成员变量，来追踪当前程序处理的是哪个帧：
 
 ```cpp
-uint32_t currentFrame = 0;
+uint32_t m_currentFrame = 0;
 ```
 
-然后我们就可以修改 `drawFrame` 函数，只需要将每个信号量/围栏/命令缓冲都设置上`currentFrame`：
+然后我们就可以修改 `drawFrame` 函数，只需要将每个信号量/围栏/命令缓冲都设置上`m_currentFrame`：
 
 ```cpp
 void drawFrame() {
-    m_device.waitForFences( *m_inFlightFences[currentFrame], true, UINT64_MAX );
-    m_device.resetFences( *m_inFlightFences[currentFrame] );
+    if( auto res = m_device.waitForFences( *m_inFlightFences[m_currentFrame], true, UINT64_MAX );
+        res != vk::Result::eSuccess ){
+        throw std::runtime_error{ "waitForFences in drawFrame was failed" };
+    }
 
-    uint32_t imageIndex = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[currentFrame]).second;
+    m_device.resetFences( *m_inFlightFences[m_currentFrame] );
 
-    m_commandBuffers[currentFrame].reset();
-    recordCommandBuffer(m_commandBuffers[currentFrame], imageIndex);
+    auto [nxtRes, imageIndex] = m_swapChain.acquireNextImage(UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame]);
+
+    m_commandBuffers[m_currentFrame].reset();
+    recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
 
     vk::SubmitInfo submitInfo;
 
-    submitInfo.setWaitSemaphores( *m_imageAvailableSemaphores[currentFrame] );
-    std::vector<vk::PipelineStageFlags> waitStages { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+    submitInfo.setWaitSemaphores( *m_imageAvailableSemaphores[m_currentFrame] );
+    std::array<vk::PipelineStageFlags,1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
     submitInfo.setWaitDstStageMask( waitStages );
 
-    submitInfo.setCommandBuffers( *m_commandBuffers[currentFrame] );
+    submitInfo.setCommandBuffers( *m_commandBuffers[m_currentFrame] );
+    submitInfo.setSignalSemaphores( *m_renderFinishedSemaphores[m_currentFrame] );
 
-    submitInfo.setSignalSemaphores( *m_renderFinishedSemaphores[currentFrame] );
-
-    m_graphicsQueue.submit(submitInfo, m_inFlightFences[currentFrame]);
+    m_graphicsQueue.submit(submitInfo, m_inFlightFences[m_currentFrame]);
 
     vk::PresentInfoKHR presentInfo;
-    presentInfo.setWaitSemaphores( *m_renderFinishedSemaphores[currentFrame] );
-
+    presentInfo.setWaitSemaphores( *m_renderFinishedSemaphores[m_currentFrame] );
     presentInfo.setSwapchains( *m_swapChain );
     presentInfo.pImageIndices = &imageIndex;
 
-    m_presentQueue.presentKHR( presentInfo );
+    if( auto res = m_presentQueue.presentKHR( presentInfo );
+        res != vk::Result::eSuccess) {
+        throw std::runtime_error{ "presentKHR in drawFrame was failed" };
+    }
 }
 ```
 
-记得在函数末尾更新我们的 `currentFrame` 。
+记得在函数末尾更新我们的 `m_currentFrame` 。
 
 ```cpp
 void drawFrame() {
     // ...
 
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 ```
 
 > `[]`越界会强行结束程序。虽然我们的逻辑保证了这里不会越界，但你仍可提前检查或使用更安全的`.at()`。
-
-## 处理警告
-
-你可能注意到，在编译时会有两个警告信息 `放弃具有 [[nodiscard]] 属性的函数的返回值` 。
-
-这两个函数返回的是`vk::Result`类型的枚举，表示成功或错误的类型。
-成功类型较少，但是错误的种类非常多，我们暂时只判断`vk::Result::eSuccess`，下一章会具体进行错误处理。
-
-```cpp
-void drawFrame() {
-    if( auto res = m_device.waitForFences( *m_inFlightFences[currentFrame], true, UINT64_MAX );
-        res != vk::Result::eSuccess){
-        throw std::runtime_error{"waitForFences error"};
-    }
-    m_device.resetFences( *m_inFlightFences[currentFrame] );
-
-    // ......
-
-    if( auto res = m_presentQueue.presentKHR( presentInfo );
-        res != vk::Result::eSuccess) {
-        throw std::runtime_error{"presentKHR error"};
-    }
-
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-}
-```
-
-> 这里用到了C++17的if初始化语句。
 
 ## 最后
 
@@ -178,3 +155,11 @@ void drawFrame() {
 **[C++代码](../codes/0133_flightframe/main.cpp)**
 
 **[C++代码差异](../codes/0133_flightframe/main.diff)**
+
+**[根项目CMake代码](../codes/0121_shader/CMakeLists.txt)**
+
+**[shader-CMake代码](../codes/0121_shader/shaders/CMakeLists.txt)**
+
+**[shader-vert代码](../codes/0121_shader/shaders/shader.vert)**
+
+**[shader-frag代码](../codes/0121_shader/shaders/shader.frag)**

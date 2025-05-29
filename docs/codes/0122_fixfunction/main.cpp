@@ -13,7 +13,6 @@
 #include <optional>
 #include <stdexcept>
 
-
 class HelloTriangleApplication {
 public:
     void run() {
@@ -26,20 +25,20 @@ public:
 private:
     /////////////////////////////////////////////////////////////////
     /// static values
-    static const uint32_t WIDTH = 800;
-    static const uint32_t HEIGHT = 600;
+    static constexpr uint32_t WIDTH = 800;
+    static constexpr uint32_t HEIGHT = 600;
 
-    static constexpr std::array<const char*,1> validationLayers {
+    inline static const std::vector<const char*> validationLayers {
         "VK_LAYER_KHRONOS_validation"
     };
-    static constexpr std::array<const char*,1> deviceExtensions {
+    inline static const std::vector<const char*> deviceExtensions {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
 
     #ifdef NDEBUG
-        static const bool enableValidationLayers = false;
+        static constexpr bool enableValidationLayers = false;
     #else
-        static const bool enableValidationLayers = true;
+        static constexpr bool enableValidationLayers = true;
     #endif
     /////////////////////////////////////////////////////////////////
 
@@ -61,19 +60,15 @@ private:
     std::vector<vk::raii::ImageView> m_swapChainImageViews;
     vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
     /////////////////////////////////////////////////////////////////
-    
+
     /////////////////////////////////////////////////////////////////
     /// run()
     void initWindow() {
-        // initialize glfw lib
         glfwInit();
-        
-        // Configure GLFW to not use OpenGL
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        // Temporarily disable window resizing to simplify operations
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-        
-        // Create window
+
         m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
     }
 
@@ -101,7 +96,7 @@ private:
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
-    /// create instance
+    /// instance creation
     std::vector<const char*> getRequiredExtensions() {
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions;
@@ -116,7 +111,6 @@ private:
 
         return extensions;
     }
-
     void createInstance(){
         if (enableValidationLayers && !checkValidationLayerSupport()) {
             throw std::runtime_error("validation layers requested, but not available!");
@@ -129,19 +123,11 @@ private:
             1,                  // engineVersion
             VK_API_VERSION_1_1  // apiVersion
         );
-
+        
         vk::InstanceCreateInfo createInfo( 
             {},                 // vk::InstanceCreateFlags
             &applicationInfo    // vk::ApplicationInfo*
         );
-
-        // std::vector<vk::ExtensionProperties>
-        auto extensions = m_context.enumerateInstanceExtensionProperties();
-        std::cout << "available extensions:\n";
-
-        for (const auto& extension : extensions) {
-            std::cout << '\t' << extension.extensionName << std::endl;
-        }
 
         std::vector<const char*> requiredExtensions = getRequiredExtensions();
         // special setter
@@ -153,6 +139,13 @@ private:
         if (enableValidationLayers) {
             createInfo.setPEnabledLayerNames( validationLayers );
             createInfo.pNext = &debugMessengerCreateInfo;
+        }
+
+        auto extensions = m_context.enumerateInstanceExtensionProperties();
+        std::cout << "available extensions:\n";
+
+        for (const auto& extension : extensions) {
+            std::cout << '\t' << extension.extensionName << std::endl;
         }
 
         m_instance = m_context.createInstance( createInfo );
@@ -202,6 +195,14 @@ private:
 
     /////////////////////////////////////////////////////////////////
     /// physical device
+    struct QueueFamilyIndices {
+        std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
+
+        bool isComplete() {
+            return graphicsFamily.has_value() && presentFamily.has_value();
+        }
+    };
     bool checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice) {
         // std::vector<vk::ExtensionProperties>
         auto availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
@@ -241,20 +242,11 @@ private:
             throw std::runtime_error("failed to find a suitable GPU!");
         }
     }
-    struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily;
-        std::optional<uint32_t> presentFamily;
-
-        bool isComplete() {
-            return graphicsFamily.has_value() && presentFamily.has_value();
-        }
-    };
     QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
         QueueFamilyIndices indices;
 
         // std::vector<vk::QueueFamilyProperties>
         auto queueFamilies = physicalDevice.getQueueFamilyProperties();
-
         for (int i = 0; const auto& queueFamily : queueFamilies) {
             if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
                 indices.graphicsFamily = i;
@@ -272,7 +264,7 @@ private:
         return indices;
     }
     /////////////////////////////////////////////////////////////////
-    
+
     /////////////////////////////////////////////////////////////////
     /// logical device
     void createLogicalDevice() {
@@ -284,12 +276,10 @@ private:
 
         float queuePriority = 1.0f;
         for (uint32_t queueFamily : uniqueQueueFamilies) {
-            queueCreateInfos.emplace_back( vk::DeviceQueueCreateInfo(
-                {},                             // flags
-                indices.graphicsFamily.value(), // queueFamilyIndex
-                1,                              // queueCount
-                &queuePriority    
-            ));
+            vk::DeviceQueueCreateInfo queueCreateInfo;
+            queueCreateInfo.queueFamilyIndex = queueFamily;
+            queueCreateInfo.setQueuePriorities( queuePriority );
+            queueCreateInfos.emplace_back( queueCreateInfo );
         }
 
         vk::PhysicalDeviceFeatures deviceFeatures;
@@ -298,11 +288,11 @@ private:
         createInfo.setQueueCreateInfos( queueCreateInfos );
         createInfo.pEnabledFeatures = &deviceFeatures;
 
+        createInfo.setPEnabledExtensionNames( deviceExtensions );
+
         if (enableValidationLayers) {
             createInfo.setPEnabledLayerNames( validationLayers );
         }
-
-        createInfo.setPEnabledExtensionNames( deviceExtensions );
 
         m_device = m_physicalDevice.createDevice( createInfo );
         m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
@@ -381,22 +371,19 @@ private:
         vk::Extent2D extent = chooseSwapExtent( swapChainSupport.capabilities );
 
         uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-
         if (swapChainSupport.capabilities.maxImageCount > 0 && 
             imageCount > swapChainSupport.capabilities.maxImageCount) {
             imageCount = swapChainSupport.capabilities.maxImageCount;
         }
 
-        vk::SwapchainCreateInfoKHR createInfo(
-            {},                         // flags
-            m_surface,                  // vk::Surface
-            imageCount,                 // minImageCount
-            surfaceFormat.format,       // Format
-            surfaceFormat.colorSpace,   // ColorSpaceKHR
-            extent,                     // Extent2D
-            1,                          // imageArrayLayers
-            vk::ImageUsageFlagBits::eColorAttachment    // imageUsage
-        );
+        vk::SwapchainCreateInfoKHR createInfo;
+        createInfo.surface = m_surface;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = surfaceFormat.format;
+        createInfo.imageColorSpace = surfaceFormat.colorSpace;
+        createInfo.imageExtent = extent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
         QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
         std::vector<uint32_t> queueFamilyIndices { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -426,12 +413,10 @@ private:
     void createImageViews() {
         m_swapChainImageViews.reserve( m_swapChainImages.size() );
         for (size_t i = 0; i < m_swapChainImages.size(); i++) {
-            vk::ImageViewCreateInfo createInfo(
-                {},                     // flags
-                m_swapChainImages[i],   // vk::Image
-                vk::ImageViewType::e2D, // ImageViewType
-                m_swapChainImageFormat  // format
-            );
+            vk::ImageViewCreateInfo createInfo;
+            createInfo.image = m_swapChainImages[i];
+            createInfo.viewType = vk::ImageViewType::e2D;
+            createInfo.format = m_swapChainImageFormat;
             createInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
             createInfo.subresourceRange.baseMipLevel = 0;
             createInfo.subresourceRange.levelCount = 1;
@@ -451,9 +436,9 @@ private:
         if (!file.is_open()) {
             throw std::runtime_error("failed to open file!");
         }
-
         size_t fileSize = (size_t) file.tellg();
         std::vector<char> buffer(fileSize);
+
         file.seekg(0);
         file.read(buffer.data(), fileSize);
         file.close();
@@ -461,13 +446,10 @@ private:
         return buffer;
     }
     vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) {
-        vk::ShaderModuleCreateInfo createInfo(
-            {},             // flags
-            code.size(),    // codeSize
-            reinterpret_cast<const uint32_t*>(code.data()) // pCode
-        );
-
-        return m_device.createShaderModule( createInfo );
+        vk::ShaderModuleCreateInfo createInfo;
+        createInfo.codeSize = code.size();
+        createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+        return m_device.createShaderModule(createInfo);
     }
     void createGraphicsPipeline() {
         auto vertShaderCode = readFile("shaders/vert.spv");
@@ -476,22 +458,18 @@ private:
         vk::raii::ShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         vk::raii::ShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
-        vk::PipelineShaderStageCreateInfo vertShaderStageInfo(
-            {},                                 // flags
-            vk::ShaderStageFlagBits::eVertex,   // stage
-            vertShaderModule,                   // ShaderModule
-            "main"                              // pName
-        );
+        vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
+        vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
+        vertShaderStageInfo.module = vertShaderModule;
+        vertShaderStageInfo.pName = "main";
 
-        vk::PipelineShaderStageCreateInfo fragShaderStageInfo(
-            {},                                 // flags
-            vk::ShaderStageFlagBits::eFragment, // stage
-            fragShaderModule,                   // ShaderModule
-            "main"                              // pName
-        );
+        vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
+        fragShaderStageInfo.stage = vk::ShaderStageFlagBits::eFragment;
+        fragShaderStageInfo.module = fragShaderModule;
+        fragShaderStageInfo.pName = "main";
 
         std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo, fragShaderStageInfo };
-    
+
         std::vector<vk::DynamicState> dynamicStates = {
             vk::DynamicState::eViewport,
             vk::DynamicState::eScissor
@@ -502,27 +480,13 @@ private:
 
         vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 
-        vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
-            {},                                     // flags
-            vk::PrimitiveTopology::eTriangleList,   // topology
-            false                                   // primitiveRestartEnable - default false
-        );
-
-        vk::Viewport viewport(
-            0.0f, 0.0f,                                     // x y
-            static_cast<float>(m_swapChainExtent.width),    // width
-            static_cast<float>(m_swapChainExtent.height),   // height
-            0.0f, 1.0f                                      // minDepth maxDepth
-        );
-
-        vk::Rect2D scissor(
-            {0, 0},             // offset
-            m_swapChainExtent   // Extent2D
-        );
+        vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
+        inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
+        inputAssembly.primitiveRestartEnable = false; // default
 
         vk::PipelineViewportStateCreateInfo viewportState;
-        viewportState.setViewports( viewport );
-        viewportState.setScissors( scissor );
+        viewportState.viewportCount = 1;
+        viewportState.scissorCount = 1;
 
         vk::PipelineRasterizationStateCreateInfo rasterizer;
         rasterizer.depthClampEnable = false;
@@ -533,23 +497,16 @@ private:
         rasterizer.frontFace = vk::FrontFace::eClockwise;
         rasterizer.depthBiasEnable = false;
 
-        vk::PipelineMultisampleStateCreateInfo multisampling(
-            {},                             // flags
-            vk::SampleCountFlagBits::e1,    //  rasterizationSamples
-            false                           // sampleShadingEnable
-        );
+        vk::PipelineMultisampleStateCreateInfo multisampling;
+        multisampling.rasterizationSamples =  vk::SampleCountFlagBits::e1;
+        multisampling.sampleShadingEnable = false;  // default
 
-        vk::PipelineColorBlendAttachmentState colorBlendAttachment(
-            false,                      // blendEnable 
-            vk::BlendFactor::eOne,      // srcColorBlendFactor - optional
-            vk::BlendFactor::eZero,     // dstColorBlendFactor - optional
-            vk::BlendOp::eAdd,          // colorBlendOp - optional
-            vk::BlendFactor::eOne,      // srcAlphaBlendFactor - optional
-            vk::BlendFactor::eZero,     // dstAlphaBlendFactor - optional
-            vk::BlendOp::eAdd,          // alphaBlendOp - optional
-            vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+        vk::PipelineColorBlendAttachmentState colorBlendAttachment;
+        colorBlendAttachment.blendEnable = false; // default
+        // colorBlendAttachment.colorWriteMask = vk::FlagTraits<vk::ColorComponentFlagBits>::allFlags;
+        colorBlendAttachment.colorWriteMask = (
+            vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | 
             vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA
-            // colorWriteMask - default is RGBA
         );
 
         vk::PipelineColorBlendStateCreateInfo colorBlending;
