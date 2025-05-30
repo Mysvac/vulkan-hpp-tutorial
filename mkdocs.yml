@@ -62,3 +62,7 @@ nav:
   - uniform缓冲: 
     - 描述符布局与缓冲: md/0300_descriptor1.md
     - 描述符池与集合: md/0301_descriptor2.md
+  - 纹理映射:
+    - 纹理图像: md/0400_texture.md
+    - 图像视图和采样器: md/0401_sampler.md
+    - 组合图像采样器: md/0402_combined.md
