@@ -295,16 +295,16 @@ void createImage(
     imageInfo.samples = vk::SampleCountFlagBits::e1;
     imageInfo.sharingMode = vk::SharingMode::eExclusive;
 
-    m_textureImage = m_device.createImage(imageInfo);
+    image = m_device.createImage(imageInfo);
 
-    vk::MemoryRequirements memRequirements = m_textureImage.getMemoryRequirements();
+    vk::MemoryRequirements memRequirements = image.getMemoryRequirements();
     vk::MemoryAllocateInfo allocInfo;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    m_textureImageMemory = m_device.allocateMemory(allocInfo);
+    imageMemory = m_device.allocateMemory(allocInfo);
 
-    m_textureImage.bindMemory(m_textureImageMemory, 0);
+    image.bindMemory(imageMemory, 0);
 }
 ```
 

@@ -1,0 +1,11 @@
+diff --git a/shaders/shader.frag b/shaders/shader.frag
+index 3b314be..873f541 100644
+--- a/shaders/shader.frag
++++ b/shaders/shader.frag
+@@ -8,5 +8,5 @@ layout(location = 1) in vec2 fragTexCoord;
+ layout(location = 0) out vec4 outColor;
+ 
+ void main() {
+-    outColor = vec4(fragColor * texture(texSampler, fragTexCoord).rgb, 1.0);
++    outColor = texture(texSampler, fragTexCoord);
+ }

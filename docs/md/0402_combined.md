@@ -145,7 +145,7 @@ struct Vertex {
 然后修改我们的 `vertices` 变量，加入纹理坐标：
 
 ```cpp
-const std::vector<Vertex> vertices = {
+inline static const std::vector<Vertex> vertices = {
     {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
     {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
     {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},

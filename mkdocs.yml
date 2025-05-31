@@ -66,3 +66,4 @@ nav:
     - 纹理图像: md/0400_texture.md
     - 图像视图和采样器: md/0401_sampler.md
     - 组合图像采样器: md/0402_combined.md
+  - 深度缓冲: md/0500_depthbuffer.md
