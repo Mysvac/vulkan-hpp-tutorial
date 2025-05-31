@@ -67,3 +67,4 @@ nav:
     - 图像视图和采样器: md/0401_sampler.md
     - 组合图像采样器: md/0402_combined.md
   - 深度缓冲: md/0500_depthbuffer.md
+  - 加载模型: md/0600_loadmodel.md

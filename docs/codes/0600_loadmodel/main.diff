@@ -1,0 +1,214 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index a209945..6dabfb1 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -5,8 +5,12 @@
+ #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+ #include <glm/glm.hpp>
+ #include <glm/gtc/matrix_transform.hpp>
++#define GLM_ENABLE_EXPERIMENTAL
++#include <glm/gtx/hash.hpp>
+ #define STB_IMAGE_IMPLEMENTATION
+ #include <stb_image.h>
++#define TINYOBJLOADER_IMPLEMENTATION
++#include <tiny_obj_loader.h>
+ 
+ #include <chrono>
+ #include <iostream>
+@@ -14,6 +18,7 @@
+ #include <vector>
+ #include <array>
+ #include <set>
++#include <unordered_map>
+ #include <limits>
+ #include <algorithm>
+ #include <memory>
+@@ -30,11 +35,19 @@ public:
+     }
+ 
+ private:
++    /////////////////////////////////////////////////////////////////
++    /// forwoard declare
++    struct Vertex;
++    /////////////////////////////////////////////////////////////////
++
+     /////////////////////////////////////////////////////////////////
+     /// static values
+     static constexpr uint32_t WIDTH = 800;
+     static constexpr uint32_t HEIGHT = 600;
+ 
++    inline static const std::string MODEL_PATH = "models/viking_room.obj";
++    inline static const std::string TEXTURE_PATH = "textures/viking_room.png";
++
+     inline static const std::vector<const char*> validationLayers {
+         "VK_LAYER_KHRONOS_validation"
+     };
+@@ -62,6 +75,8 @@ private:
+     vk::raii::Device m_device{ nullptr };
+     vk::raii::Queue m_graphicsQueue{ nullptr };
+     vk::raii::Queue m_presentQueue{ nullptr };
++    std::vector<Vertex> m_vertices;
++    std::vector<uint32_t> m_indices;
+     vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
+     vk::raii::Buffer m_vertexBuffer{ nullptr };
+     vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
+@@ -126,6 +141,7 @@ private:
+         createTextureImage();
+         createTextureImageView();
+         createTextureSampler();
++        loadModel();
+         createVertexBuffer();
+         createIndexBuffer();
+         createUniformBuffers();
+@@ -740,7 +756,7 @@ private:
+         // std::array<vk::Buffer,1> vertexBuffers { m_vertexBuffer };
+         // std::array<vk::DeviceSize,1> offsets { 0 };
+         commandBuffer.bindVertexBuffers( 0, *m_vertexBuffer, vk::DeviceSize{0} );
+-        commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint16 );
++        commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint32 );
+ 
+         commandBuffer.bindDescriptorSets(
+             vk::PipelineBindPoint::eGraphics, 
+@@ -750,7 +766,7 @@ private:
+             nullptr
+         );
+ 
+-        commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
++        commandBuffer.drawIndexed(static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
+ 
+         commandBuffer.endRenderPass();
+         commandBuffer.end();
+@@ -899,21 +915,9 @@ private:
+ 
+             return attributeDescriptions;
+         }
+-    };
+-    inline static const std::vector<Vertex> vertices = {
+-        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+-        {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+-        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+-        {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+-
+-        {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+-        {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+-        {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+-        {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+-    };
+-    inline static const std::vector<uint16_t> indices = {
+-        0, 1, 2, 2, 3, 0,
+-        4, 5, 6, 6, 7, 4
++        bool operator==(const Vertex& other) const {
++            return pos == other.pos && color == other.color && texCoord == other.texCoord;
++        }
+     };
+     /////////////////////////////////////////////////////////////////
+ 
+@@ -944,7 +948,7 @@ private:
+         buffer.bindMemory(bufferMemory, 0);
+     }
+     void createVertexBuffer() {
+-        vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
++        vk::DeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
+ 
+         vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
+         vk::raii::Buffer stagingBuffer{ nullptr };
+@@ -957,7 +961,7 @@ private:
+         );
+ 
+         void* data = stagingBufferMemory.mapMemory(0, bufferSize);
+-        memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
++        memcpy(data, m_vertices.data(), static_cast<size_t>(bufferSize));
+         stagingBufferMemory.unmapMemory();
+ 
+         createBuffer(bufferSize, 
+@@ -971,7 +975,7 @@ private:
+         copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
+     }
+     void createIndexBuffer() {
+-        vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
++        vk::DeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
+ 
+         vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
+         vk::raii::Buffer stagingBuffer{ nullptr };
+@@ -984,7 +988,7 @@ private:
+         );
+ 
+         void* data = stagingBufferMemory.mapMemory(0, bufferSize);
+-        memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
++        memcpy(data, m_indices.data(), static_cast<size_t>(bufferSize));
+         stagingBufferMemory.unmapMemory();
+ 
+         createBuffer(bufferSize, 
+@@ -1315,7 +1319,7 @@ private:
+     }
+     void createTextureImage() {
+         int texWidth, texHeight, texChannels;
+-        stbi_uc* pixels = stbi_load("textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
++        stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+         if (!pixels) {
+             throw std::runtime_error("failed to load texture image!");
+         }
+@@ -1480,8 +1484,63 @@ private:
+         // );
+     }
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// load model
++    void loadModel() {
++        tinyobj::attrib_t attrib;
++        std::vector<tinyobj::shape_t> shapes;
++        std::vector<tinyobj::material_t> materials;
++        std::string warn, err;
++
++        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
++            throw std::runtime_error(warn + err);
++        }
++        
++        std::unordered_map<
++            Vertex, 
++            uint32_t,
++            decltype( [](const Vertex& vertex) -> size_t {
++                return (((std::hash<glm::vec3>()(vertex.pos) << 1) ^ std::hash<glm::vec3>()(vertex.color) ) >> 1) ^
++                    (std::hash<glm::vec2>()(vertex.texCoord) << 1);
++            } ),
++            decltype( [](const Vertex& vtx_1, const Vertex& vtx_2){
++                return vtx_1.pos == vtx_2.pos && vtx_1.color == vtx_2.color && vtx_1.texCoord == vtx_2.texCoord;
++            } )
++        > uniqueVertices;
++
++        for (const auto& shape : shapes) {
++            for (const auto& index : shape.mesh.indices) {
++                Vertex vertex;
++
++                vertex.pos = {
++                    attrib.vertices[3 * index.vertex_index + 0],
++                    attrib.vertices[3 * index.vertex_index + 1],
++                    attrib.vertices[3 * index.vertex_index + 2]
++                };
++
++                vertex.texCoord = {
++                    attrib.texcoords[2 * index.texcoord_index + 0],
++                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
++                };
++
++                vertex.color = {1.0f, 1.0f, 1.0f};
++
++                if (!uniqueVertices.contains(vertex)) {
++                    uniqueVertices[vertex] = static_cast<uint32_t>(m_vertices.size());
++                    m_vertices.push_back(vertex);
++                }
++                m_indices.push_back(uniqueVertices[vertex]);
++
++                // m_vertices.push_back(vertex);
++                // m_indices.push_back(m_indices.size());
++            }
++        }
++    }
++    /////////////////////////////////////////////////////////////////
+ };
+ 
++
+ int main() {
+     HelloTriangleApplication app;
+ 
