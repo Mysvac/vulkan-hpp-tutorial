@@ -70,3 +70,5 @@ nav:
   - 深度缓冲: md/0500_depthbuffer.md
   - 加载模型: md/0600_loadmodel.md
   - 生成Mipmaps: md/0700_mipmaps.md
+  - 多重采样: md/0800_multisample.md
+  - 隐私政策: policy.md
