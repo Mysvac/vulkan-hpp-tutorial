@@ -4,6 +4,7 @@ repo_url: https://github.com/Mysvac/vulkan-hpp-tutorial
 
 theme:
   name: material
+  language: zh
   palette:  # 启用深浅模式切换
     - scheme: default  # 浅色模式
       toggle:
@@ -68,3 +69,4 @@ nav:
     - 组合图像采样器: md/0402_combined.md
   - 深度缓冲: md/0500_depthbuffer.md
   - 加载模型: md/0600_loadmodel.md
+  - 生成Mipmaps: md/0700_mipmaps.md
