@@ -1,6 +1,6 @@
-# Vulkan 渲染通道
+# **渲染通道**
 
-## 渲染通道概念
+## **渲染通道概念**
 
 在 **Vulkan API** 中，**渲染通道（Render Pass）** 是一个核心概念，用于定义渲染操作的框架，包括帧缓冲（Framebuffer）的附件（Attachments）、子通道（Subpasses）之间的依赖关系以及数据如何在不同渲染阶段传递。
 
@@ -20,7 +20,7 @@
 | **命令缓冲（Command Buffer）** | 在命令缓冲中，`vkCmdBeginRenderPass` 和 `vkCmdEndRenderPass` 之间记录渲染命令，依赖渲染通道的配置。 |
 | **同步（Synchronization）** | 子通道依赖和外部依赖（如与交换链图像的同步）通过 `VkSubpassDependency` 和管线屏障（Barrier）管理。 |
 
-## 设置
+## **设置**
 
 在我们完成管线的创建之前，我们需要告诉 Vulkan 将在渲染时使用的帧缓冲附件。
 我们还需要指定将有多少颜色和深度缓冲，每个缓冲使用多少个采样，以及它们的内容在整个渲染操作中应如何处理。
@@ -48,13 +48,16 @@ void createRenderPass() {
 }
 ```
 
-## 附件描述
+## **附件描述**
 
 在我们的例子中，我们将只有一个颜色缓冲附件，由交换链中的一个图像表示。
 
 ```cpp
 vk::AttachmentDescription colorAttachment;
 ```
+
+> 注意渲染通道只包含附件的“描述”，而实际的附件对象绑定在帧缓冲上。  
+> 你需要保证渲染通道的附件“描述”和帧缓冲实际绑定的“附件”一一对应。
 
 ### 1. 颜色附件格式
 
@@ -122,7 +125,7 @@ colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 此特殊值的不能保证图像的内容会被保留，但这没关系，因为我们无论如何都要清除它。
 我们希望图像在使用交换链渲染后即可用于呈现，所以我们使用 `ePresentSrcKHR` 作为 `finalLayout`。
 
-## 渲染通道组成
+## **渲染通道组成**
 
 渲染通道由附件、子通道和子通道依赖组成。
 
@@ -139,8 +142,10 @@ colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
 `attachment` 参数通过其在附件描述数组中的索引来指定要引用的附件。
 我们的数组由单个 `vk::AttachmentDescription` 组成，因此其索引为 `0`。
 
-`layout` 指定我们希望附件在使用此引用的子通道期间具有的布局，当子通道启动时，Vulkan 将自动将附件转换为此布局。
-我们打算使用该附件充当颜色缓冲，并使用 `vk::ImageLayout::eColorAttachmentOptimal` 布局提供最佳性能。
+`layout` 指定我们希望附件在此子通道期间具有的布局，当子通道启动时，Vulkan 自动将附件转换为此布局。
+我们打算使用该附件充当颜色缓冲，并使用 `eColorAttachmentOptimal` 布局提供最佳性能。
+
+> 注意这里引用的实际是“附件描述”，而此附件本身（`vk::Image`）实际绑定在帧缓冲上。
 
 ### 2. 子通道（Subpasses）
 
@@ -182,9 +187,9 @@ subpass.setColorAttachments( colorAttachmentRef );
 ### 3. 子通道依赖（Subpass Dependencies）
 
 子通道依赖定义子通道之间的执行顺序和内存访问规则，解决资源竞争问题。
-由于我们自由单个子通道，暂时无需处理依赖问题。
+由于我们只有单个子通道，暂时无需处理依赖问题。
 
-## 渲染通道
+## **渲染通道**
 
 现在已经描述了附件和引用它的基本子通道，我们可以创建渲染通道本身。
 创建一个新的类成员变量来保存 `vk::raii::RenderPass` 对象，就在 `m_pipelineLayout` 变量的**上方**
@@ -205,13 +210,13 @@ renderPassInfo.setSubpasses( subpass );
 m_renderPass = m_device.createRenderPass(renderPassInfo);
 ```
 
-## 测试
+## **测试**
 
 现在可以运行程序，请保证没有错误发生。
 
 ---
 
-这有很多工作，但在下一章中，我们会将所有内容都结合在一起，最终创建图形管线对象！
+这里进行了很多工作，但在下一章中，我们会将所有内容都结合在一起，最终创建图形管线对象！
 
 ---
 

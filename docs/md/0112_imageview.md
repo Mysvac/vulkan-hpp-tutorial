@@ -1,15 +1,15 @@
-# Vulkan 图像视图
+# **图像视图**
 
-## 简介
+## **简介**
 
-要使用任何 `vk::Image`，我们必须在渲染管线中创建一个 `vk::ImageView` 对象。
+要使用任何 `vk::Image`，必须先在渲染管线中创建一个 `vk::ImageView` 对象。
 
 ImageView 从字面上看就是图像的视图。
-它描述了如何访问图像以及访问图像的哪一部分，例如它是否应该被视为没有 mipmapping 深度级别的 2D 纹理。
+它描述了如何访问图像以及访问图像的哪一部分，例如它是否应该被视为没有 mipmapping 深度级别的 2D 纹理图像。
 
-在本章中，我们将编写一个 `createImageViews` 函数，为交换链中的每个图像创建一个基本的图像视图，以便我们稍后可以将它们用作颜色目标。
+在本章中，我们将编写一个 `createImageViews` 函数，为交换链中的每个图像创建一个图像视图，以便稍后将它们用作颜色目标。
 
-## 创建图像视图
+## **创建图像视图**
 
 ### 1. 添加基本结构
 
@@ -59,12 +59,11 @@ for (size_t i = 0; i < m_swapChainImages.size(); i++) {
     createInfo.format = m_swapChainImageFormat;
 ```
 
-- `viewType` 参数允许您将图像视为 1D 纹理、2D 纹理、3D 纹理和立方体贴图。
+- `viewType` 参数允许您将图像视为 1D、2D、3D 和立方体贴图。
 
 - `components` 字段我们未设置（默认），他允许您调换颜色通道。例如，您可以将所有通道映射到红色通道以获得单色纹理。
 
-下面设置 `subresourceRange` 字段，她s描述了图像的用途以及应访问图像的哪一部分。
-我们的图像将用在没有 `mipmapping` 级别和多层颜色的目标上。
+下面设置 `subresourceRange` 字段，她描述了图像的用途以及应访问图像的哪一部分。
 
 ```cpp
 createInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -74,6 +73,12 @@ createInfo.subresourceRange.baseArrayLayer = 0;
 createInfo.subresourceRange.layerCount = 1;
 ```
 
+第一个字段指定图像存放的数据类型，我们存放的是“色彩”数据。
+此外还有“深度”和“模板”，我们会在“深度缓冲”章节介绍。
+
+我们的图像将用在没有 `mipmapping` 级别和多层颜色的目标上。
+注意没有额外 `mip` 级别和层次，但是原图自身占一个级别和层次，所以 `levelCount` 和 `layerCount` 为 `1` 。
+
 > 如果您正在开发立体的 3D 应用程序，那么您将创建一个具有多层的交换链。
 > 然后，您可以为每个图像创建多个图像视图，通过访问不同的图层来表示左眼和右眼的视图。
 
@@ -82,7 +87,7 @@ createInfo.subresourceRange.layerCount = 1;
 ```cpp
 m_swapChainImageViews.emplace_back( m_device.createImageView(createInfo) );
 ```
-## 测试
+## **测试**
 
 现在运行程序保证没有异常。
 

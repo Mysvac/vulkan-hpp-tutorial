@@ -1,23 +1,23 @@
-# Vulkan 交换链
+# **交换链**
 
-## 基础概念
+## **基础概念**
 
 - Vulkan 没有默认帧缓冲，需要显式创建交换链
 
-- 交换链是一组等待显示到屏幕的图像队列
+- 交换链\(swapchain\)是一组等待显示到屏幕的图像队列
 
 - 应用程序从队列获取图像进行渲染，完成后返回队列
 
 - 交换链同步图像呈现与屏幕刷新率
 
-## 检查交换链支持
+## **检查交换链支持**
 
 ### 1. 添加扩展
 
 并非所有显卡都支持将图像呈现到屏幕，比如专用于服务器的显卡。
 
 窗口系统并非 Vulkan 核心，所以我们要启用 `VK_KHR_swapchain` 设备扩展并检查支持性。
-首先声明一个必需的设备扩展列表，类似于要启用的验证层列表。
+首先声明一个必需的设备扩展列表，类似于要启用的层列表。
 
 ```cpp
 inline static const std::vector<const char*> deviceExtensions {
@@ -25,11 +25,11 @@ inline static const std::vector<const char*> deviceExtensions {
 };
 ```
 
-> 宏 `VK_KHR_SWAPCHAIN_EXTENSION_NAME` 被定义为 `"VK_KHR_swapchain"`，使用此宏防止拼写错误。
+> 宏 `VK_KHR_SWAPCHAIN_EXTENSION_NAME` 等于 `"VK_KHR_swapchain"`，使用宏防止拼写错误。
 
 ### 2. 扩展物理设备检查
 
-接下来创建一个新的函数 `checkDeviceExtensionSupport`，该函数将被 `isDeviceSuitable` 调用，作为额外的检查
+接下来创建一个新的函数 `checkDeviceExtensionSupport`，该函数将被 `isDeviceSuitable` 调用，作为额外的检查：
 
 ```cpp
 bool checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice) {
@@ -71,7 +71,7 @@ createInfo.setPEnabledExtensionNames( deviceExtensions );
 
 现在运行代码并验证您的显卡是否能够创建交换链。
 
-## 查询交换链支持详情
+## **查询交换链支持详情**
 
 仅检查交换链是否可用是不够的，因为它可能与我们的窗口表面不兼容。
 基本上我们还需要检查三种属性
@@ -104,9 +104,9 @@ SwapChainSupportDetails querySwapChainSupport(const vk::raii::PhysicalDevice& ph
 
 > 本节仅介绍如何查询这些信息。它们的具体含义和内容将在下一节中讨论。
 
-### 2. 查询基本表面功能
+### 2. 查询可用设置
 
-我们从基本表面功能开始，这些属性易于查询。
+我们从基本表面功能与可用设置开始，这些属性易于查询。
 
 ```cpp
 details.capabilities = physicalDevice.getSurfaceCapabilitiesKHR( m_surface );
@@ -130,7 +130,7 @@ return indices.isComplete() && extensionsSupported && swapChainAdequate;
 > 注意，我们在验证扩展可用后再查询交换链支持。
 
 
-## 交换链设置选择
+## **交换链设置选择**
 
 只要满足上述检查，支持性就足够了。 但可能存在许多不同的优化模式。
 
@@ -275,7 +275,7 @@ vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
 
 > `clamp` 函数用于将 `width` 和 `height` 的值限制在指定的范围之间。
 
-## 创建交换链
+## **创建交换链**
 
 ### 1. 基础结构
 
@@ -398,9 +398,9 @@ createInfo.clipped = true;
 
 这只剩下一个字段， `oldSwapChain` 。
 
-使用 Vulkan，您的交换链可能会在应用程序运行时变为无效或未优化，例如因为窗口已调整大小。
-在这种情况下，需要从头开始重新创建交换链，并且必须在此字段中指定对旧交换链的引用。
-这是一个复杂的主题，我们将在以后的章节中了解更多信息。现在，我们假设我们只会创建一个交换链
+使用 Vulkan，您的交换链可能会在应用程序运行时变为无效或未优化，例如窗口调整了大小。
+在这种情况下，需要重新创建交换链，并且必须在此字段中指定对旧交换链的引用。
+这是一个复杂的主题，我们将在以后的章节中了解更多信息。现在，我们假设只会创建一个交换链
 
 ```cpp
 createInfo.oldSwapchain = nullptr;
@@ -431,7 +431,7 @@ m_swapChain = m_device.createSwapchainKHR( createInfo );
 
 现在运行应用程序以确保交换链已成功创建！！
 
-## 检索交换链图像
+## **检索交换链图像**
 
 交换链现在已创建，因此剩下的就是检索其中 `vk::Image` 的句柄。我们将在后面的章节中在渲染操作期间引用这些句柄。添加一个类成员来存储句柄
 
@@ -450,9 +450,9 @@ m_swapChainImages = m_swapChain.getImages();
 > 
 > 我们仅在交换链中指定了最少数量的图像，而实现允许创建具有更多图像的交换链。
 
-## 存储交换链参数
+## **存储交换链参数**
 
-最后一件事，将我们为交换链图像选择的格式 `vk::Format` 和范围 `vk::Extent2D` 存储在成员变量中。我们将在以后的章节中需要它们。
+最后一件事，将我们为交换链图像选择的格式 `vk::Format` 和范围 `vk::Extent2D` 存储在成员变量中。我们以后的章节需要用到它们。
 
 ```cpp
 // class member
@@ -468,13 +468,14 @@ m_swapChainImageFormat = surfaceFormat.format;
 m_swapChainExtent = extent;
 ```
 
-## 测试
+## **测试**
 
 现在运行代码保证程序正常。
 
 ---
 
-我们现在有一组可以绘制并可以呈现到窗口的图像。下一章将开始介绍如何将图像设置为渲染目标，然后我们将开始研究实际的图形管线和绘制命令！
+我们现在有了一组可以绘制并呈现到窗口的图像。
+下一章将开始介绍如何将图像设置为渲染目标，然后我们将开始研究实际的图形管线和绘制命令！
 
 ---
 

@@ -1,14 +1,16 @@
-# Vulkan 命令缓冲与命令池
+# **命令缓冲与命令池**
 
 在 Vulkan 中，像绘制操作和内存传输这样的命令不是直接使用函数调用来执行的。你必须在你想要执行的命令缓冲区对象中记录所有操作。
 
 这样做的好处是，当我们准备告诉 Vulkan 我们想要做什么时，所有命令都会一起提交，Vulkan 可以更有效地处理这些命令，因为所有命令都同时可用。
 此外，如果需要，这允许命令记录在多个线程中进行。
 
-## 命令池(Command Pool)
+## **命令池**
 
-在我们可以创建命令缓冲区之前，我们必须先创建一个命令池。
-命令池管理用于存储缓冲区的内存，命令缓冲区从命令池中分配。添加一个新的类成员来存储一个 `vk::CommandPool`
+在我们创建命令缓冲区\(Command Buffer\)之前，必须先创建一个命令池\(Command Pool\)。
+命令池管理用于管理命令缓冲的内存，命令缓冲从命令池中分配。
+
+现在添加一个新的类成员来存储一个 `vk::CommandPool` ：
 
 ```cpp
 vk::raii::CommandPool m_commandPool{ nullptr };
@@ -57,8 +59,9 @@ poolInfo.queueFamilyIndex =  queueFamilyIndices.graphicsFamily.value();
 
 我们将每帧记录一个命令缓冲区，所以我们希望能够重置并重新记录它。因此我们需要设置 `eResetCommandBuffer` 标志位。
 
-命令缓冲区通过在设备队列之一（例如我们检索到的图形和呈现队列）上提交来执行。
-每个命令池只能分配在单一类型的队列上提交的命令缓冲区。我们将记录用于绘制的命令，这就是为什么我们选择了图形队列族。
+命令缓冲需要先记录命令，然后在指定的设备队列（例如我们的图形和呈现队列）上提交，才能实际执行对应的命令。
+
+每个命令池只能分配在单一类型的队列上提交的命令缓冲区。我们将记录用于绘制的命令，所以我们选择了图形队列族。
 
 然后直接创建即可：
 
@@ -66,7 +69,7 @@ poolInfo.queueFamilyIndex =  queueFamilyIndices.graphicsFamily.value();
 m_commandPool = m_device.createCommandPool( poolInfo );
 ```
 
-## 命令缓冲区（Command Buffer）
+## **命令缓冲区**
 
 我们现在可以开始分配命令缓冲区了。
 
@@ -125,7 +128,7 @@ void createCommandBuffer() {
 
 由于我们只分配一个命令缓冲区，因此 `commandBufferCount` 参数仅为 `1` 。
 
-## 命令缓冲区记录
+## **命令缓冲区记录**
 
 我们现在将开始处理 `recordCommandBuffer` 函数，该函数将我们想要执行的命令写入命令缓冲区。
 使用的 `vk::raii::CommandBuffer` 将作为参数传入，以及我们想要写入的当前交换链图像的索引。
@@ -158,7 +161,7 @@ commandBuffer.begin( beginInfo );
 
 如果命令缓冲区已经记录过一次，那么调用 `begin` 将隐式地重置它。稍后无法将命令附加到缓冲区。
 
-## 开始渲染通道
+## **开始渲染通道**
 
 ### 1. 初始化渲染通道信息
 
@@ -186,7 +189,7 @@ renderPassInfo.renderArea.extent = m_swapChainExtent;   // 区域尺寸（匹配
 
 ### 3. 配置清除值
 
-指定附件初始化时的清除值（对应 VK_ATTACHMENT_LOAD_OP_CLEAR）：
+指定附件初始化时的清除值（对应 `vk::AttachmentLoadOp::eClear`）：
 
 ```cpp
 vk::ClearValue clearColor(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
@@ -208,7 +211,7 @@ commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
 我们不使用辅助命令缓冲区，所以选择第一个选项。
 
-## 基本绘制命令
+## **基本绘制命令**
 
 我们现在可以绑定图形管线了
 
@@ -254,7 +257,7 @@ commandBuffer.draw(3, 1, 0, 0);
 - `firstVertex`：用作顶点缓冲区的偏移量，定义了 gl_VertexIndex 的最小值。
 - `firstInstance`：用作实例化渲染的偏移量，定义了 gl_InstanceIndex 的最小值。
 
-## 完成
+## **完成**
 
 渲染通道和命令录制可以结束了
 
@@ -264,8 +267,6 @@ commandBuffer.end();
 ```
 
 > 结束失败会抛出异常，我们同样使用之前的方式，在主函数捕获，无需修改。
-
-## 测试
 
 现在运行程序保证没有出错。
 

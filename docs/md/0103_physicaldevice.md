@@ -1,8 +1,9 @@
-# Vulkan 物理设备与队列族
+# **物理设备与队列族**
 
-在通过创建实例之后，我们需要查找并选择系统中合适的显卡。实际上，我们可以选择任意数量的显卡并同时使用它们，但在本教程中，我们只使用第一张满足我们需求的显卡。
+在创建实例之后，我们需要查找并选择系统中合适的显卡。
+实际上，我们可以选择任意数量的显卡并同时使用它们，但在本教程中，我们只使用第一张满足我们需求的显卡。
 
-## 基础成员和函数声明
+## **成员变量和函数声明**
 
 首先在 `m_debugMessenger` 下方添加一个成员变量：
 
@@ -10,7 +11,7 @@
 vk::raii::PhysicalDevice m_physicalDevice{ nullptr };
 ```
 
-然后添加一个函数 `pickPhysicalDevice`，并在 `initVulkan` 函数中添加调用。
+然后添加一个函数 `pickPhysicalDevice`，并在 `initVulkan` 函数中调用它：
 
 ```cpp
 void initVulkan() {
@@ -24,7 +25,7 @@ void pickPhysicalDevice() {
 }
 ```
 
-## 物理设备枚举与选择
+## **物理设备枚举与选择**
 
 ### 1. 获取可用设备列表
 
@@ -72,7 +73,7 @@ if(m_physicalDevice == nullptr){
 
 > 作者认为此处API设计有误，它应该直接返回`vk::PhysicalDevice`，不应携带`raii::`。
 
-## 设备评估标准
+## **设备评估标准**
 
 ### 1. 设备属性与特性查询
 
@@ -86,7 +87,7 @@ vk::PhysicalDeviceFeatures features = physicalDevice.getFeatures();
 - `Properties` : 基本设备属性，例如名称、类型和支持的 Vulkan 版本。
 - `Features` : 可选功能（如纹理压缩、64 位浮点数和多视口渲染）的支持。
 
-例如，假设我们认为我们的应用程序仅适用于支持几何着色器的独立显卡。那么可以这样写
+假设我们的应用程序需要支持几何着色器的独立显卡。那么可以这样写
 
 ```cpp
 bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
@@ -136,13 +137,13 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 
 在下一节中，我们将讨论第一个真正需要检查的功能。
 
-## 队列族管理
+## **队列族管理**
 
 Vulkan 中的几乎每个操作，从绘制到上传纹理，都需要将命令提交到队列。
 
 ### 1. 队列查找函数
 
-队列有不同的类型，这些类型源自不同的队列族，并且每个队列族仅允许命令的子集。
+队列有不同的类型，这些类型源自不同的队列族，并且每个队列族仅允许一些特定的命令。
 例如，可能有一个队列族仅允许处理计算命令，或者一个队列族仅允许与内存传输相关的命令。
 
 为此，我们将添加一个新函数 `findQueueFamilies`，用于查找我们需要的所有队列族。
@@ -172,7 +173,7 @@ QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDev
 ### 2. 更好的队列存储
 
 此函数可能找不到有用的队列族。但是有时候找不到也可以正常执行，
-比如我们可能偏好具有专用传输队列族的设备，但不强制要求。
+比如我们可能希望使用具有专用传输队列族的设备，但不强制要求。
 
 不应该使用魔术值来指示队列族的不存在，因为 `uint32_t` 的任何值都可能是有效的队列族索引，包括 `0`。
 幸运的是，C++17 引入了一种数据结构 `std::optional<>` 来区分值存在与不存在的情况，它可以这样使用
@@ -214,7 +215,7 @@ QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDev
 auto queueFamilies = physicalDevice.getQueueFamilyProperties();
 ```
 
-`vk::QueueFamilyProperties`只包含基本信息，包括支持的操作类型以及该族可创建的队列数量，在这里已经足够了。
+`vk::QueueFamilyProperties`只包含基本信息，包括支持的操作类型以及该族可创建的队列数量，但在这里已经足够了。
 
 我们需要找到至少一个支持 `vk::QueueFlagBits::eGraphics` 的队列族。
 
@@ -242,7 +243,7 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 }
 ```
 
-为了使其更方便一点，我们还将在结构体本身中添加一个通用检查
+为了更方便一点，我们可以在结构体中添加一个通用检查
 
 ```cpp
 struct QueueFamilyIndices {
@@ -278,13 +279,13 @@ for (int i = 0; const auto& queueFamily : queueFamilies) {
 
 > 为什么不直接赋值后就退出？因为我们后面还需查找其他队列族。
 
-## 测试
+## **测试**
 
 现在构建与运行代码，虽然程序还是和之前一样的效果，但不应报错。
 
 ---
 
-太棒了，这就是我们现在找到合适的物理设备所需的一切！下一步是创建逻辑设备以与之交互。
+太棒了，我们现在足以找到合适的物理设备，下一步是创建逻辑设备以与之交互。
 
 ---
 

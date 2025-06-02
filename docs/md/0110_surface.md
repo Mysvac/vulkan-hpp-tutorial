@@ -1,4 +1,4 @@
-# Vulkan 窗口表面
+# **窗口表面**
 
 Vulkan作为平台无关的API，需要通过WSI（窗口系统集成）扩展与窗口系统交互。
 
@@ -11,7 +11,7 @@ Vulkan作为平台无关的API，需要通过WSI（窗口系统集成）扩展�
 
 > 注意 Vulkan 进行离屏渲染不需要窗口系统，也就不需要这些扩展。
 
-## 添加表面成员变量
+## **添加表面成员变量**
 
 窗口表面需要在实例创建之后立即创建，因为它会影响物理设备的选择。
 由于它还涉及了呈现和渲染的内容，推迟到现在才说明是为了使教程结构更清晰。
@@ -29,7 +29,7 @@ vk::raii::Device m_device{ nullptr };
 vk::raii::Queue m_graphicsQueue{ nullptr };
 ```
 
-添加一个函数 `createSurface`，以便在实例创建和 `setupDebugMessenger` 之后从 `initVulkan` 中调用它。
+添加一个函数 `createSurface`，在实例创建和 `setupDebugMessenger` 之后调用它。
 
 ```cpp
 void initVulkan() {
@@ -45,12 +45,12 @@ void createSurface() {
 }
 ```
 
-## 创建窗口表面
+## **创建窗口表面**
 
 虽然 `vk::raii::SurfaceKHR` 对象及其用法与平台无关，但其创建并非如此，因为它取决于窗口系统的详细信息。
-创值得庆幸的是，所需的平台特定扩展已在 `glfwGetRequiredInstanceExtensions` 返回的列表中，无需手动添加。
+值得庆幸的是，所需的平台特定扩展已在 `glfwGetRequiredInstanceExtensions` 返回的列表中，无需手动添加。
 
-我们将直接使用 GLFW 的 `glfwCreateWindowSurface`，它自动为我们处理平台的差异。但下面的代码还不能运行！！
+我们将直接使用 GLFW 的 `glfwCreateWindowSurface` 函数，它自动为我们处理平台的差异。但下面的代码还不能运行！！
 
 ```cpp
 if (glfwCreateWindowSurface( m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS) {
@@ -74,13 +74,14 @@ void createSurface() {
 > 这里 `*m_instance` 的 `*` 是运算符重载，返回内部 `VkInstance` 的引用。  
 > 这没有内存泄漏风险，无需担心。
 
-## 扩展队列族支持检查
+## **扩展队列族支持检查**
 
-Vulkan 支持窗口系统基础，但设备可能不支持。 我们需要扩展 `isDeviceSuitable` 以确保设备可以将图像呈现到我们创建的表面。
+Vulkan 支持窗口系统，但设备可能不支持。
+我们需要扩展 `isDeviceSuitable` 以确保设备可以将图像呈现到我们创建的表面。
 
-由于呈现是特定于队列的功能，因此此问题实际上是找到一个支持呈现到表面的队列族。
+由于呈现是特定于队列的功能，此问题实际上是找到一个支持呈现到表面的队列族。
 
-支持绘制命令的队列族和支持呈现的队列族可能不重叠。因此我们需要修改 `QueueFamilyIndices` 结构体，添加新内容
+支持绘制的队列族和支持呈现的队列族可能不重叠，因此需要修改 `QueueFamilyIndices` 结构体，添加新内容：
 
 ```cpp
 struct QueueFamilyIndices {
@@ -103,9 +104,9 @@ if(physicalDevice.getSurfaceSupportKHR(i, m_surface)){
 ```
 
 请注意，最终它们很可能是同一个队列族，但在整个程序中，我们将把它们视为独立的队列，以便采用统一的方法。  
-尽管如此，您可以添加逻辑来显式地偏好在同一队列中支持绘制和呈现的物理设备，以提高性能。
+尽管如此，您可以添加额外的逻辑，偏好具有同时支持绘制和呈现功能的队列的物理设备，以提高性能。
 
-## 创建呈现队列
+## **创建呈现队列**
 
 剩下的最后一件事是修改逻辑设备创建过程，从而创建呈现队列。在 `m_graphicsQueue` 下方添加一个成员变量
 
@@ -146,7 +147,7 @@ m_presentQueue = m_device.getQueue( indices.presentFamily.value(), 0 );
 
 如果队列族相同，则这两个句柄现在很可能具有相同的值，这依然可以正常运行。
 
-## 测试
+## **测试**
 
 现在构建与运行程序，保证没有报错。
 

@@ -1,11 +1,11 @@
-# 重建交换链
+# **重建交换链**
 
-## 前言
+## **前言**
 
 现在我们已经成功绘制了第一个三角形，但是还有些特殊情况没有处理。
 当窗口表面发送变化时，交换链可能不再适配窗口表面。一种可能的原因是窗口被调整，我们需要捕获此事件并重建交换链。
 
-## 重建交换链
+## **重建交换链**
 
 创建一个 `recreateSwapchain` 函数，需要重建的相关内容（依赖交换链和窗口尺寸的）都放入它的内部。
 
@@ -41,19 +41,19 @@ void recreateSwapChain() {
 }
 ```
 
-之前提到了`Image`资源由交换链管理，自身只有句柄。
+之前提到了 `Image` 资源由交换链管理，自身只有句柄。
 我们创建时也时直接赋值整个数组而非在末尾追加。
-所以`m_swapChainImages`可以不手动清理，`createSwapChain`中会处理。
-`m_swapChainExtent`和`m_swapChainImageFormat`也是这样。
+所以 `m_swapChainImages` 可以不手动清理， `createSwapChain` 会处理它。
+ `m_swapChainExtent` 和 `m_swapChainImageFormat` 也是这样。
 
 这种方法的缺点是，我们需要在创建新的交换链之前停止所有渲染。
 其实我们可以在旧交换链图像上的绘制命令仍在进行时创建新的交换链。
 您需要将之前的交换链传递给 `vk::SwapchainCreateInfoKHR` 结构体中的 `oldSwapChain` 字段，并在完成使用旧交换链后立即销毁它。
 
-## 次优或过期的交换链
+## **次优或过期的交换链**
 
 现在我们需要知道什么时候应该重建交换链。
-`acquireNextImage2KHR` 和 `presentKHR` 会返回一个`vk::Result`枚举，我们可以从中得知当前交换链是否合适。
+`acquireNextImage` 和 `presentKHR` 会返回 `vk::Result` 枚举，我们可以从中得知当前交换链是否合适。
 
 枚举的可能类型有很多，这里只介绍我们需要的三种：
 
@@ -85,7 +85,7 @@ try{
 > 如果你禁用了全局异常，那么你应该通过判断`res`决定是否重建交换链。
 
 
-`presentKHR`函数也返回一个`vk::Result`，我们进行同样的判断。
+`presentKHR` 函数也返回一个 `vk::Result` ，我们进行同样的判断。
 由于我们已经绘制完毕了，次优时直接重建交换链即可。
 
 ```cpp
@@ -101,13 +101,13 @@ try{
 m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 ```
 
-## 修复死锁
+## **修复死锁**
 
 如果你现在运行代码，可能会遇到死锁问题。
-调试或观察带可以发现，这是因为我们先重置了围栏`fench`，但是在获取下一个图像时可能重建交换链然后退出了函数。
-此时没有执行图形管线的提交，所以`fench`不会被补充，下次进入时会无限等待。
+调试或观察带可以发现，这是因为我们先重置了围栏 `fench` ，但是在获取下一个图像时可能重建交换链然后退出了函数。
+此时没有执行图形管线的提交，所以 `fench` 不会被补充，下次进入时会无限等待。
 
-一种简单的修复方式是将`resetFences`后移，移动到`acquireNextImage2KHR`的判断之后：
+一种简单的修复方式是将 `resetFences` 后移，移动到 `acquireNextImage` 的判断之后：
 
 ```cpp
 if( auto res = m_device.waitForFences( *m_inFlightFences[m_currentFrame], true, UINT64_MAX );
@@ -129,7 +129,7 @@ try{
 m_device.resetFences( *m_inFlightFences[m_currentFrame] );
 ```
 
-## 显式处理尺寸变化
+## **显式处理尺寸变化**
 
 尽管大多数的驱动和平台都可以在窗口大小变化后自动触发`Result::eErrorOutOfDateKHR`，但只是大多数而非全部。
 我们需要一些额外操作，显式处理窗口尺寸的变化。
@@ -216,7 +216,7 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 
 现在尝试运行程序并调整窗口大小，看看帧缓冲是否确实随窗口正确调整大小。
 
-## 处理最小化
+## **处理最小化**
 
 还有另一种情况，交换链可能会过期，那是一种特殊的窗口大小调整：窗口最小化。
 这种情况很特殊，因为它会导致帧缓冲区大小为 `0`。
@@ -239,7 +239,7 @@ void recreateSwapChain() {
 
 我们循环等待，直到窗口大小不为0，也就是最小化状态结束。
 
-## 最后
+## **最后**
 
 恭喜，您现在已经完成了您的第一个行为良好的 Vulkan 程序！在下一章中，我们将摆脱顶点着色器中的硬编码顶点，并使用顶点缓冲。
 

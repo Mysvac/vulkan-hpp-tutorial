@@ -1,15 +1,15 @@
-# Vulkan 实例
+# **Vulkan实例**
 
-## RAII上下文初始化
+## **RAII上下文初始化**
 
-`vk::raii::Context` 的作用是 初始化 Vulkan 的动态加载层（Loader），并提供 Vulkan 函数指针的加载功能。它是 RAII 封装的基础。
+`vk::raii::Context` 的作用是 初始化 Vulkan 的动态加载层（Loader），自动加载全局函数指针，它是 RAII 封装的基础。
 
-**要求：**
+> 在C风格接口中，部分扩展函数需要通过加载函数获取函数指针，无法直接通过函数名调用。  
+> 而 `vk::raii::Context` 隐藏了这些加载操作，让我们可以直接调用相关类的成员函数。
 
-1. 我们必须初始化它
-2. 只初始化一次
-3. 保证它的生命周期覆盖其他Vulkan组件
-4. 可以无参构造，不可`nullptr`构造（特殊）
+- 我们必须初始化它，且只初始化一次
+- 保证它的生命周期覆盖其他Vulkan组件
+- 可以无参构造，不可`nullptr`构造（特殊）
 
 所以我们可以直接将它作为成员变量，类实例化时自动创建并加载上下文：
 
@@ -22,12 +22,12 @@ private:
 
 现在直接构建与运行程序，请保证程序不报错。
 
-> RAII机制参考接口介绍章节。
+> RAII机制参考“接口介绍”章节。
 
 
-## 创建实例
+## **创建实例**
 
-我们还需要创建一个实例来初始化 Vulkan 库，实例是您的应用程序和 Vulkan 库之间沟通的桥梁。
+还需要创建一个实例来初始化 Vulkan 库，实例是您的应用程序和 Vulkan 库之间沟通的桥梁。
 
 ### 1. 创建成员变量和辅助函数
 
@@ -48,7 +48,7 @@ void createInstance(){
 }
 ```
 
-> 之前提到大部分 `raii` 资源不支持无参构造，要使用 `nullptr` 初始化表示无效值
+> 之前提到大部分 `raii` 资源不支持无参构造，要使用 `nullptr` 初始化表示无资源
 
 ### 2. 添加应用程序信息
 
@@ -66,7 +66,7 @@ void createInstance(){
 }
 ```
 
-注意到，它并不是raii的，因为它只是个配置信息，不含特殊资源。
+注意到，它并不是RAII的，因为它只是个配置信息，不含特殊资源。
 所以我们可以无参构造，然后直接修改成员变量，像这样：
 
 ```cpp
@@ -90,10 +90,9 @@ vk::InstanceCreateInfo createInfo(
 
 **说明**：
 
-1. 任何 `CreateInfo` 都有一个 `flags` 参数。
-2. `flags` 参数是位枚举，用于控制特殊行为。
-3. `flags`参数提供默认初始化，大部分时候无需修改。
-4. 还有其他参数，但都提供了默认初始化，无需手动设置。
+1. `flags` 参数是特殊的标志位类型，用于控制特殊行为。
+2. `flags` 参数默认初始化为空标志，大多时候无需修改。
+3. 还有其他参数，但都提供了默认初始化，无需手动设置。
 
 注意到，`&applicationInfo`传入指针，需要注意生命周期！
 
@@ -118,7 +117,7 @@ m_instance = vk::raii::Instance( m_context, createInfo );
 
 > 本文档统一使用成员函数创建子对象。
 
-## 添加扩展以支持GLFW
+## **添加扩展以支持GLFW**
 
 Vulkan 是一个平台无关的 API，这意味着您需要一个扩展来处理窗口系统接口。
 
@@ -145,12 +144,12 @@ createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size
 createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 ```
 
-> 为了兼容底层C接口，很多配置信息的参数依然是首元素指针+元素数量的方式。
-> 但是vulkan-hpp提供了更高级的成员函数，也就是上面用到的 `setter`，可以简化代码。
+### 2. 特殊setter函数说明
 
-### 2. 特殊settter函数说明
+由于数组类型传参时会隐式退化成指针，底层C风格接口都使用“开始指针+元素数量”的方式引用数组。
+Vulkan-hpp需要调用底层C接口，所以这些配置信息采用相同的方式记录。
 
-vulkan-hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::ArrayProxyNoTemporaries` 模板参数简化了数组参数的设置。
+但 vulkan-hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::ArrayProxyNoTemporaries` 模板参数简化了数组参数的设置。
 
 > 这些函数的命名大致是： `set......s` ，末尾`s`表示多个。  
 > 假如是 `setAs`，那么应该有类似 `pA` 和 `aCount` 的成员变量，分别表示开始指针和数量。
@@ -161,20 +160,18 @@ vulkan-hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::Ar
    - 支持直接传入单个元素（自动包装为单元素数组）。
    - 自动计算元素数量并设置指针，无需手动管理 `....Count` 和 `p....s`。
 
-> 实际上，每个成员变量还有自身的 `setter` ，他们和直接赋值是等效的。
-> 
-> 为了方便区分，如果是单参数，我们直接赋值而不用 `setter` 函数。  
-> 如果使用了 `setter` ，那么大概率是上述情况。
+> 实际上，每个成员变量还有自身的 `setter` ，他们和直接赋值是等效的。  
+> 为了方便区分，如果是单参数，本教程直接赋值而不用 `setter` 函数。  
 
 ### 3. 测试与运行
 
 现在尝试构建与运行项目，非MacOS不应该出现错误。
 
-## 处理MacOS的错误
+## **处理MacOS的错误**
 
 > 特征：err.code() 为  `vk::Result::eErrorIncompatibleDriver`
 
-如果在使用最新 MoltenVK sdk 的 MacOS 上，可能抛出异常，因为MacOS在运行Vulkan时必须启用转换层扩展。
+在使用最新 MoltenVK SDK 的 MacOS 上，可能抛出异常，因为MacOS在运行Vulkan时必须启用转换层扩展。
 
 **解决方案：**
 
@@ -195,9 +192,9 @@ createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 现在重新尝试构建与运行项目，不应该出现错误。
 
 
-## 检查扩展支持
+## **检查扩展支持**
 
-有扩展不支持时，创建实例会抛出异常，异常代码为 `vk::Result::eErrorExtensionNotPresent`。
+有扩展不支持时创建实例会抛出异常，异常代码为 `vk::Result::eErrorExtensionNotPresent` 。
 
 我们可以主动检查哪些扩展是支持的，使用 `enumerateInstanceExtensionProperties` 函数，会返回一个 `std::vector` ，表示支持的扩展类型。
 
@@ -219,15 +216,13 @@ for (const auto& extension : extensions) {
 
 > 挑战：尝试创建一个函数，检查 GLFW 需要的所有扩展是否都在支持的扩展列表中。
 
-## 清理资源
+## **清理资源**
 
 - `CreateInfo`和 `ApplicationInfo` 是简单结构，不含其他资源，自然析构即可。
 
 - C风格接口必须手动调用相关 `Destory` 函数释放 `VkInstance` 等特殊资源。
 
 - 我们使用了 `vk::raii`，不需要在 `cleanup` 中手动清理资源。
-
-- 可以使用`.destory()`成员函数显式销毁资源。
 
 **注意：**
 
@@ -237,13 +232,15 @@ for (const auto& extension : extensions) {
 
 3. 由1+2，需要保证成员变量的声明顺序正确。
 
-## 测试
+> 实际上也可以使用 `m_xxx = nullptr` 显式清理资源，此时无需在意声明顺序。
+
+## **测试**
 
 现在运行代码，保证没有出错，出现问题可以参考下面的样例代码。
 
 ---
 
-在继续实例创建之后更复杂的步骤之前，是时候通过验证层来评估我们的程序了。
+在继续更复杂的步骤之前，是时候通过验证层来评估我们的程序了。
 
 ---
 

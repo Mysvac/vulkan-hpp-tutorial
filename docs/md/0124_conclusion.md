@@ -1,4 +1,4 @@
-# Vulkan 图形管线-结论
+# **图形管线-总结**
 
 现在我们可以结合之前章节中的所有结构和对象来创建图形管线了！以下是我们现在拥有的对象类型，作为一个快速回顾
 
@@ -7,11 +7,11 @@
 - 管线布局：uniform 值和 push 值被着色器引用，可以在绘制时更新
 - 渲染通道：管线阶段引用的附件及其用途
 
-## 添加创建信息
+## **添加创建信息**
 
-所有这些结合在一起完全定义了图形管线的功能，
+这些内容结合在一起完全定义了图形管线的功能，
 所以我们现在可以开始填写 `vk::GraphicsPipelineCreateInfo` 结构体，
-在 `createGraphicsPipeline` 函数的末尾。
+在 `createGraphicsPipeline` 函数的末尾：
 
 ```cpp
 vk::GraphicsPipelineCreateInfo pipelineInfo;
@@ -63,7 +63,7 @@ pipelineInfo.basePipelineHandle = nullptr; // Optional
 pipelineInfo.basePipelineIndex = -1; // Optional
 ```
 
-## 创建图形管线
+## **创建图形管线**
 
 现在准备好最后一步，创建一个类成员来保存 `vk::raii::Pipeline` 对象
 
@@ -83,13 +83,13 @@ m_graphicsPipeline = m_device.createGraphicsPipeline( nullptr, pipelineInfo );
 > 此位置的参数简写是 `optional<PipelineCache>` 管线缓存。  
 > 我们将在管线缓存章节中深入探讨这一点。
 
-## 测试
+## **测试**
 
 现在运行你的程序，确认我们已经可以成功创建管线！
 
 ---
 
-我们已经非常接近在屏幕上看到一些东西弹出来了。
+我们已经非常接近在屏幕上看到一些东西了。
 在接下来的几章中，我们将从交换链图像中设置实际的帧缓冲，并准备绘制命令。
 
 ---
