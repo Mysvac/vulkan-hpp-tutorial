@@ -1,13 +1,15 @@
-# 创建顶点缓冲
+# **创建顶点缓冲**
 
-## 前言
+## **前言**
 
 缓冲(Buffers)在 Vulkan 中是一个用于存储任意数据的区域，它可以被显卡读取。
 在本节中，我们将用它存储顶点数据。
 与其他的 Vulkan 对象不同，缓冲并不会自动分配内存。
 我们在之前的章节中见识到了Vulkan API的可控性，内存管理也是其中之一。
 
-## 创建缓冲
+> 本教程中有时叫它“缓冲区”，但大多数时候直接称为“缓冲”，二者是一样的。
+
+## **创建缓冲**
 
 在`initVulkan`中创建一个新的函数`createVertexBuffer`，放在`createCommandBuffers`之前：
 
@@ -46,7 +48,7 @@ vk::BufferCreateInfo bufferInfo;
 bufferInfo.size = sizeof(vertices[0]) * vertices.size();
 ```
 
-第二个参数是`usage`，它表示这些数据的用途。它本身是个位枚举，可以同时表示多种用途。
+第二个参数是`usage`，它表示这些数据的用途，可以是多个位掩码的组合。
 我们需要的是顶点缓冲，所以可以这样写：
 
 ```cpp
@@ -88,7 +90,7 @@ void createVertexBuffer() {
 }
 ```
 
-## 内存需求
+## **内存需求**
 
 虽然缓冲已经创建了，但它实际还未分配任何内存。分配内存的第一步是查询他的内存需求量：
 
@@ -104,8 +106,8 @@ vk::MemoryRequirements memRequirements = m_vertexBuffer.getMemoryRequirements();
 | `alignment` | 内存对齐方式，取决于`bufferInfo.usage`和`bufferInfo.flags` |
 | `memoryTypeBits` | 适用于缓冲的内存类型的位字段 |
 
-显卡可以分配不同类型的内存，这些不同的内存类型可能有不同的操作或性能表现。
-我们需要结合需求寻找正确的内存类型，现在让我们创建新函数`findMemoryType`
+显卡可以分配不同类型的内存\(显存\)，这些不同的内存类型可能有不同的操作或性能表现。
+我们需要根据需求寻找合适的内存类型，现在让我们创建新函数`findMemoryType`
 
 ```cpp
 uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
@@ -120,11 +122,10 @@ uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
 auto memProperties = m_physicalDevice.getMemoryProperties();
 ```
 
-> 以`2`位后缀的类型大多数是在原基础上支持了`pNext`指针，我们使用普通函数即可。
-
 `vk::PhysicalDeviceMemoryProperties`结构体中有两个数组 `memoryTypes` 和 `memoryHeaps`。
-第二个数组内存堆是不同的内存资源，比如VRAM耗尽时专用于VRAM和RAM交换的空间。而不同的内存类型存在于这些堆中。
-现在我们只关心类型而不关心它来自哪个堆，但显然这也会影响性能。
+第二个数组“内存堆”是不同的内存资源，比如VRAM耗尽时专用于VRAM和RAM交换的空间。而不同的内存类型存在于这些堆中。
+
+作为初学者，我们现在只关心类型而不关心它来自哪个堆，但需要记得后者其实也会影响性能。
 
 让我们找一个合适的内存类型：
 
@@ -155,7 +156,7 @@ for(uint32_t i = 0; i < memProperties.memoryTypeCount; ++i){
 }
 ```
 
-## 内存分配
+## **内存分配**
 
 现在我们有办法找到正确的内存类型了，将这些信息都记入 `vk::MemoryAllocateInfo` 结构体中。
 
@@ -167,7 +168,7 @@ allocInfo.memoryTypeIndex = findMemoryType( memRequirements.memoryTypeBits,
 );
 ```
 
-`eHostVisible` 表示可以被CPU访问， `eHostCoherent` 表示内存自动同步。
+`eHostVisible` 表示可以被CPU\(主机\)访问， `eHostCoherent` 表示内存自动同步。
 
 分配内存非常简单，我们首先在 `m_vertexBuffer` **上方**创建一个新变量，然后使用 `allocateMemory` 分配资源：
 
@@ -188,9 +189,9 @@ m_vertexBufferMemory = m_device.allocateMemory( allocInfo );
 m_vertexBuffer.bindMemory(m_vertexBufferMemory, 0);
 ```
 
-右边的`0`是内存区域内的偏移量，通过此变量可以让一块内存分成多个区域。此内存转为顶点缓冲分配，偏移量应为0。
+右边的`0`是内存区域内的偏移量，通过此变量可以让一块内存分成多个区域。此内存专为顶点缓冲分配，偏移量应为0。
 
-## 填充顶点缓冲
+## **填充顶点缓冲**
 
 现在是时候把顶点数据拷贝到缓冲中了。我们使用`mapMemory`获取内存地址指针:
 
@@ -225,7 +226,7 @@ m_vertexBufferMemory.unmapMemory();
 刷新内存范围和使用一致性内存堆意味着驱动程序可以注意到我们写入了缓冲，但这不意味着在GPU上可见。
 GPU上的数据转移是个隐含的过程，规范只[告诉我们](https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/chap7.html#synchronization-submission-host-writes)，它保证在下次调用`queue.submit`时完成。
 
-## 绑定顶点缓冲
+## **绑定顶点缓冲**
 
 剩下的就是在渲染操作期间绑定顶点缓冲，我们扩展`recordCommandBuffer`函数来执行此操作。
 
@@ -245,7 +246,7 @@ commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 `bindVertexBuffers`的第一个参数指定顶点缓冲绑定点的偏移量。
 我们还修改了`draw`，传递缓冲中得到顶点数，而不是硬编码的`3`。
 
-## 测试
+## **测试**
 
 现在运行程序，你应该可以看到熟悉的三角形：
 

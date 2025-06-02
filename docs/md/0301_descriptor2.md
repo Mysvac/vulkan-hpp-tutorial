@@ -1,11 +1,11 @@
-# 描述符池和集
+# **描述符池与集合**
 
-## 前言
+## **前言**
 
 我们上一章定义的描述符布局描述了可以绑定的描述符类型。
 在这一章，我们将为每个 `vk::Buffer` 资源创建描述符集，从而绑定到对应的`uniform`缓冲描述符。
 
-## 描述符池
+## **描述符池**
 
 描述符集不能直接创建，必须通过描述符池分配，就像命令缓冲一样。
 现在我们创建一个新函数`createDescriptorPool`用于设置描述符池。
@@ -41,7 +41,7 @@ poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 poolInfo.setPoolSizes( poolSize );
 ```
 
-我们使用了RAII封装，必须指定`eFreeDescriptorSet`标志位，从而在描述符集合释放时将控制全交还给描述符池。
+我们使用了RAII封装，必须指定`eFreeDescriptorSet`标志位，从而在描述符集合释放时将控制权交还给描述符池。
 
 除了可用的单个描述符的最大数量外，我们还需要指定可能分配的描述符集合的最大数量：
 
@@ -49,7 +49,7 @@ poolInfo.setPoolSizes( poolSize );
 poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 ```
 
-在`m_descriptorSetLayout`下方添加一个新的类成员来存储描述符池的句柄，并调用  来创建它。
+在`m_descriptorSetLayout`下方添加一个新的类成员来存储描述符池的句柄，并调用 `createDescriptorPool` 来创建它。
 
 ```cpp
 vk::raii::DescriptorSetLayout m_descriptorSetLayout{ nullptr };
@@ -60,7 +60,7 @@ vk::raii::DescriptorPool m_descriptorPool{ nullptr };
 m_descriptorPool = m_device.createDescriptorPool(poolInfo);
 ```
 
-## 描述符集合
+## **描述符集合**
 
 现在可以分配描述符集合本身了，为此目的添加一个 `createDescriptorSets` 函数：
 
@@ -79,7 +79,7 @@ void createDescriptorSets() {
 }
 ```
 
-我们需要使用`vk::DescriptorSetAllocateInfo`结构定义描述符集合的分配方式。
+我们需要使用 `vk::DescriptorSetAllocateInfo` 结构定义描述符集合的分配方式。
 您需要从中指定对应的描述符池、需要分配的描述符集合数量和布局。
 
 ```cpp
@@ -91,7 +91,7 @@ allocInfo.setSetLayouts( layouts );
 
 我们为每个飞行中的帧都创建一个描述符集合，它们的布局相同，所以需要一个布局数组。
 
-注意我们这里的布局数组，共用了成员变量中RAII布局变量的内部句柄，避免不需要的重复资源创建。
+注意我们这里的布局数组，共用了RAII布局变量的内部句柄，避免不需要的重复资源创建。
 
 现在添加一个类成员来保存描述符集合句柄，并使用 `allocateDescriptorSets` 分配：
 
@@ -132,8 +132,8 @@ descriptorWrite.dstBinding = 0;
 descriptorWrite.dstArrayElement = 0;
 ```
 
-前两个字段指定要更新的描述符集合和绑定，我们的`uniform`缓冲绑定的是索引`0`。
-由于描述符可以是数组，我们还需要指定更新数组元素的开始索引。我们没有使用数组，所以这里是`0`。
+前两个字段指定要更新的描述符集合和绑定，我们的 `uniform` 缓冲绑定的是索引 `0` 。
+由于描述符可以是数组，我们还需要指定更新数组元素的开始索引。我们没有使用数组，所以这里是 `0` 。
 
 我们还需要再次指定描述符的类型和数量：
 
@@ -142,20 +142,20 @@ descriptorWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
 descriptorWrite.setBufferInfo(bufferInfo);
 ```
 
-注意`setBufferInfo`设置了`descriptorCount`和`pBufferInfo`两个字段。
+注意 `setBufferInfo` 设置了 `descriptorCount` 和 `pBufferInfo` 两个字段。
 
-不同的描述符需要设置不同的字段，比如`BufferInfo`自动用于引用缓冲区数据的描述符，`ImageInfo`用于引用图像数据的描述符，`TexelBufferView`则用于引用缓冲区视图的描述符。我们使用`BufferInfo`。
+不同的描述符需要设置不同的字段，比如 `BufferInfo` 自动用于引用缓冲区数据的描述符， `ImageInfo` 用于引用图像数据的描述符， `TexelBufferView` 则用于引用缓冲区视图的描述符。我们使用 `BufferInfo` 。
 
-最后使用`updateDescriptorSets`更新描述符集合。
+最后使用 `updateDescriptorSets` 更新描述符集合：
 
 ```cpp
 m_device.updateDescriptorSets(descriptorWrite, nullptr);
 ```
 
-第一个参数是`vk::WriteDescriptorSet`的代理数组。
-第二个参数是`vk::CopyDescriptorSet`的代理数组，用于描述符相互复制，我们不需要。
+第一个参数是 `vk::WriteDescriptorSet` 的代理数组。
+第二个参数是 `vk::CopyDescriptorSet` 的代理数组，用于描述符之间相互复制，我们不需要。
 
-## 使用描述符集合
+## **使用描述符集合**
 
 我们现在需要更新 `recordCommandBuffer` 函数，从而将每帧正确的描述符集合绑定到着色器的描述符上。
 在 `drawIndexed` 之前使用 `bindDescriptorSets` ：
@@ -178,7 +178,7 @@ commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 最后一个参数指定动态描述符，我们会在以后的章节介绍。
 
 如果您现在运行程序，您会注意到不幸的是什么都不可见。
-问题是由于我们在投影矩阵中所做的 Y 翻转，顶点现在以逆时针顺序而不是顺时针顺序绘制。
+这是由于我们在投影矩阵中所做的 Y 翻转，顶点现在以逆时针顺序而不是顺时针顺序绘制。
 这会导致背面剔除生效，并阻止绘制任何几何图形。
 转到 `createGraphicsPipeline` 函数并修改  `frontFace` 以纠正此问题
 
@@ -194,9 +194,10 @@ rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
 矩形已变为正方形，因为投影矩阵现在校正了宽高比。
 `updateUniformBuffer` 负责屏幕大小调整，因此我们不需要在 `recreateSwapChain` 中重新创建描述符集合。
 
-## 对齐要求
+## **对齐要求**
 
-到目前为止，我们忽略了一件事，即 C++ 结构中的数据应如何与着色器中的 `uniform` 定义匹配。简单地在两者中使用相同的类型似乎很明显
+到目前为止，我们忽略了一件事，即 C++ 结构中的数据应如何与着色器中的 `uniform` 定义匹配。
+简单地在两者中使用相同的类型似乎很容易
 
 ```cpp
 // cpp
@@ -214,7 +215,7 @@ layout(binding = 0) uniform UniformBufferObject {
 } ubo;
 ```
 
-但是，这并不是全部。例如，尝试修改结构和着色器，使其看起来像这样
+但这并不是一直可行。尝试修改结构和着色器，使其看起来像这样：
 
 ```cpp
 // cpp
@@ -246,9 +247,9 @@ Vulkan 希望您结构中的数据以特定方式在内存中对齐，例如
 
 您可以在 [规范](https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/chap15.html#interfaces-resources-layout) 中找到完整的对齐要求列表。
 
-我们原始的着色器只有三个 `mat4` 字段，已经满足了对齐要求。由于每个 `mat4` 的大小为 4 x 4 x 4 = 64 字节，因此 `model` 的偏移量为 0，`view `的偏移量为 64，`proj` 的偏移量为 128。所有这些都是 16 的倍数，这就是它工作正常的原因。
+我们原始的着色器只有三个 `mat4` 字段，已经满足了对齐要求。由于每个 `mat4` 的大小为 4 x 4 x 4 = 64 字节，因此 `model` 的偏移量为 0，`view `的偏移量为 64，`proj` 的偏移量为 128。这些都是 16 的倍数，所以它能正常工作。
 
-新结构以 `vec2` 开头，它只有 8 字节大小，因此会抵消所有偏移量。现在 `model` 的偏移量为 8，`view` 的偏移量为 72，`proj` 的偏移量为 136，它们都不是 16 的倍数。为了解决这个问题，我们可以使用 C++11 中引入的 `alignas` 说明符
+新结构以 `vec2` 开头，它只有 8 字节大小，因此会抵消所有偏移量。现在 `model` 的偏移量为 8，`view` 的偏移量为 72，`proj` 的偏移量为 136，它们都不是 16 的倍数。为了解决这个问题，我们可以使用 C++11 中引入的 `alignas` 说明符：
 
 ```cpp
 struct UniformBufferObject {
@@ -259,9 +260,9 @@ struct UniformBufferObject {
 };
 ```
 
-如果您现在编译并再次运行程序，您应该会看到着色器再次正确接收其矩阵值。
+如果您现在编译并再次运行程序，您应该会看到着色器再次正确接收矩阵值。
 
-幸运的是，有一种方法可以在大多数情况下不必考虑这些对齐要求。我们可以在包含 GLM 之前定义 `GLM_FORCE_DEFAULT_ALIGNED_GENTYPES`
+幸运的是，有一种方法可以在大多数情况下不必考虑这些对齐要求。我们可以在包含 GLM 之前定义宏 `GLM_FORCE_DEFAULT_ALIGNED_GENTYPES` ：
 
 ```cpp
 #define GLM_FORCE_RADIANS
@@ -271,7 +272,7 @@ struct UniformBufferObject {
 
 这将强制 GLM 使用已经为我们指定了对齐要求的 `vec2` 和 `mat4` 版本。如果您添加此定义，则可以删除 `alignas` 说明符，并且您的程序仍然可以正常工作。
 
-不幸的是，如果您开始使用嵌套结构，此方法可能会崩溃。考虑 C++ 代码中的以下定义
+不幸的是，如果您开始使用嵌套结构，此方法可能会失败。考虑 C++ 代码中的以下定义
 
 ```cpp
 struct Foo {
@@ -318,18 +319,18 @@ struct alignas(16) UniformBufferObject {
 
 > 不要忘记在删除 `foo` 字段后重新编译着色器。
 
-## 多个描述符集合
+## **多个描述符集合**
 
 正如一些结构和函数调用所暗示的那样，实际上可以同时绑定多个描述符集合。
 创建管线布局时，您需要为每个描述符集合指定一个描述符布局。
-然后，着色器可以像这样引用特定的描述符集合
+然后，着色器可以像这样引用特定的描述符集合：
 
 ```glsl
 layout(set = 0, binding = 0) uniform UniformBufferObject { ... }
 ```
 
 您可以使用此功能将每个对象变化的描述符和共享的描述符放入单独的描述符集合中。
-在这种情况下，您可以避免在绘制调用中重新绑定大多数描述符，这可能更有效。
+此时可以避免在绘制调用中重新绑定大多数描述符，这可能更高效。
 
 ---
 

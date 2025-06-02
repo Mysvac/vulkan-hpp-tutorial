@@ -1,6 +1,6 @@
-# 暂存缓冲
+# **暂存缓冲**
 
-## 前言
+## **前言**
 
 我们现在的顶点缓冲已经可以正常工作了，但它的内存类型还不是最佳选择。
 
@@ -9,12 +9,12 @@
 
 容易理解，CPU访问内存更快、而GPU访问显存更快，交叉访问却比较麻烦，所以我们最好需要两个顶点缓冲。
 
-1. 位于内存，像上一节一样，我们称其为暂存缓冲（Staging Buffer）。
-2. 位于显存，这里称它为最终顶点缓冲。
+1. 位于内存，像上一节一样，我们称其为暂存缓冲\(Staging Buffer\)。
+2. 位于显存，这里称它为最终顶点缓冲，或是设备本地缓冲\(DeviceLocal\)。
 
 我们的CPU向暂存缓冲写数据，然后通过某种方式将数据从暂存缓冲复制到最终缓冲，然后GPU从最终缓冲中读取。
 
-## 转移队列
+## **转移队列**
 
 在缓冲之间复制数据需要支持相关操作的队列族，附带 `vk::QueueFlagBits::eTransfer` 标志位。
 好消息是满足 `eGraphics` 或 `eCompute` 的队列族已经隐式支持了 `eTransfer` 操作。
@@ -30,11 +30,11 @@
 
 - 将资源的 `sharingMode` 更改为 `vk::SharingMode::eConcurrent` ，并指定图形和传输队列族
 
-- 将任何传输命令（例如 `vkCmdCopyBuffer`，我们将在本章中使用它）提交到传输队列，而不是图形队列
+- 将任何传输命令（例如 `copyBuffer`，我们将在本章中使用它）提交到传输队列，而不是图形队列
 
 这有点工作量，但它会教您很多关于资源如何在队列族之间共享的知识。
 
-## 修改缓冲创建
+## **修改缓冲创建**
 
 因为我们需要创建多个缓冲，最好将单个缓冲创建的代码移入一个辅助函数。
 现在创建一个新函数 `createBuffer` ，并将 `createVertexBuffer` 的部分代码写入此函数：
@@ -45,8 +45,8 @@ void createBuffer(
     vk::BufferUsageFlags usage, 
     vk::MemoryPropertyFlags properties, 
     vk::raii::Buffer& buffer, 
-    vk::raii::DeviceMemory& bufferMemory) {
-    
+    vk::raii::DeviceMemory& bufferMemory
+) {
     vk::BufferCreateInfo bufferInfo;
     bufferInfo.size = size;
     bufferInfo.usage = usage;
@@ -90,7 +90,7 @@ void createVertexBuffer() {
 
 现在运行程序，保证程序依然正常工作。
 
-## 使用暂存缓冲
+## **使用暂存缓冲**
 
 现在我们修改 `createVertexBuffer`，主机可见缓冲将只作为临时缓冲，然后创建设备本地缓冲作为实际的顶点缓冲。
 
@@ -128,7 +128,7 @@ void createVertexBuffer() {
 - `eTransferSrc` 表示缓冲可以作为内存传输操作的源
 - `eTransferDst` 表示缓冲可以作为内存传输操作的目的地
 
-## 缓冲拷贝函数
+## **缓冲拷贝函数**
 
 我们现在创建一个新函数 `copyBuffer` ，用于缓冲之间的数据拷贝，
 
@@ -182,7 +182,7 @@ commandBuffer.end();
 ```
 
 与绘制命令不同，我们只希望它立刻执行内存传输命令。
-我们至少有两种方式等待内存传输完成，使用围栏`Fence`进行同步或直接`waitIdle`，我们使用后者。
+我们至少有两种方式等待内存传输完成，使用围栏`Fence`进行同步或直接`waitIdle`，这里使用后者：
 
 ```cpp
 vk::SubmitInfo submitInfo;
@@ -192,9 +192,9 @@ m_graphicsQueue.submit(submitInfo);
 m_graphicsQueue.waitIdle();
 ```
 
-> 使用`Fence`进行同步更精准，允许你同时同步多条传输命令，这可以带来更好的性能优化。
+> 使用 `Fence` 更精准，允许你同时同步地进行多条传输命令，可以带来更好的性能优化。
 
-## 最后
+## **最后**
 
 现在在 `createVertexBuffer` 函数末尾调用 `copyBuffer` ，将暂存缓冲的数据拷贝到设备本地缓冲。
 
@@ -204,12 +204,12 @@ copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
 
 现在尝试运行程序，保证程序可以正常执行。
 
-### 注意
+### **注意**
 
 在实际应用中，你不应该给每个缓冲都调用一次`allocateMemory`。
 同时为大量对象分配内存的正确方法是创建一个自定义分配器，该分配器通过使用我们在许多函数中看到的 `offset` 参数将单个资源拆分到许多不同的对象中。
 
-你可以自己实现这样的分配器，也可以使用 [VulkanMemoryAllocator-Hpp](https://github.com/YaaZ/VulkanMemoryAllocator-Hpp) 第三方库。
+你可以自己实现这样的分配器，也可以使用 [VulkanMemoryAllocator-Hpp](https://github.com/YaaZ/VulkanMemoryAllocator-Hpp) 这样的第三方库。
 
 但是对于本教程，为每个资源使用单独的分配是可以的。因为我们的数据量很小，不会触发相关限制。
 

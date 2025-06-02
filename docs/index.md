@@ -26,8 +26,7 @@
 - [CMake](https://cmake.org/) 构建系统
 - [vcpkg](https://vcpkg.io/) 依赖管理
 
-正如教程名，我会使用 Vulkan SDK 为C++提供的 `vulkan-hpp` 封装，且使用内部的 `raii` 封装，它提供了更现代的C++接口。
-
+正如教程名，我们会使用 Vulkan SDK 为C++提供的 `vulkan-hpp` 和 `raii` 封装，它提供了更现代的C++接口。
 
 虽然 `vulkan-hpp` 提供了模块支持，但是我们还需要使用 `glfw3` 库和 `glm` 库，将它们模块化是比较繁琐的，
 这超出了本教程的范围，因此不使用C++20的模块功能。

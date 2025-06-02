@@ -1,13 +1,13 @@
-# 顶点输入描述
+# **顶点输入描述**
 
-## 前言
+## **前言**
 
-在后面几章，我们将使用内存中的顶点缓冲数据代替Shader中的硬编码数据。
+在后面几章，我们将使用内存中的顶点缓冲区\(vertex buffers\)数据代替Shader中的硬编码数据。
 
-我们将从最简单的方式开始，创建CPU可见缓冲然后直接用`memcpy`将顶点数据复制进去。
-之后我们将了解如何使用暂存缓冲将顶点数据复制进高性能显存中。
+我们将从最简单的方式开始，创建CPU可见缓冲区然后直接用 `memcpy` 将顶点数据复制进去。
+之后我们将了解如何使用暂存缓冲区\(staging buffers\)将顶点数据复制进高性能显存中。
 
-## 顶点着色器
+## **顶点着色器**
 
 首先我们需要改变顶点着色器的代码，不再包含硬编码的顶点数据。
 顶点数据将从外部获取，通过`in`关键字：
@@ -29,7 +29,7 @@ void main() {
 `inPosition` 和 `inColor` 是顶点参数，是每个顶点在顶点缓冲中指定的属性。
 
 我们之前提过，一个`location`只能放一个资源，所以我们的位置和颜色信息需要放在不同的`location`中。
-我们通过输入接收了资源，所以`location = 0`暂时空了，可以用于输出。
+注意 `inPosition` 是外部->顶点着色器，`fragColor`是顶点着色器->片段着色器，所以二者不冲突。
 
 特殊的是，某些类型需要多个槽位，比如使用`dvec3`时，后一个变量的索引至少要高2：
 
@@ -40,7 +40,7 @@ layout(location = 2) in vec3 inColor;
 
 您可以在 [OpenGL wiki](https://www.khronos.org/opengl/wiki/Layout_Qualifier_(GLSL)) 中找到有关 layout 限定符的更多信息。
 
-## 顶点数据、
+## **顶点数据**
 
 现在回到C++代码，我们要将顶点数据从着色器代码移动到C++程序代码的数组中。
 
@@ -72,12 +72,12 @@ inline static const std::vector<Vertex> vertices = {
 };
 ```
 
-我们使用的位置和颜色值与之前完全相同，但现在它们组合成一个顶点数组。这被称为*交错*顶点属性。
+我们使用的位置和颜色值与之前完全相同，但现在它们组合成一个顶点数组，这被称为“交错顶点属性”。
 
 下一步要告诉 Vulkan 这些数据上传到GPU内存后如何传递给顶点着色器。
 我们需要两个结构体传达这些信息。
 
-## 绑定描述
+## **绑定描述**
 
 第一个结构体是 `vk::VertexInputBindingDescription` ，我们添加一个静态成员函数用于填充信息：
 
@@ -94,7 +94,7 @@ struct Vertex {
 };
 ```
 
-顶点绑定描述了从内存中通过顶点集合加载顶点的速率。
+顶点绑定描述结构体描述了从内存中通过顶点集合加载顶点的“速率”。
 它规定了单个数据条目的字节数，以及要在每个顶点还是每个实例时读取一条数据。
 
 ```cpp
@@ -109,14 +109,14 @@ bindingDescription.inputRate = vk::VertexInputRate::eVertex;
 
 `inputRate`参数具有以下两种枚举值：
 
-| 枚举 | 意义 |  
+| `vk::VertexInputRate` | 意义 |  
 |------|------|
 | `eVertex` | 在处理每个顶点时读取一条 |
 | `eInstance` | 在处理每个实例时读取一条 |
 
 我们不会使用实例化渲染，因此使用每个顶点读取一条。实际我们每条数据就对应一个顶点。
 
-## 属性描述
+## **属性描述**
 
 第二个结构体是 `vk::VertexInputAttributeDescription` ，它描述了如何处理顶点的输入数据。
 我们依然添加一个静态成员函数：
@@ -169,7 +169,7 @@ attributeDescriptions[1].offset = offsetof(Vertex, color);
 
 > 注意这里的`format`对应的是`vec3`。
 
-## 管线顶点输入
+## **管线顶点输入**
 
 我们现在需要设置图形管线的配置，让它接收这些数据。现在修改`createGraphicsPipeline`函数，找到`vertexInputInfo`变量并添加信息：
 
@@ -183,7 +183,7 @@ vertexInputInfo.setVertexBindingDescriptions(bindingDescription);
 vertexInputInfo.setVertexAttributeDescriptions(attributeDescriptions);
 ```
 
-## 最后
+## **最后**
 
 现在管线已准备好接受指定格式的顶点数据并将其传递给顶点着色器。
 
