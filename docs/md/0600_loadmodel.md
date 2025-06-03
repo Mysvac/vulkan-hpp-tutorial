@@ -1,6 +1,6 @@
-# 加载模型
+# **加载模型**
 
-## 前言
+## **前言**
 
 经过前面的内容，程序已经可以渲染三维网格体了。这一章节我们将从模型文件中加载顶点和索引，而不再硬编码于C++代码中。
 
@@ -8,7 +8,7 @@
 但任何稍微有趣些的3D程序就会需要此文件格式不支持的功能，比如骨骼动画。
 我们将在本章中从OBJ模型加载网格数据，但我们更关注如何使用这些数据，而不是如何从文件读取。
 
-## 库
+## **库**
 
 我们将使用 [tinyobjloader](https://github.com/syoyo/tinyobjloader) 库用于加载 OBJ 文件的数据。
 它像stb_image一样是单头文件库，你可以直接去仓库下载此文件，但我们依然使用VCPkg安装。
@@ -27,7 +27,7 @@ find_package(tinyobjloader CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE tinyobjloader::tinyobjloader)
 ```
 
-## 示例网格
+## **示例网格**
 
 本章中我们依然不启用光照系统，所以我们将使用把光照烘焙到纹理上的模型。
 查找此类模型的简便方法是在 [Sketchfab](https://sketchfab.com/) 上查找。该网站上的许多模型都以 OBJ 格式提供，并具有宽松的许可证。
@@ -41,7 +41,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE tinyobjloader::tinyobjloader)
 欢迎使用你自己的模型，但请确保它仅包含一种材质，且尺寸约 1.5*1.5*1.5 单位。
 如果它大于此尺寸，你必须更改视口矩阵。
 
-现在创建在 `shaders` 和 `textures` 旁创建新文件夹 `models`，将 OBJ 文件放入此文件夹，将纹理图像放入 `textures`文件夹。
+现在在 `shaders` 和 `textures` 旁创建新文件夹 `models`，将 OBJ 文件放入此文件夹，将纹理图像放入 `textures`文件夹。
 
 在您的程序中放置两个新的配置变量，以定义模型和纹理路径
 
@@ -59,7 +59,7 @@ inline static const std::string TEXTURE_PATH = "textures/viking_room.png";
 stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 ```
 
-## 前置准备
+## **前置准备**
 
 ### 1. 修改顶点和索引变量
 
@@ -113,7 +113,7 @@ tinyobjloader 库的头文件导入和STB基本一致，导入 `tiny_obj_loader.
 #include <tiny_obj_loader.h>
 ```
 
-## 加载模型数据
+## **加载模型数据**
 
 ### 1. 辅助函数
 
@@ -234,7 +234,7 @@ vertex.texCoord = {
 
 > 当模型旋转时，您可能会注意到后部（墙壁的背面）看起来有点奇怪。这是正常的，仅仅是因为该模型设计时就不支持从后侧观看。
 
-## 顶点去重
+## **顶点去重**
 
 上面的代码中，我们使用自增索引，给每个面的每个点都记录了相关信息，并没有真正利用到索引缓冲区。
 此时 `vertices` 向量包含大量重复的顶点数据，而我们应该去除重复顶点，并通过索引重用它们。
@@ -320,7 +320,7 @@ std::unordered_map<
 - 第三个模板形参是哈希算法，看起来比较复杂，但实际只是几个位运算的杂乱组合。
 - 第四个模板形参是键的等于算法，我们要求三个内容完全相等。
 
-## 最后
+## **最后**
 
 您现在应该能够成功编译并运行您的程序。
 如果您检查 `vertices` 的大小，您将看到它从 `11484` 缩小到 `3566`！

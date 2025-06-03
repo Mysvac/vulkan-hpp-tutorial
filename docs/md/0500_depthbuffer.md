@@ -1,11 +1,11 @@
-# 深度缓冲
+# **深度缓冲**
 
-## 前言
+## **前言**
 
 现在，我们已经将几何体载入了三维空间，但我们只输入了二维坐标。
-在本章中，我们会为3D网格添加 Z 坐标，并通过一个例子向你展示图像是否处理深度的差异。
+在本章中，我们会为3D网格添加 Z 坐标，并通过一个例子向你展示图像是否处理深度时的差异。
 
-## 3D几何体
+## **3D几何体**
 
 ### 1. 添加三维坐标
 
@@ -106,7 +106,7 @@ inline static const std::vector<uint16_t> indices = {
 第一种方法通常用于绘制透明对象，因为与顺序无关的透明对象绘制并不容易。
 而深度片段排序问题更常见的解决方案就是深度缓冲\(depth buffer\)。
 
-深度缓冲是额外的附件，它存储每个片段对应的深度，每次在光栅化器生成片段时都会比较是否比前一个片段更近。
+深度缓冲是额外的附件，它存储每个片段对应的深度，每次在光栅化器生成片段时都会判断是否比前一个片段更近。
 如果更近则替换，更远则抛弃，这被称为深度测试\(depth testing\)，用于处理物体的远近关系。
 可以在片段着色器中操作此值，就像操作颜色的输出一样。
 
@@ -121,7 +121,7 @@ GLM 生成的透视投影矩阵默认使用 OpenGL 的 `[-1.0, 1.0]` 的范围�
 #include <glm/gtc/matrix_transform.hpp>
 ```
 
-## 深度图像与视图
+## **深度图像与视图**
 
 ### 1. 成员变量与辅助函数
 
@@ -315,9 +315,9 @@ m_textureImageView = createImageView(m_textureImage, vk::Format::eR8G8B8A8Srgb, 
 m_depthImageView = createImageView(m_depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth);
 ```
 
-创建深度图像就到此为止，我们不需要映射或拿另一个图像复制进去，因为它会在渲染管线开始时像颜色附件一个被清理。
+创建深度图像就到此为止，我们不需要映射或拿另一个图像复制进去，因为它会在渲染管线开始时像颜色附件一样被清理。
 
-## 显式转换深度图像
+## **显式转换深度图像**
 
 不需要显式地将图像的布局转换为深度附件，因为我们将在渲染通道中处理它。
 但为了完整起见，仍然在本节描述此过程。如果你愿意，完全可以跳过这部分内容。
@@ -383,7 +383,7 @@ if( oldLayout == vk::ImageLayout::eUndefined &&
 深度缓冲区会在深度测试时被读取并在绘制新片段时被写入。
 读取发生在 `eEarlyFragmentTests` ，写入发生在 `eLateFragmentTests` ，我们只需要选择在最早的阶段之前完成转换操作即可。
 
-## 渲染通道
+## **渲染通道**
 
 我们现在需要修改 `createRenderPass` 以包含深度附件，首先指定 `vk::AttachmentDescription`：
 
@@ -452,7 +452,7 @@ dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk
 dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
 ```
 
-## 帧缓冲
+## **帧缓冲**
 
 下一步是修改帧缓冲的创建，从而将深度图像绑定到深度附件。
 
@@ -484,7 +484,7 @@ void initVulkan() {
 }
 ```
 
-## 清除值
+## **清除值**
 
 因为我们现在有多个具有 `vk::AttachmentLoadOp::eClear` 的附件，所以我们还需要指定多个清除值。转到 `recordCommandBuffer` 并创建一个 `vk::ClearValue` 结构体数组：
 
@@ -501,9 +501,9 @@ Vulkan 中深度缓冲的深度范围为 `[0.0, 1.0]`，其中 `1.0` 位于远�
 
 > 请注意，`clearValues` 的顺序应与附件的顺序相同。
 
-## 深度与模板状态
+## **深度与模板状态**
 
-深度附件已经可以使用了，但仍然需要再图形管线中启用深度测试。
+深度附件已经可以使用了，但仍然需要在图形管线中启用深度测试。
 现在转到 `createGraphicsPipeline` 函数中添加 `vk::PipelineDepthStencilStateCreateInfo` 结构体配置：
 
 ```cpp
@@ -515,7 +515,7 @@ depthStencil.depthWriteEnable = true;
 `depthTestEnable`指定是否将新片段与深度缓冲中的片段对比。
 `depthWriteEnable`指定是否将通过测试的片段写入深度缓冲。
 
-然后还需通过 `depthCompareOp` 字段定义比较方式，我们检查更小的深度=更近，所以应该这样：
+然后还需通过 `depthCompareOp` 字段定义比较方式，我们坚持更小的深度=更近，所以应该这样：
 
 ```cpp
 depthStencil.depthCompareOp = vk::CompareOp::eLess;
@@ -547,10 +547,10 @@ pipelineInfo.pDepthStencilState = &depthStencil;
 
 ![depth_correct](../images/depth_correct.png)
 
-## 处理窗口大小调整
+## **处理窗口大小调整**
 
 当窗口大小调整以匹配新的颜色附件分辨率时，深度缓冲的分辨率应更改。
-扩展 `recreateSwapChain` 函数以在这种情况下重建深度资源
+扩展 `recreateSwapChain` 函数以在此情况下重建深度资源：
 
 ```cpp
 void recreateSwapChain() {

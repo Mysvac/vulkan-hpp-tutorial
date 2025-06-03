@@ -47,7 +47,7 @@ Vulkan SDK本身由C编写，这带来更好的跨语言能力，可以其他语
 
 - 基于Vulkano封装的Rust教程 [Vulkan-tutorial-rs](https://github.com/bwasty/vulkan-tutorial-rs)
 
-
+> 如果你发现了文档的错误，请点击右上角前往Github仓库，提交 Issue 或 PR 。
 
 ## **项目参考资料**
 

@@ -1,6 +1,6 @@
-# 纹理
+# **纹理**
 
-## 前言
+## **前言**
 
 我们将从这一节开始使用纹理映射让图像看起来更加有趣，这也是为后面的3D模型章节打基础。
 
@@ -11,32 +11,33 @@
 3. 创建图像采样器
 4. 添加组合图像采样器描述符，以从纹理获取颜色
 
-为了让着色器读取纹理，我们需要一个目标图像\(有Dsc标志的VkImage\)，就像我们之前的最终顶点缓冲。
-
-我们直接已经使用过交换链创建的图像对象`vk::Image`，现在我们需要创建自己的图像对象。
+为了让着色器读取纹理，我们需要一个着色器可读图像\(有ShaderRead标志的VkImage\)。
+我们之前已经使用过交换链创建的图像对象`vk::Image`，现在我们需要创建自己的图像对象。
 
 要让着色器读取，资源位于显存，CPU无法直接写入，我们需要通过缓冲\(VkBuffer\)或暂存图像\(有Src的VkImage\)中转数据。
 
-我们可以使用暂存图像，但使用缓冲时的性能往往不低于暂存图像，在某些硬件上更快。
+使用暂存缓冲的性能往往不低于暂时图像，所以本教程使用第一种方式。
 
-我们首先创建此缓冲区并用像素值填充，然后创建一个图像将像素复制到其中。这和之前的顶点缓冲过程基本一致。
+我们先创建此缓冲区并用像素值填充，然后创建一个图像将像素复制到其中。这和之前的顶点缓冲过程基本一致。
 
 不过我们还需要注意一些事情，图像可以有不同的布局，这些布局会影响图像在内存中的组织方式。
-由于显卡的工作模式，按行存储图像资源未必带来最佳性能表现，我们我们需要为图像指定合适的布局方式。
+由于显卡的工作模式差异，按行存储图像资源未必带来最佳性能表现，我们需要为图像指定合适的布局方式。
 
-实际上我们在创建渲染通道时已经接触过了一些布局，它们都在`vk::ImageLayout`枚举类型中：
+实际上我们在创建渲染通道时已经接触过了一些布局：
 
-|    布局类型   |      含义      |
-|--------------|----------------|
+|    `vk::ImageLayout`  |      含义      |
+|-----------------------|----------------|
 | `ePresentSrcKHR` | 优化呈现    |
 | `eColorAttachmentOptimal` | 优化色彩的修改 |
 | `eTransferSrcOptimal` | 资源传输时作为源优化 |
 | `eTransferDstOptimal` | 资源传输时作为目标优化 |
 | `eShaderReadOnlyOptimal` | 优化着色器采样 |
 
-一种常见的修改图像布局的方式是使用管线屏障(pipeline barrier)，在本章节我们会向你展示。
+一种常见的修改图像布局的方式是使用管线屏障(pipeline barrier)，我们会在本章节中向你展示。
 
-## 图像库
+> 另一种常见的方式是交给渲染通道处理，就像我们的颜色附件一样。
+
+## **图像库**
 
 Vulkan不含内置的图像/模型加载工具，你需要使用第三方库，或者自己写一个程序加载简单的图像数据。
 
@@ -61,7 +62,7 @@ find_package(Stb REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${Stb_INCLUDE_DIR})
 ```
 
-## 加载图像
+## **加载图像**
 
 现在在程序中添加头文件从而导入库：
 
@@ -94,7 +95,7 @@ void createTextureImage() {
 现在在项目根目录创建一个新文件夹 `textures` 用于存放图像资源，文件夹与 `shaders` 平级。
 本教程将使用 [CC0 licensed image](https://pixabay.com/en/statue-sculpture-fig-historically-1275469/)，你可以使用自己喜欢的图像。
 
-我们已经将此图像修改成了 512*512 像素，并改名为 `texture.jpg`，你可以直接点击下方的图像并保存：
+原教程已经将此图像修改成了 512*512 像素，并改名为 `texture.jpg`，你可以直接点击下方的图像并保存：
 
 ![texture.jpg](../images/texture.jpg)
 
@@ -115,10 +116,9 @@ void createTextureImage() {
 我们使用 `STBI_rgb_alpha` 让他强制加载4通道，缺少的通道会自动补齐。
 一个像素一个通道是1Byte，可以轻松算出图片的总大小。
 
-## 暂存缓冲
+## **暂存缓冲**
 
-我们需要创建一个主机可见缓冲用于暂存数据，就像创建顶点缓冲时的那样。
-在 `createTextureImage` 函数中添加两个临时变量：
+我们需要创建一个主机可见缓冲用于暂存数据，请在 `createTextureImage` **函数中**添加两个临时变量：
 
 ```cpp
 vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
@@ -152,10 +152,10 @@ stagingBufferMemory.unmapMemory();
 stbi_image_free(pixels);
 ```
 
-## 纹理图像
+## **纹理图像**
 
 我们还要让着色器能够访问缓冲中的像素值，最好的方式是使用 Vulkan 的图像对象。
-图像对象允许我们更简单且快速地使用2D坐标检索对应位置的颜色。
+图像对象允许我们简单且快速地使用2D坐标检索对应位置的颜色。
 图像对象中的像素们被称为纹素(texels)，我们后面会使用此名称。
 
 现在添加两个新的类成员，放在`m_swapChain`的上方：
@@ -183,7 +183,7 @@ imageInfo.arrayLayers = 1;
 我们使用 `imageType` 指定图像类型，可以是1D、2D和3D图像，它们在Vulkan中有不同的坐标系统。
 一维图像是一个数组，二维常用于存放纹理，三维图形则常用于存放立体元素(voxel volumes)。
 
-`extent`自动指定了图像每个轴包含的纹素数，所以深度是1。
+`extent`自动指定了图像每个轴包含的纹素数，所以 `depth` 是1。
 我们暂时不使用mipmapping，所以`mipLevels`设为了1。
 我们只有一副图像，所以`arrayLayers`也为1。
 
@@ -268,7 +268,7 @@ m_textureImage.bindMemory(m_textureImageMemory, 0);
 
 上面的内存分配方式和缓冲区的分配几乎完全一致。
 
-现在函数已经变得很大了，我们应该像前面缓冲区的创建一个，独立出一个辅助函数 `createImage` 以便后续重用代码：
+现在函数已经变得很大了，我们应该像前面缓冲区的做法一样，独立出一个辅助函数 `createImage` 以便后续重用代码：
 
 ```cpp
 void createImage(
@@ -353,7 +353,7 @@ void createTextureImage() {
 }
 ```
 
-## 布局转换
+## **布局转换**
 
 我们现在要编写的函数再次涉及命令缓冲的记录和执行，现在是时候将此逻辑分离成两个独立函数了。
 
@@ -387,7 +387,7 @@ void endSingleTimeCommands(vk::raii::CommandBuffer commandBuffer) {
 }
 ```
 
-> 使用`endSingleTimeCommands`时需要通过移动语义，将命令缓冲移入，函数结束时自动销毁。
+> 使用`endSingleTimeCommands`时需要通过移动语义将命令缓冲移入，函数结束时自动销毁。
 
 现在可以优化 `copyBuffer` 函数：
 
@@ -449,7 +449,7 @@ barrier.subresourceRange.baseArrayLayer = 0;
 barrier.subresourceRange.layerCount = 1;
 ```
 
-我们的图像不是数组，也没有 mipmapping 级别，因此只知道一个级别和层级，
+我们的图像不是数组，也没有 mipmapping 级别，因此只有一个级别和层级，
 
 屏障主要用于同步，所以你必须指定屏障开始和等待的操作类型。
 及时我们通过其他方式进行了同步，也必须填写这两个参数。
@@ -487,7 +487,7 @@ commandBuffer.pipelineBarrier(
 
 最后三个参数是三种管线屏障的代理数组，即内存屏障、缓冲内存屏障和图像内存屏障，我们只有图像内存屏障。
 
-## 复制缓冲区内容到图像
+## **复制缓冲区内容到图像**
 
 现在创建一个`copyBufferToImage`辅助函数，用于复制数据：
 
@@ -538,9 +538,9 @@ commandBuffer.copyBufferToImage(
 );
 ```
 
-第四个参数接受代理数组，我们现在只将一块像素复制到整个读取，但你可以通过多个 `vk::BufferImageCopy` 信息在一次操作中实现多种不同的复制。
+第四个参数接受代理数组，我们现在只需要复制一块区域，但你可以通过多个 `vk::BufferImageCopy` 信息在一次操作中实现多种不同的复制。
 
-## 准备纹理图像
+## **准备纹理图像**
 
 现在我们回到`createTextureImage`函数，先调用刚才编写的布局转换函数，再调用数据复制函数：
 
@@ -574,7 +574,7 @@ transitionImageLayout(
 );
 ```
 
-## 修改屏障掩码
+## **修改屏障掩码**
 
 如果你现在运行程序，会发现验证层提示StageMask的设置不合法。
 我们现在需要设置 `transitionImageLayout` 中没有填写的`StageMask`和`AccessMask`。
@@ -584,7 +584,7 @@ transitionImageLayout(
 1. undefined -> tranfer destination
 2. transfer destination -> shader read only
 
-第一个变换时，我们不需要任何同步。第二个变变换时，我们需要保证着色器的读取在数据写入之后才能进行。
+第一个变换时，我们不需要任何同步。第二个变换时，我们需要保证着色器在数据写入之后才能进行读取。
 
 
 那么我们可以这样设置：
@@ -629,7 +629,7 @@ commandBuffer.pipelineBarrier(
 
 图像将在同一管线阶段写入，随后由片段着色器读取，这就是为什么我们在片段着色器管线阶段指定着色器读取访问。
 
-## 延伸
+## **延伸**
 
 注意的一件事是，命令缓冲区提交会导致开始时隐式的 `vk::AccessFlagBits::eHostWrite` 同步，用于同步 CPU 和 GPU 之间的内存访问，保证了GPU图像管线转写发生在CPU命令提交之后。
 

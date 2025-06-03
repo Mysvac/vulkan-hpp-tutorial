@@ -1,6 +1,6 @@
-# 生成 Mipmaps
+# **生成 Mipmaps**
 
-## 前言
+## **前言**
 
 在本章中，我们将为程序添加 mipmap 生成功能。Mipmaps 广泛应用于游戏和渲染软件中，Vulkan 让我们可以完全控制它们的创建方式。
 
@@ -13,7 +13,7 @@ Mipmaps的外观示例如下：
 
 > GAME101 课程中有Mipmap更详细的介绍。
 
-## 图像创建
+## **图像创建**
 
 ### 1. 获取mip级别
 
@@ -177,7 +177,7 @@ transitionImageLayout(
 );
 ```
 
-## 生成 Mipmaps
+## **生成 Mipmaps**
 
 ### 1. 函数修改
 
@@ -237,9 +237,9 @@ copyBufferToImage(
 // );
 ```
 
-### 2. 辅助函数创建
+现在整幅图像（每个 mip 级别）都被设置成了 `eTransferDstOptimal` 。
 
-我们需要将纹理图像的每个级别都设为 `eTransferDstOptimal` ，在bilt命令完成之后再转为 `eShaderReadOnlyOptimal`。
+### 2. 辅助函数创建
 
 现在添加一个辅助函数用于生成 mipmaps：
 
@@ -377,7 +377,7 @@ if (mipHeight > 1) mipHeight /= 2;
 
 `> 1` 检查是为了保证每个维度永远不会变为0。
 
-注意到循环是从 1 到 mipLevels-1 ，我们并没有把最后一个级别\(mipLevels-1\)的布局变回`eShaderReadOnlyOptimal`，所以需要再循环之外特殊处理：
+注意到循环是从 1 到 mipLevels-1 ，我们并没有把最后一个级别\(mipLevels-1\)的布局变回`eShaderReadOnlyOptimal`，所以需要在循环之外特殊处理：
 
 ```cpp
     barrier.subresourceRange.baseMipLevel = mipLevels - 1;
@@ -427,7 +427,7 @@ generateMipmaps(
 );
 ```
 
-## 线性过滤支持
+## **线性过滤支持**
 
 使用 `blitImage` 这样的内置函数生成 mip 图像非常方便，但这要求我们的纹理图像格式支持线性过滤。
 可以使用 `physicalDevice.FormatProperties()` 函数进行检查。
@@ -480,7 +480,7 @@ if(!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSample
 通常会预生成然后一并放入纹理文件中，从而提高加载速度。
 作为一个练习，读者自行可以寻找合适的纹理图片，尝试从中加载多个mipmap级别。
 
-## 采样器
+## **采样器**
 
 ### 1. 字段介绍
 
@@ -531,7 +531,7 @@ samplerInfo.maxLod = static_cast<float>(m_mipLevels);
 
 根据上面的伪代码，你应该可以理解这里的参数。
 
-## 运行
+## **运行**
 
 现在运行您的程序，您应该看到以下内容
 

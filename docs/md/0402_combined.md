@@ -1,6 +1,6 @@
-# 组合图像采样器
+# **组合图像采样器**
 
-## 前言
+## **前言**
 
 我们在uniform缓冲的章节介绍了一种描述符，本章我们将看到新的一种：组合图像采样器\(Combined image sampler\)。
 此描述符允许着色器通过采样器实例访问图像资源。
@@ -8,7 +8,7 @@
 我们会修改描述符布局/池/集，从而加入一个组合图像采样器。
 然后用我们的`Vertex`结构添加纹理坐标，并修改片段着色器让它使用纹理色彩。
 
-## 更新描述符
+## **更新描述符**
 
 ### 1. 修改描述符布局
 
@@ -55,7 +55,11 @@ poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
 尽管驱动程序可能允许超限分配，但开发者仍应遵循描述符池的初始限制。这是为了避免潜在的性能问题或兼容性问题。
 
-### 绑定描述符与图像和采样器资源
+> `maxSets` 指定描述符集合的最大数量  
+> `poolSizeCount` 指定描述符集合的类型数  
+> `descriptorCount` 指定单个描述符集合中描述符实例的数量
+
+### 3. 绑定描述符与图像和采样器资源
 
 最后一步是将实际的图像和采样器资源绑定到描述符集中的描述符。转到 `createDescriptorSets` 函数：
 
@@ -75,9 +79,9 @@ for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 }
 ```
 
-组合图像采样器的资源必须在 `vk::DescriptorImageInfo` 结构中指定，就像上面的uniform缓冲资源一样.
+组合图像采样器的资源必须在 `vk::DescriptorImageInfo` 结构中指定，就像之前的uniform缓冲资源一样。
 
-必须使用此图像信息更新描述符，就像缓冲一样。这次我们使用 `ImageInfo` 数组而不是 `BufferInfo`。
+必须使用此图像信息更新描述符，这次我们使用 `ImageInfo` 数组而不是 `BufferInfo`。
 
 ```cpp
 std::array<vk::WriteDescriptorSet, 2> descriptorWrites;
@@ -97,12 +101,12 @@ m_device.updateDescriptorSets(descriptorWrites, nullptr);
 
 描述符现在已准备好供着色器使用！
 
-## 纹理坐标
+## **纹理坐标**
 
 纹理映射还缺少一个重要的成分，那就是每个顶点的实际坐标。坐标决定了图像实际如何映射到几何体。
 
 修改 `Vertex` 结构以包含纹理坐标的 `vec2`。
-确保还添加 `vk::VertexInputAttributeDescription` ，以便我们可以在顶点着色器中使用纹理坐标作为输入。
+还需添加 `vk::VertexInputAttributeDescription` ，以便我们可以在顶点着色器中使用纹理坐标作为输入。
 这样才能将它们传递到片段着色器并在正方形表面上进行插值。
 
 ```cpp
@@ -155,7 +159,7 @@ inline static const std::vector<Vertex> vertices = {
 
 在本教程中，我将通过使用从左上角的 `0, 0` 到右下角的 `1, 1` 的坐标来简单地用纹理填充正方形。然后尝试使用低于 0 或高于 1 的坐标来查看寻址模式的实际效果。你可以随意尝试不同的坐标！
 
-## 着色器
+## **着色器**
 
 ### 1. 调试
 
@@ -179,8 +183,6 @@ void main() {
 
 就像每个顶点的颜色一样，`fragTexCoord` 值将由光栅化器在正方形区域上平滑插值。
 我们可以通过让片段着色器将纹理坐标作为颜色输出，来可视化这一点
-
-您应该看到类似下图的图像。不要忘记重新编译着色器！
 
 ```glsl
 #version 450
@@ -250,7 +252,7 @@ void main() {
 }
 ```
 
-我在这里分离了 RGB 和 alpha 通道，以不缩放 alpha 通道。
+我在这里分离了 RGB 和 alpha 通道，防止透明度被变换。
 
 ![texture_on_square_colorized](../images/texture_on_square_colorized.png)
 
@@ -258,7 +260,7 @@ void main() {
 
 您现在知道如何在着色器中访问图像了！
 
-当它与那些写入帧缓冲区的图像结合使用时是一种非常强大的技术。
+当它与那些写入帧缓冲区的图像结合使用时具有非常强大的功能。
 您可以使用这些图像作为输入来实现很酷的效果，例如后处理和 3D 世界中的相机显示。
 
 ---
