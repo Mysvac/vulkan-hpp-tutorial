@@ -544,7 +544,7 @@ private:
         vk::AttachmentDescription colorAttachmentResolve;
         colorAttachmentResolve.format = m_swapChainImageFormat;
         colorAttachmentResolve.samples = vk::SampleCountFlagBits::e1;
-        colorAttachmentResolve.loadOp = vk::AttachmentLoadOp::eClear;
+        colorAttachmentResolve.loadOp = vk::AttachmentLoadOp::eDontCare;
         colorAttachmentResolve.storeOp = vk::AttachmentStoreOp::eStore;
         colorAttachmentResolve.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
         colorAttachmentResolve.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
@@ -952,9 +952,6 @@ private:
             attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
 
             return attributeDescriptions;
-        }
-        bool operator==(const Vertex& other) const {
-            return pos == other.pos && color == other.color && texCoord == other.texCoord;
         }
     };
     /////////////////////////////////////////////////////////////////

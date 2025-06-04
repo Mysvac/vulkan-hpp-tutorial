@@ -274,13 +274,15 @@ void recreateSwapChain() {
 vk::AttachmentDescription colorAttachmentResolve;
 colorAttachmentResolve.format = m_swapChainImageFormat;
 colorAttachmentResolve.samples = vk::SampleCountFlagBits::e1;
-colorAttachmentResolve.loadOp = vk::AttachmentLoadOp::eClear;
+colorAttachmentResolve.loadOp = vk::AttachmentLoadOp::eDontCare;
 colorAttachmentResolve.storeOp = vk::AttachmentStoreOp::eStore;
 colorAttachmentResolve.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
 colorAttachmentResolve.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
 colorAttachmentResolve.initialLayout = vk::ImageLayout::eUndefined;
 colorAttachmentResolve.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 ```
+
+注意 `loadOp` 不再需要清除，整幅图像会根据多重缓冲图像更新全部内容。
 
 现在必须指示渲染通道将多重采样颜色图像解析为常规附件。
 创建一个新的附件引用，它将指向将用作解析目标的颜色缓冲

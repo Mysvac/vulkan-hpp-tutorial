@@ -97,9 +97,6 @@ index a209945..6dabfb1 100644
 -    inline static const std::vector<uint16_t> indices = {
 -        0, 1, 2, 2, 3, 0,
 -        4, 5, 6, 6, 7, 4
-+        bool operator==(const Vertex& other) const {
-+            return pos == other.pos && color == other.color && texCoord == other.texCoord;
-+        }
      };
      /////////////////////////////////////////////////////////////////
  
