@@ -29,46 +29,48 @@ extra_css:
 
 nav:
   - 首页: index.md
-  - 项目介绍: md/0000_intro.md
-  - 开发环境: md/0001_env.md
-  - 接口介绍: md/0002_diff.md
+  - 项目介绍: md/00/00_intro.md
+  - 开发环境: md/00/01_env.md
+  - 接口介绍: md/00/02_diff.md
   - 绘制三角形:
     - 设置:
-      - 基础代码: md/0100_base.md
-      - 实例: md/0101_instance.md
-      - 验证层: md/0102_validation.md
-      - 物理设备与队列族: md/0103_physicaldevice.md
-      - 逻辑设备与队列: md/0104_device.md
+      - 基础代码: md/01/00_base.md
+      - 实例: md/01/01_instance.md
+      - 验证层: md/01/02_validation.md
+      - 物理设备与队列族: md/01/03_physicaldevice.md
+      - 逻辑设备与队列: md/01/04_device.md
     - 呈现:
-      - 窗口表面: md/0110_surface.md
-      - 交换链: md/0111_swapchain.md
-      - 图像视图: md/0112_imageview.md
+      - 窗口表面: md/01/10_surface.md
+      - 交换链: md/01/11_swapchain.md
+      - 图像视图: md/01/12_imageview.md
     - 图形管线基础:
-      - 介绍: md/0120_pipeline.md
-      - 着色器: md/0121_shader.md
-      - 固定功能: md/0122_fixfunction.md
-      - 渲染通道: md/0123_renderpass.md
-      - 总结: md/0124_conclusion.md
+      - 介绍: md/01/20_pipeline.md
+      - 着色器: md/01/21_shader.md
+      - 固定功能: md/01/22_fixfunction.md
+      - 渲染通道: md/01/23_renderpass.md
+      - 总结: md/01/24_conclusion.md
     - 绘制:
-      - 帧缓冲: md/0130_framebuffer.md
-      - 命令缓冲: md/0131_commandbuffer.md
-      - 渲染和呈现: md/0132_rendering.md
-      - 飞行中的帧: md/0133_flightframe.md
-    - 重建交换链: md/0140_recreateswapchain.md
-  - 顶点缓冲:
-    - 顶点输入描述: md/0200_vertexinput.md
-    - 创建顶点缓冲: md/0201_vertexbuffer.md
-    - 暂存缓冲: md/0202_stagingbuffer.md
-    - 索引缓冲: md/0203_indexbuffer.md
-  - uniform缓冲: 
-    - 描述符布局与缓冲: md/0300_descriptor1.md
-    - 描述符池与集合: md/0301_descriptor2.md
-  - 纹理映射:
-    - 纹理图像: md/0400_texture.md
-    - 图像视图和采样器: md/0401_sampler.md
-    - 组合图像采样器: md/0402_combined.md
-  - 深度缓冲: md/0500_depthbuffer.md
-  - 加载模型: md/0600_loadmodel.md
-  - 生成Mipmaps: md/0700_mipmaps.md
-  - 多重采样: md/0800_multisample.md
+      - 帧缓冲: md/01/30_framebuffer.md
+      - 命令缓冲: md/01/31_commandbuffer.md
+      - 渲染和呈现: md/01/32_rendering.md
+      - 飞行中的帧: md/01/33_flightframe.md
+    - 重建交换链: md/01/40_recreateswapchain.md
+  - 缓冲与图像:
+    - 顶点缓冲:
+      - 顶点输入描述: md/02/00_vertexinput.md
+      - 创建顶点缓冲: md/02/01_vertexbuffer.md
+      - 暂存缓冲: md/02/02_stagingbuffer.md
+    - 索引缓冲: md/02/10_indexbuffer.md
+    - uniform缓冲: 
+      - 描述符布局与缓冲: md/02/20_descriptor1.md
+      - 描述符池与集合: md/02/21_descriptor2.md
+    - 纹理映射:
+      - 纹理图像: md/02/30_texture.md
+      - 图像视图和采样器: md/02/31_sampler.md
+      - 组合图像采样器: md/02/32_combined.md
+    - 深度缓冲: md/02/40_depthbuffer.md
+  - 扩展基础功能:
+    - 加载模型: md/03/00_loadmodel.md
+    - 生成Mipmaps: md/03/10_mipmaps.md
+    - 多重采样: md/03/20_multisample.md
   - 隐私政策: policy.md
