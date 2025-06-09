@@ -2,7 +2,7 @@
 
 ## **教程简介**
 
-本教程是 Vulkan 的入门教程，将系统讲解 Vulkan 图形与计算 API 的基础知识与实际应用。
+本文档是 Vulkan 的入门教程，将系统讲解 Vulkan 图形与计算 API 的基础知识与实际应用。
 
 教程将使用 C++ 编写代码，借助 Vulkan-Hpp 封装，充分利用 RAII 等现代 C++ 特性。
 
@@ -14,11 +14,12 @@
 2. 配置开发环境
 3. 绘制第一个三角形
 4. 扩展基础功能
+5. 介绍进阶功能
 
 
 ## **代码说明**
 
-教程将使用 C++ 编写代码，采用C++20标准，并使用以下工具链：
+教程将使用 C++ 编写代码，采用C++20标准，主要使用以下工具链：
 
 - [Vulkan SDK](https://lunarg.com/vulkan-sdk/)
 - [GLM](http://glm.g-truc.net/) 线性代数库
@@ -31,17 +32,17 @@
 虽然 `vulkan-hpp` 提供了模块支持，但是我们还需要使用 `glfw3` 库和 `glm` 库，将它们模块化是比较繁琐的，
 这超出了本教程的范围，因此不使用C++20的模块功能。
 
-> C++23 的标准库模块与标准库头文件似乎是冲突的，这很可能显著延缓C++社区模块化的进度
+> 在后续的扩展章节中可能会尝试启用模块，但在前面的基础章节中不会使用。
 
-`CMake` 用于项目构建，实现跨平台的项目，但要求读者了解CMake基础使用。
+`CMake` 用于项目构建，实现跨平台的项目配置，但要求读者了解 CMake 的基础使用。
 
-`Vcpkg` 用于管理第三方库，主要用于安装 `glfw3` 和 `glm`，这非常简单。
+`Vcpkg` 用于管理第三方库，主要用于安装 `glfw3` 和 `glm` 等依赖，这非常简单。
 
 ## **其他说明**
 
-Vulkan SDK本身由C编写，这带来更好的跨语言能力，可以其他语言调用C接口。
+Vulkan SDK本身由C编写，这带来更好的跨语言能力，可以使用其他语言调用C接口。
 
-你或许更喜欢C风格底层接口，或使用Rust：
+你或许更喜欢C风格的底层接口，或使用Rust：
 
 - 基于底层C接口的C++教程：[Vulkan-tutorial](https://vulkan-tutorial.com/)
 
@@ -57,3 +58,4 @@ Vulkan英文教程 [Vulkan-Tutorial](https://github.com/Overv/VulkanTutorial) �
 
 Vulkan中文教程 [Vulkan-Tutorial](https://tutorial.vulkan.net.cn/Introduction) 。
 
+> 如果觉得内容尚可，请给Github仓库点个 Star ，谢谢喵。
