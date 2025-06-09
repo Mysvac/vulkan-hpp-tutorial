@@ -1,18 +1,22 @@
 site_name: Vulkan-hpp-tutorial
-site_url: https://mysvac.github.io/vulkan-hpp-tutorial/ 
+site_author: 迷枵(Mysvac)
+site_url: https://mysvac.github.io/vulkan-hpp-tutorial/
 repo_url: https://github.com/Mysvac/vulkan-hpp-tutorial
+repo_name: Mysvac/vulkan-hpp-tutorial
+site_description: >
+  Vulkan 入门教程，使用 C++20 编写，基于官方 Vulkan SDK 的 vulkan-hpp 和 RAII 封装，帮助开发者更现代、安全地学习 Vulkan 图形编程。
 
 theme:
   name: material
   language: zh
-  palette:  # 启用深浅模式切换
-    - scheme: default  # 浅色模式
+  palette:
+    - scheme: default
       toggle:
-        icon: material/weather-sunny  # 太阳图标
+        icon: material/weather-sunny
         name: 切换到深色模式
-    - scheme: slate  # 深色模式（内置）
+    - scheme: slate
       toggle:
-        icon: material/weather-night  # 月亮图标
+        icon: material/weather-night
         name: 切换到浅色模式
   features:
     - content.code.annotate

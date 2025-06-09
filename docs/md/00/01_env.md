@@ -226,7 +226,13 @@ build/HelloVulkan
 - 弹出空白窗口
 - 关闭窗口后，控制台输出支持的Vulkan扩展数量
 
-> 你或许喜欢使用CMakePresets简化配置，可以自行创建使用，但本教程不涉及CMake预设。
+### 关于CMake预设
+
+**注意：CMake预设不是必须的，我们没有复杂的配置需求，你完全可以通过上面两行简单的CMake指令构建项目！**
+
+如果你喜欢使用 `CMakePresets.json` （可以很好地和CLion、VSCode、Visual Studio配合），可以参考 **[这个](../../codes/00/01_env/CMakePresets.json)** 预设模板。
+
+此预设模板使用Ninja作为生成器，提供了MSVC/GNU/Clang的预设配置。但它未经过充分测试，不保证全平台可用。
 
 ---
 
