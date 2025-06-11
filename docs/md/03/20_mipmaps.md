@@ -431,7 +431,7 @@ generateMipmaps(
 
 使用 `blitImage` 这样的内置函数生成 mip 图像非常方便，但这要求我们的纹理图像格式支持线性过滤。
 可以使用 `physicalDevice.FormatProperties()` 函数进行检查。
-为此在 `generateMipmaps` 函数中添加一个参数用于检查。
+为此在 `generateMipmaps` 函数中添加一个参数：
 
 ```cpp
 void createTextureImage() {
@@ -478,7 +478,7 @@ if(!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSample
 
 应该注意的时，实际应用中一般不会在运行时生成mipmap级别。
 通常会预生成然后一并放入纹理文件中，从而提高加载速度。
-作为一个练习，读者自行可以寻找合适的纹理图片，尝试从中加载多个mipmap级别。
+作为一个练习，读者可以自行寻找合适的纹理图片，尝试从中加载多个mipmap级别。
 
 ## **采样器**
 
@@ -551,17 +551,15 @@ samplerInfo.maxLod = static_cast<float>(m_mipLevels);
 samplerInfo.minLod = static_cast<float>(m_mipLevels / 2);
 ```
 
-这将参数类似下面的图像：
+此参数将生成类似下面的图像：
 
 ![highmipmaps](../../images/highmipmaps.png)
 
-> 当物体远离摄像机时，采样器会自动使用更高的 mip 级别，无需手动调整。
-
 ---
 
-**[C++代码](../../codes/03/10_mipmaps/main.cpp)**
+**[C++代码](../../codes/03/20_mipmaps/main.cpp)**
 
-**[C++代码差异](../../codes/03/10_mipmaps/main.diff)**
+**[C++代码差异](../../codes/03/20_mipmaps/main.diff)**
 
 **[根项目CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 

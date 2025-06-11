@@ -94,10 +94,6 @@ private:
     vk::Format m_swapChainImageFormat;
     vk::Extent2D m_swapChainExtent;
     std::vector<vk::raii::ImageView> m_swapChainImageViews;
-    vk::SampleCountFlagBits m_msaaSamples = vk::SampleCountFlagBits::e1;
-    vk::raii::DeviceMemory m_colorImageMemory{ nullptr };
-    vk::raii::Image m_colorImage{ nullptr };
-    vk::raii::ImageView m_colorImageView{ nullptr };
     vk::raii::DeviceMemory m_depthImageMemory{ nullptr };
     vk::raii::Image m_depthImage{ nullptr };
     vk::raii::ImageView m_depthImageView{ nullptr };
@@ -115,6 +111,12 @@ private:
     std::vector<vk::raii::Fence> m_inFlightFences;
     uint32_t m_currentFrame = 0;
     bool m_framebufferResized = false;
+    glm::vec3 m_cameraPos{ 2.0f, 2.0f, 2.0f };
+    glm::vec3 m_cameraUp{ 0.0f, 1.0f, 0.0f };
+    float m_pitch = -35.0f;
+    float m_yaw = -135.0f;
+    float m_cameraMoveSpeed = 1.0f;
+    float m_cameraRotateSpeed = 25.0f;
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
@@ -141,7 +143,6 @@ private:
         createDescriptorSetLayout();
         createGraphicsPipeline();
         createCommandPool();
-        createColorResources();
         createDepthResources();
         createFramebuffers();
         createTextureImage();
@@ -318,7 +319,6 @@ private:
         for (const auto& it : physicalDevices) {
             if (isDeviceSuitable(it)) {
                 m_physicalDevice = it;
-                m_msaaSamples = getMaxUsableSampleCount();
                 break;
             }
         }
@@ -515,13 +515,13 @@ private:
     void createRenderPass() {
         vk::AttachmentDescription colorAttachment;
         colorAttachment.format = m_swapChainImageFormat;
-        colorAttachment.samples = m_msaaSamples;
+        colorAttachment.samples = vk::SampleCountFlagBits::e1;
         colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
         colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
         colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
         colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
         colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
-        colorAttachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+        colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
         vk::AttachmentReference colorAttachmentRef;
         colorAttachmentRef.attachment = 0;
@@ -529,7 +529,7 @@ private:
 
         vk::AttachmentDescription depthAttachment;
         depthAttachment.format = findDepthFormat();
-        depthAttachment.samples = m_msaaSamples;
+        depthAttachment.samples = vk::SampleCountFlagBits::e1;
         depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
         depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
         depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
@@ -540,30 +540,13 @@ private:
         vk::AttachmentReference depthAttachmentRef;
         depthAttachmentRef.attachment = 1;
         depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-        
-        vk::AttachmentDescription colorAttachmentResolve;
-        colorAttachmentResolve.format = m_swapChainImageFormat;
-        colorAttachmentResolve.samples = vk::SampleCountFlagBits::e1;
-        colorAttachmentResolve.loadOp = vk::AttachmentLoadOp::eDontCare;
-        colorAttachmentResolve.storeOp = vk::AttachmentStoreOp::eStore;
-        colorAttachmentResolve.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        colorAttachmentResolve.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        colorAttachmentResolve.initialLayout = vk::ImageLayout::eUndefined;
-        colorAttachmentResolve.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-
-        vk::AttachmentReference colorAttachmentResolveRef;
-        colorAttachmentResolveRef.attachment = 2;
-        colorAttachmentResolveRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
 
         vk::SubpassDescription subpass;
         subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
+        subpass.setColorAttachments( colorAttachmentRef );
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
-        subpass.pResolveAttachments = &colorAttachmentResolveRef;
 
-        auto attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
+        auto attachments = { colorAttachment, depthAttachment };
         vk::RenderPassCreateInfo renderPassInfo;
         renderPassInfo.setAttachments( attachments );
         renderPassInfo.setSubpasses( subpass );
@@ -658,7 +641,7 @@ private:
         rasterizer.depthBiasEnable = false;
 
         vk::PipelineMultisampleStateCreateInfo multisampling;
-        multisampling.rasterizationSamples =  m_msaaSamples;
+        multisampling.rasterizationSamples =  vk::SampleCountFlagBits::e1;
         multisampling.sampleShadingEnable = false;  // default
 
         vk::PipelineColorBlendAttachmentState colorBlendAttachment;
@@ -717,11 +700,7 @@ private:
         for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
             vk::FramebufferCreateInfo framebufferInfo;
             framebufferInfo.renderPass = m_renderPass;
-            std::array<vk::ImageView, 3> attachments { 
-                m_colorImageView, 
-                m_depthImageView,
-                m_swapChainImageViews[i]
-            };
+            std::array<vk::ImageView, 2> attachments { m_swapChainImageViews[i], m_depthImageView };
             framebufferInfo.setAttachments( attachments );
             framebufferInfo.width = m_swapChainExtent.width;
             framebufferInfo.height = m_swapChainExtent.height;
@@ -899,10 +878,6 @@ private:
         m_depthImage = nullptr;
         m_depthImageMemory = nullptr;
 
-        m_colorImageView = nullptr;
-        m_colorImage = nullptr;
-        m_colorImageMemory = nullptr;
-
         m_swapChainImageViews.clear();
         m_swapChainImages.clear(); // optional
         m_swapChain = nullptr;
@@ -910,7 +885,6 @@ private:
 
         createSwapChain();
         createImageViews();
-        createColorResources();
         createDepthResources();
         createFramebuffers();
 
@@ -1109,21 +1083,29 @@ private:
         }
     }
     void updateUniformBuffer(uint32_t currentImage) {
-        static auto startTime = std::chrono::high_resolution_clock::now();
+        updateCamera();
 
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        glm::vec3 front;
+        front.x = std::cos(glm::radians(m_yaw)) * std::cos(glm::radians(m_pitch));
+        front.y = std::sin(glm::radians(m_pitch));
+        front.z = std::sin(glm::radians(m_yaw)) * std::cos(glm::radians(m_pitch));
+        front = glm::normalize(front);
 
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(
             glm::mat4(1.0f), 
-            time * glm::radians(90.0f), 
+            glm::radians(-90.0f), 
+            glm::vec3(1.0f, 0.0f, 0.0f)
+        );
+        ubo.model *= glm::rotate(
+            glm::mat4(1.0f), 
+            glm::radians(-90.0f), 
             glm::vec3(0.0f, 0.0f, 1.0f)
         );
         ubo.view = glm::lookAt(
-            glm::vec3(2.0f, 2.0f, 2.0f), 
-            glm::vec3(0.0f, 0.0f, 0.0f), 
-            glm::vec3(0.0f, 0.0f, 1.0f)
+            m_cameraPos, 
+            m_cameraPos + front, 
+            m_cameraUp
         );
         ubo.proj = glm::perspective(
             glm::radians(45.0f), 
@@ -1221,7 +1203,6 @@ private:
         uint32_t width,
         uint32_t height,
         uint32_t mipLevels,
-        vk::SampleCountFlagBits numSamples,
         vk::Format format,
         vk::ImageTiling tilling,
         vk::ImageUsageFlags usage,
@@ -1240,7 +1221,7 @@ private:
         imageInfo.tiling = tilling;
         imageInfo.initialLayout = vk::ImageLayout::eUndefined;
         imageInfo.usage = usage;
-        imageInfo.samples = numSamples;
+        imageInfo.samples = vk::SampleCountFlagBits::e1;
         imageInfo.sharingMode = vk::SharingMode::eExclusive;
 
         image = m_device.createImage(imageInfo);
@@ -1386,7 +1367,6 @@ private:
             texWidth, 
             texHeight,
             m_mipLevels,
-            vk::SampleCountFlagBits::e1,
             vk::Format::eR8G8B8A8Srgb,
             vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eTransferSrc |
@@ -1531,7 +1511,6 @@ private:
             m_swapChainExtent.width,
             m_swapChainExtent.height,
             1,
-            m_msaaSamples,
             depthFormat,
             vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -1608,6 +1587,51 @@ private:
                 // m_indices.push_back(m_indices.size());
             }
         }
+    }
+    /////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////
+    /// move camera
+    void updateCamera() {
+        static auto startTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        startTime = currentTime;
+
+        glm::vec3 front;
+        front.x = std::cos(glm::radians(m_yaw)) * std::cos(glm::radians(m_pitch));
+        front.y = 0.0f;
+        front.z = std::sin(glm::radians(m_yaw)) * std::cos(glm::radians(m_pitch));
+        front = glm::normalize(front);
+
+        if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS)
+            m_cameraPos += front * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS)
+            m_cameraPos -= front * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS)
+            m_cameraPos -= glm::normalize(glm::cross(front, m_cameraUp)) * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS)
+            m_cameraPos += glm::normalize(glm::cross(front, m_cameraUp)) * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            m_cameraPos += m_cameraUp * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+            m_cameraPos -= m_cameraUp *m_cameraMoveSpeed * time;
+
+        if (glfwGetKey(m_window, GLFW_KEY_UP) == GLFW_PRESS)
+            m_pitch += m_cameraRotateSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_DOWN) == GLFW_PRESS)
+            m_pitch -= m_cameraRotateSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_LEFT) == GLFW_PRESS)
+            m_yaw   -= m_cameraRotateSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+            m_yaw   += m_cameraRotateSpeed * time;
+
+        m_yaw = std::fmodf(m_yaw + 180.0f, 360.0f);
+        if (m_yaw < 0.0f) m_yaw += 360.0f;
+        m_yaw -= 180.0f;
+
+        if (m_pitch > 89.0f) m_pitch = 89.0f;
+        if (m_pitch < -89.0f) m_pitch = -89.0f;
     }
     /////////////////////////////////////////////////////////////////
 
@@ -1716,50 +1740,6 @@ private:
         if (mipHeight > 1) mipHeight /= 2;
 
         endSingleTimeCommands( std::move(commandBuffer) );
-    }
-    /////////////////////////////////////////////////////////////////
-
-    /////////////////////////////////////////////////////////////////
-    /// multi sample
-    vk::SampleCountFlagBits getMaxUsableSampleCount() {
-        // vk::PhysicalDeviceProperties
-        auto properties = m_physicalDevice.getProperties();
-
-        vk::SampleCountFlags counts = (
-            properties.limits.framebufferColorSampleCounts & 
-            properties.limits.framebufferDepthSampleCounts
-        );
-
-        if(counts & vk::SampleCountFlagBits::e64) return vk::SampleCountFlagBits::e64;
-        if(counts & vk::SampleCountFlagBits::e32) return vk::SampleCountFlagBits::e32;
-        if(counts & vk::SampleCountFlagBits::e16) return vk::SampleCountFlagBits::e16;
-        if(counts & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e8;
-        if(counts & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e4;
-        if(counts & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e2;
-        return vk::SampleCountFlagBits::e1;
-    }
-    void createColorResources() {
-        vk::Format colorFormat = m_swapChainImageFormat;
-
-        createImage(
-            m_swapChainExtent.width,
-            m_swapChainExtent.height,
-            1,
-            m_msaaSamples,
-            colorFormat,
-            vk::ImageTiling::eOptimal,
-            vk::ImageUsageFlagBits::eTransientAttachment |
-            vk::ImageUsageFlagBits::eColorAttachment,
-            vk::MemoryPropertyFlagBits::eDeviceLocal,
-            m_colorImage,
-            m_colorImageMemory
-        );
-        m_colorImageView = createImageView(
-            m_colorImage,
-            colorFormat,
-            vk::ImageAspectFlagBits::eColor,
-            1
-        );
     }
     /////////////////////////////////////////////////////////////////
 };

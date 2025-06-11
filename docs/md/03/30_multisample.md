@@ -3,7 +3,7 @@
 ## **前言**
 
 我们的程序现在可以为纹理加载多个细节级别，这修复了渲染远离观察者的物体时出现的瑕疵。
-图像现在平滑了很多，但是仔细观察你会注意到几何形状边缘可能会出现锯齿状的图案。
+图像现在平滑了很多，但是仔细观察你将注意到几何形状边缘可能会出现锯齿状的图案。
 这在我们早期的程序中尤其明显，当时我们渲染了一个四边形：
 
 ![texcoord_visualization](../../images/texcoord_visualization.png)
@@ -18,7 +18,7 @@
 
 原因是这些部分在内的像素，要么染色要么不染色，而没有选择染部分颜色。
 MSAA 的作用就是每个像素使用多个采样点来确定其最终颜色。
-正如人们可能预料的那样，样本越多，效果越好，但这在计算上也更昂贵。
+正如你想的那样，样本越多，效果越好，但在计算上也更昂贵。
 
 ![antialiasing](../../images/antialiasing.png)
 
@@ -35,7 +35,7 @@ MSAA 的作用就是每个像素使用多个采样点来确定其最终颜色。
 vk::SampleCountFlagBits m_msaaSamples = vk::SampleCountFlagBits::e1;
 ```
 
-> 它并非RAII，可以任意放置。样例代码将他放在交换链下方、深度缓冲上方。
+> 它并非RAII，可以任意放置。样例代码将它放在交换链下方、深度缓冲上方。
 
 默认情况下，我们每个像素只使用一个样本，这等于没有超采样。
 我们正在使用深度缓冲，因此必须考虑颜色和深度的采样计数。
@@ -163,7 +163,8 @@ createImage(
 
 ### 3. 创建色彩资源
 
-现在创建一个新函数 `createColorResources` 用于创建多重采样色彩缓冲，这里的 `createImage` 使用 `m_msaasample` 成员变量，我们还仅使用一个 mip 级别，因为对于每个像素具有多个样本的图像，Vulkan 规范强制执行此操作。
+现在创建一个新函数 `createColorResources` 用于创建多重采样色彩缓冲，这里的 `createImage` 使用 `m_msaasample` 成员变量。
+我们仅使用一个 mip 级别，因为对于每个像素具有多个样本的图像，Vulkan 规范强制执行此操作。
 此外这个颜色缓冲不需要 mipmap，因为它不会用作纹理
 
 ```cpp
@@ -228,7 +229,7 @@ void createDepthResources() {
 
 ### 5. 重建交换链
 
-并更新 `recreateSwapChain`，以便在调整窗口大小时可以以正确的分辨率重新创建新的颜色图像
+并更新 `recreateSwapChain`，以便在调整窗口大小时可以以正确的分辨率重建颜色图像
 
 ```cpp
 void recreateSwapChain() {
@@ -349,7 +350,7 @@ void createGraphicsPipeline() {
 
 ![multisampling_comparison](../../images/multisampling_comparison.png)
 
-当近距离观察其中一个边缘时，差异更加明显
+当放大其中一个边缘时，差异较为明显（截图并放大而非移动摄像头靠近观看）
 
 ![multisampling_comparison2](../../images/multisampling_comparison2.png)
 
@@ -406,11 +407,13 @@ void createGraphicsPipeline() {
 当前的程序可以通过多种方式扩展，例如添加 Blinn-Phong 光照、后期处理效果和阴影贴图。
 你应该能够从其他 API 的教程中学习这些效果是如何工作。尽管 Vulkan API 很细致，但许多概念仍然是相同的。
 
+> 理论上，作者会更新后面这些内容，但至少需要等到期末周结束。
+
 ---
 
-**[C++代码](../../codes/03/20_multisample/main.cpp)**
+**[C++代码](../../codes/03/30_multisample/main.cpp)**
 
-**[C++代码差异](../../codes/03/20_multisample/main.diff)**
+**[C++代码差异](../../codes/03/30_multisample/main.diff)**
 
 **[根项目CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 

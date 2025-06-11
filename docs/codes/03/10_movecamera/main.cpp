@@ -85,7 +85,6 @@ private:
     std::vector<vk::raii::Buffer> m_uniformBuffers;
     std::vector<void*> m_uniformBuffersMapped;
     vk::raii::DeviceMemory m_textureImageMemory{ nullptr };
-    uint32_t m_mipLevels;
     vk::raii::Image m_textureImage{ nullptr };
     vk::raii::ImageView m_textureImageView{ nullptr };
     vk::raii::Sampler m_textureSampler{ nullptr };
@@ -111,6 +110,12 @@ private:
     std::vector<vk::raii::Fence> m_inFlightFences;
     uint32_t m_currentFrame = 0;
     bool m_framebufferResized = false;
+    glm::vec3 m_cameraPos{ 2.0f, 2.0f, 2.0f };
+    glm::vec3 m_cameraUp{ 0.0f, 1.0f, 0.0f };
+    float m_pitch = -35.0f;
+    float m_yaw = -135.0f;
+    float m_cameraMoveSpeed = 1.0f;
+    float m_cameraRotateSpeed = 25.0f;
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
@@ -493,12 +498,7 @@ private:
         m_swapChainImageViews.reserve( m_swapChainImages.size() );
         for (size_t i = 0; i < m_swapChainImages.size(); ++i) {
             m_swapChainImageViews.emplace_back( 
-                createImageView(
-                    m_swapChainImages[i], 
-                    m_swapChainImageFormat, 
-                    vk::ImageAspectFlagBits::eColor,
-                    1
-                ) 
+                createImageView(m_swapChainImages[i], m_swapChainImageFormat, vk::ImageAspectFlagBits::eColor) 
             );
         }
     }
@@ -1077,21 +1077,29 @@ private:
         }
     }
     void updateUniformBuffer(uint32_t currentImage) {
-        static auto startTime = std::chrono::high_resolution_clock::now();
+        updateCamera();
 
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        glm::vec3 front;
+        front.x = std::cos(glm::radians(m_yaw)) * std::cos(glm::radians(m_pitch));
+        front.y = std::sin(glm::radians(m_pitch));
+        front.z = std::sin(glm::radians(m_yaw)) * std::cos(glm::radians(m_pitch));
+        front = glm::normalize(front);
 
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(
             glm::mat4(1.0f), 
-            time * glm::radians(90.0f), 
+            glm::radians(-90.0f), 
+            glm::vec3(1.0f, 0.0f, 0.0f)
+        );
+        ubo.model *= glm::rotate(
+            glm::mat4(1.0f), 
+            glm::radians(-90.0f), 
             glm::vec3(0.0f, 0.0f, 1.0f)
         );
         ubo.view = glm::lookAt(
-            glm::vec3(2.0f, 2.0f, 2.0f), 
-            glm::vec3(0.0f, 0.0f, 0.0f), 
-            glm::vec3(0.0f, 0.0f, 1.0f)
+            m_cameraPos, 
+            m_cameraPos + front, 
+            m_cameraUp
         );
         ubo.proj = glm::perspective(
             glm::radians(45.0f), 
@@ -1188,7 +1196,6 @@ private:
     void createImage(
         uint32_t width,
         uint32_t height,
-        uint32_t mipLevels,
         vk::Format format,
         vk::ImageTiling tilling,
         vk::ImageUsageFlags usage,
@@ -1201,7 +1208,7 @@ private:
         imageInfo.extent.width = width;
         imageInfo.extent.height = height;
         imageInfo.extent.depth = 1;
-        imageInfo.mipLevels = mipLevels;
+        imageInfo.mipLevels = 1;
         imageInfo.arrayLayers = 1;
         imageInfo.format = format;
         imageInfo.tiling = tilling;
@@ -1225,8 +1232,7 @@ private:
         vk::raii::Image& image,
         vk::Format format,
         vk::ImageLayout oldLayout,
-        vk::ImageLayout newLayout,
-        uint32_t mipLevels
+        vk::ImageLayout newLayout
     ) {
         vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -1238,7 +1244,7 @@ private:
         barrier.image = image;
         // barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = mipLevels;
+        barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount = 1;
 
@@ -1329,7 +1335,6 @@ private:
             throw std::runtime_error("failed to load texture image!");
         }
         vk::DeviceSize imageSize = texWidth * texHeight * 4;
-        m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
         vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
         vk::raii::Buffer stagingBuffer{ nullptr };
@@ -1352,10 +1357,8 @@ private:
         createImage( 
             texWidth, 
             texHeight,
-            m_mipLevels,
             vk::Format::eR8G8B8A8Srgb,
             vk::ImageTiling::eOptimal,
-            vk::ImageUsageFlagBits::eTransferSrc |
             vk::ImageUsageFlagBits::eTransferDst | 
             vk::ImageUsageFlagBits::eSampled,
             vk::MemoryPropertyFlagBits::eDeviceLocal,
@@ -1367,8 +1370,7 @@ private:
             m_textureImage,
             vk::Format::eR8G8B8A8Srgb,
             vk::ImageLayout::eUndefined,
-            vk::ImageLayout::eTransferDstOptimal,
-            m_mipLevels
+            vk::ImageLayout::eTransferDstOptimal
         );
 
         copyBufferToImage(
@@ -1378,52 +1380,33 @@ private:
             static_cast<uint32_t>(texHeight)
         );
 
-        generateMipmaps(
+        transitionImageLayout(
             m_textureImage,
             vk::Format::eR8G8B8A8Srgb,
-            texWidth,
-            texHeight,
-            m_mipLevels
+            vk::ImageLayout::eTransferDstOptimal,
+            vk::ImageLayout::eShaderReadOnlyOptimal
         );
-
-        // transitionImageLayout(
-        //     m_textureImage,
-        //     vk::Format::eR8G8B8A8Srgb,
-        //     vk::ImageLayout::eTransferDstOptimal,
-        //     vk::ImageLayout::eShaderReadOnlyOptimal,
-        //     m_mipLevels
-        // );
         
     }
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
     /// image view and sampler
-    vk::raii::ImageView createImageView(
-        vk::Image image, 
-        vk::Format format, 
-        vk::ImageAspectFlags aspectFlags,
-        uint32_t mipLevels
-    ) {
+    vk::raii::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags) {
         vk::ImageViewCreateInfo viewInfo;
         viewInfo.image = image;
         viewInfo.viewType = vk::ImageViewType::e2D;
         viewInfo.format = format;
         viewInfo.subresourceRange.aspectMask = aspectFlags;
         viewInfo.subresourceRange.baseMipLevel = 0;
-        viewInfo.subresourceRange.levelCount = mipLevels;
+        viewInfo.subresourceRange.levelCount = 1;
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
         return m_device.createImageView(viewInfo);
     }
     void createTextureImageView() {
-        m_textureImageView = createImageView(
-            m_textureImage, 
-            vk::Format::eR8G8B8A8Srgb, 
-            vk::ImageAspectFlagBits::eColor,
-            m_mipLevels
-        );
+        m_textureImageView = createImageView(m_textureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor);
     }
     void createTextureSampler() {
         vk::SamplerCreateInfo samplerInfo;
@@ -1448,9 +1431,7 @@ private:
         samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
         samplerInfo.mipLodBias = 0.0f;
         samplerInfo.minLod = 0.0f;
-        samplerInfo.maxLod = static_cast<float>(m_mipLevels);
-
-        // samplerInfo.minLod = static_cast<float>(m_mipLevels / 2);
+        samplerInfo.maxLod = 0.0f;
 
         m_textureSampler = m_device.createSampler(samplerInfo);
     }
@@ -1496,7 +1477,6 @@ private:
         createImage(
             m_swapChainExtent.width,
             m_swapChainExtent.height,
-            1,
             depthFormat,
             vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -1505,19 +1485,13 @@ private:
             m_depthImageMemory
         );
 
-        m_depthImageView = createImageView(
-            m_depthImage, 
-            depthFormat, 
-            vk::ImageAspectFlagBits::eDepth,
-            1
-        );
+        m_depthImageView = createImageView(m_depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth);
 
         // transitionImageLayout(
         //     m_depthImage,
         //     depthFormat,
         //     vk::ImageLayout::eUndefined,
-        //     vk::ImageLayout::eDepthStencilAttachmentOptimal,
-        //     1
+        //     vk::ImageLayout::eDepthStencilAttachmentOptimal
         // );
     }
     /////////////////////////////////////////////////////////////////
@@ -1577,110 +1551,47 @@ private:
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
-    /// mipmaps
-    void generateMipmaps(
-        vk::raii::Image& image, 
-        vk::Format imageFormat,
-        int32_t texWidth, 
-        int32_t texHeight, 
-        uint32_t mipLevels
-    ) {
-        // vk::FormatProperties
-        auto formatProperties = m_physicalDevice.getFormatProperties(imageFormat);
+    /// move camera
+    void updateCamera() {
+        static auto startTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        startTime = currentTime;
 
-        if(!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)){
-            throw std::runtime_error("texture image format does not support linear blitting!");
-        }
+        glm::vec3 front;
+        front.x = std::cos(glm::radians(m_yaw)) * std::cos(glm::radians(m_pitch));
+        front.y = 0.0f;
+        front.z = std::sin(glm::radians(m_yaw)) * std::cos(glm::radians(m_pitch));
+        front = glm::normalize(front);
 
+        if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS)
+            m_cameraPos += front * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS)
+            m_cameraPos -= front * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS)
+            m_cameraPos -= glm::normalize(glm::cross(front, m_cameraUp)) * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS)
+            m_cameraPos += glm::normalize(glm::cross(front, m_cameraUp)) * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            m_cameraPos += m_cameraUp * m_cameraMoveSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+            m_cameraPos -= m_cameraUp *m_cameraMoveSpeed * time;
 
-        auto commandBuffer = beginSingleTimeCommands();
+        if (glfwGetKey(m_window, GLFW_KEY_UP) == GLFW_PRESS)
+            m_pitch += m_cameraRotateSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_DOWN) == GLFW_PRESS)
+            m_pitch -= m_cameraRotateSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_LEFT) == GLFW_PRESS)
+            m_yaw   -= m_cameraRotateSpeed * time;
+        if (glfwGetKey(m_window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+            m_yaw   += m_cameraRotateSpeed * time;
 
-        vk::ImageMemoryBarrier barrier;
-        barrier.image = image;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
-        barrier.subresourceRange.levelCount = 1;
+        m_yaw = std::fmodf(m_yaw + 180.0f, 360.0f);
+        if (m_yaw < 0.0f) m_yaw += 360.0f;
+        m_yaw -= 180.0f;
 
-        int32_t mipWidth = texWidth;
-        int32_t mipHeight = texHeight;
-
-        for (uint32_t i = 1; i < mipLevels; ++i) {
-            barrier.subresourceRange.baseMipLevel = i - 1;
-            barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-            barrier.newLayout = vk::ImageLayout::eTransferSrcOptimal;
-            barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-            barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
-            commandBuffer.pipelineBarrier(
-                vk::PipelineStageFlagBits::eTransfer,
-                vk::PipelineStageFlagBits::eTransfer,
-                {},
-                nullptr,
-                nullptr,
-                barrier
-            );
-            
-            vk::ImageBlit blit;
-            blit.srcOffsets[0] = vk::Offset3D{ 0, 0, 0 };
-            blit.srcOffsets[1] = vk::Offset3D{ mipWidth, mipHeight, 1 };
-            blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-            blit.srcSubresource.mipLevel = i - 1;
-            blit.srcSubresource.baseArrayLayer = 0;
-            blit.srcSubresource.layerCount = 1;
-            blit.dstOffsets[0] = vk::Offset3D{ 0, 0, 0 };
-            blit.dstOffsets[1] = vk::Offset3D{ 
-                mipWidth > 1 ? mipWidth / 2 : 1, 
-                mipHeight > 1 ? mipHeight / 2 : 1, 
-                1 
-            };
-            blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-            blit.dstSubresource.mipLevel = i;
-            blit.dstSubresource.baseArrayLayer = 0;
-            blit.dstSubresource.layerCount = 1;
-            commandBuffer.blitImage(
-                image, vk::ImageLayout::eTransferSrcOptimal,
-                image, vk::ImageLayout::eTransferDstOptimal,
-                blit,
-                vk::Filter::eLinear
-            );
-
-            barrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
-            barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
-            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-            commandBuffer.pipelineBarrier(
-                vk::PipelineStageFlagBits::eTransfer,
-                vk::PipelineStageFlagBits::eFragmentShader,
-                {},
-                nullptr,
-                nullptr,
-                barrier
-            );
-
-            if (mipWidth > 1) mipWidth /= 2;
-            if (mipHeight > 1) mipHeight /= 2;
-        }
-
-        barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-        barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-        barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
-        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-        commandBuffer.pipelineBarrier(
-            vk::PipelineStageFlagBits::eTransfer,
-            vk::PipelineStageFlagBits::eFragmentShader,
-            {},
-            nullptr,
-            nullptr,
-            barrier
-        );
-
-        if (mipWidth > 1) mipWidth /= 2;
-        if (mipHeight > 1) mipHeight /= 2;
-
-        endSingleTimeCommands( std::move(commandBuffer) );
+        if (m_pitch > 89.0f) m_pitch = 89.0f;
+        if (m_pitch < -89.0f) m_pitch = -89.0f;
     }
     /////////////////////////////////////////////////////////////////
 };
