@@ -390,27 +390,6 @@ void createGraphicsPipeline() {
 
 ---
 
-## **最后**
-
-你到这里已经花费了很多工作，但终于有了一个 Vulkan 程序的良好基础。
-你现在掌握的 Vulkan 基本原理知识应该足以开始探索更多功能，例如
-
-- 推送常量\(Push constants\)
-- 实例渲染\(Instanced rendering\)
-- 动态 uniform\(Dynamic uniforms\)
-- 分离的图像和采样器描述符\(Separate images and sampler descriptors\)
-- 管线缓存\(Pipeline cache\)
-- 多线程命令缓冲生成\(Multi-threaded command buffer generation\)
-- 多个子通道\(Multiple subpasses\)
-- 计算着色器\(Compute shaders\)
-
-当前的程序可以通过多种方式扩展，例如添加 Blinn-Phong 光照、后期处理效果和阴影贴图。
-你应该能够从其他 API 的教程中学习这些效果是如何工作。尽管 Vulkan API 很细致，但许多概念仍然是相同的。
-
-> 理论上，作者会更新后面这些内容，但至少需要等到期末周结束。
-
----
-
 **[C++代码](../../codes/03/30_multisample/main.cpp)**
 
 **[C++代码差异](../../codes/03/30_multisample/main.diff)**

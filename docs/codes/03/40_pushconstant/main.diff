@@ -1,0 +1,154 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index b0d2dfe..6258fc4 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -47,6 +47,7 @@ private:
+ 
+     inline static const std::string MODEL_PATH = "models/viking_room.obj";
+     inline static const std::string TEXTURE_PATH = "textures/viking_room.png";
++    inline static const std::string BUNNY_PATH = "models/bunny.obj";
+ 
+     inline static const std::vector<const char*> validationLayers {
+         "VK_LAYER_KHRONOS_validation"
+@@ -77,6 +78,7 @@ private:
+     vk::raii::Queue m_presentQueue{ nullptr };
+     std::vector<Vertex> m_vertices;
+     std::vector<uint32_t> m_indices;
++    std::vector<uint32_t> m_indicesOffsets;
+     vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
+     vk::raii::Buffer m_vertexBuffer{ nullptr };
+     vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
+@@ -153,7 +155,8 @@ private:
+         createTextureImage();
+         createTextureImageView();
+         createTextureSampler();
+-        loadModel();
++        loadModel(MODEL_PATH);
++        loadModel(BUNNY_PATH);
+         createVertexBuffer();
+         createIndexBuffer();
+         createUniformBuffers();
+@@ -687,8 +690,15 @@ private:
+         depthStencil.depthBoundsTestEnable = false; // Optional
+         depthStencil.stencilTestEnable = false; // Optional
+ 
++        vk::PushConstantRange pushConstantRange;
++        pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eVertex;
++        pushConstantRange.offset = 0;
++        pushConstantRange.size = sizeof(PushConstantData);
++
+         vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+         pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
++        pipelineLayoutInfo.setPushConstantRanges( pushConstantRange );
++
+         m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
+ 
+         vk::GraphicsPipelineCreateInfo pipelineInfo;
+@@ -805,7 +815,36 @@ private:
+             nullptr
+         );
+ 
+-        commandBuffer.drawIndexed(static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
++        for(size_t counter = 1; const uint32_t firstIndex : m_indicesOffsets) {
++            PushConstantData pcData;
++            if(counter == 1) {
++                pcData.model = glm::rotate(
++                    glm::mat4(1.0f), 
++                    glm::radians(-90.0f), 
++                    glm::vec3(1.0f, 0.0f, 0.0f)
++                )  * glm::rotate(
++                    glm::mat4(1.0f), 
++                    glm::radians(-90.0f), 
++                    glm::vec3(0.0f, 0.0f, 1.0f)
++                );
++            } else {
++                pcData.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.12f, 0.0f));
++            }
++            commandBuffer.pushConstants<PushConstantData>(
++                m_pipelineLayout,
++                vk::ShaderStageFlagBits::eVertex,
++                0, // offset
++                pcData
++            );
++            commandBuffer.drawIndexed(
++                counter == m_indicesOffsets.size() ? m_indices.size() - firstIndex : m_indicesOffsets[counter] - firstIndex,
++                1,
++                firstIndex,
++                0,
++                0
++            );
++            ++counter;
++        }
+ 
+         commandBuffer.endRenderPass();
+         commandBuffer.end();
+@@ -1124,16 +1163,6 @@ private:
+         front = glm::normalize(front);
+ 
+         UniformBufferObject ubo{};
+-        ubo.model = glm::rotate(
+-            glm::mat4(1.0f), 
+-            glm::radians(-90.0f), 
+-            glm::vec3(1.0f, 0.0f, 0.0f)
+-        );
+-        ubo.model *= glm::rotate(
+-            glm::mat4(1.0f), 
+-            glm::radians(-90.0f), 
+-            glm::vec3(0.0f, 0.0f, 1.0f)
+-        );
+         ubo.view = glm::lookAt(
+             m_cameraPos, 
+             m_cameraPos + front, 
+@@ -1573,15 +1602,17 @@ private:
+ 
+     /////////////////////////////////////////////////////////////////
+     /// load model
+-    void loadModel() {
++    void loadModel(const std::string& model_path) {
+         tinyobj::attrib_t attrib;
+         std::vector<tinyobj::shape_t> shapes;
+         std::vector<tinyobj::material_t> materials;
+         std::string warn, err;
+ 
+-        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
++        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model_path.c_str())) {
+             throw std::runtime_error(warn + err);
+         }
++
++        m_indicesOffsets.push_back(m_indices.size());
+         
+         std::unordered_map<
+             Vertex, 
+@@ -1605,10 +1636,14 @@ private:
+                     attrib.vertices[3 * index.vertex_index + 2]
+                 };
+ 
+-                vertex.texCoord = {
+-                    attrib.texcoords[2 * index.texcoord_index + 0],
+-                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+-                };
++                if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
++                    vertex.texCoord = {
++                        attrib.texcoords[2 * index.texcoord_index],
++                        1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
++                    };
++                } else {
++                    vertex.texCoord = {0.61f, 0.17f};
++                }
+ 
+                 vertex.color = {1.0f, 1.0f, 1.0f};
+ 
+@@ -1821,6 +1856,13 @@ private:
+         );
+     }
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// push constant
++    struct PushConstantData {
++        glm::mat4 model;
++    };
++    /////////////////////////////////////////////////////////////////
+ };
+ 
+ 
