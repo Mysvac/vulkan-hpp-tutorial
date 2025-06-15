@@ -215,7 +215,7 @@ vertex.color = {1.0f, 1.0f, 1.0f};
 
 您应该看到类似以下内容
 
-![inverted_texture_coordinates](../../images/inverted_texture_coordinates.png)
+![inverted_texture_coordinates](../../images/0300/inverted_texture_coordinates.png)
 
 太棒了，几何体看起来是正确的，但是纹理似乎有些问题。
 OBJ 格式假定一个坐标系，其中垂直坐标 0 表示图像的底部，但是我们使用 Vulkan 坐标系 0 表示图像的顶部。
@@ -230,7 +230,7 @@ vertex.texCoord = {
 
 再次运行程序时，您现在应该看到正确的结果
 
-![drawing_model](../../images/drawing_model.png)
+![drawing_model](../../images/0300/drawing_model.png)
 
 > 当模型旋转时，您可能会注意到后部（墙壁的背面）看起来有点奇怪。这是正常的，仅仅是因为该模型设计时就不支持从后侧观看。
 

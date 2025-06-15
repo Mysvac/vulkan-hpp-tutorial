@@ -63,7 +63,7 @@ VkResult vkCreateInstance_WithValidation(
 ### 1. 标准验证层配置
 
 与扩展一样，验证层需要通过指定其名称来启用。
-所有有用的标准验证都捆绑到一个包含在 SDK 中的层中，该层称为 `VK_LAYER_KHRONOS_validation`。
+所有有用的标准验证都捆绑在 SDK 的一个层中，该层称为 `VK_LAYER_KHRONOS_validation`。
 
 让我们在类中添加代码：
 
@@ -94,13 +94,13 @@ inline static const std::vector<const char*> validationLayers {
 
 ### 2. 验证层可用性检查
 
-#### 添加可用性检测函数
+**添加可用性检测函数**
 
 1. 添加一个成员函数 `checkValidationLayerSupport`，用于检查所有请求的层是否可用。
 
 2. 使用 `m_context.enumerateInstanceLayerProperties` 函数列出所有可用的层。
 
-3. 使用任意方式判断是否都可用，此处借助 `std::set`。
+使用任意方式判断是否都可以，此处借助 `std::set` ：
 
 ```cpp
 // ...
@@ -118,7 +118,7 @@ bool checkValidationLayerSupport() {
 
 > 需要判断的数量很少，且只会执行一次，暴力判断也可以，无需担心性能问题。
 
-#### 使用检测函数
+**使用检测函数**
 
 现在我们可以在 `createInstance` 中使用此函数
 
@@ -131,7 +131,7 @@ void createInstance() {
 }
 ```
 
-现在在调试模式下运行程序，并确保不会发生错误 
+现在在调试模式下运行程序，并确保不会发生错误。
 
 ### 3. 实例创建时启用验证层
 
@@ -189,7 +189,7 @@ createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
 ### 2. 编写注册函数
 
-#### 添加回调函数
+**添加回调函数**
 
 添加一个新的静态成员函数，名为 `debugCallback`。
 
@@ -206,7 +206,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 }
 ```
 
-#### 回调函数说明
+**回调函数说明**
 
 `VKAPI_ATTR` 和 `VKAPI_CALL` 确保该函数具有 Vulkan 调用它的正确签名。
 
@@ -365,7 +365,7 @@ if (enableValidationLayers) {
 
 现在尝试编译运行程序，应该没有报错，且或许能看到一些加载动态库之类的调试信息输出。
 
-![示例](../../images/validation.PNG)
+![示例](../../images/0102/validation.png)
 
 ---
 

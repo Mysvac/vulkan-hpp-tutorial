@@ -97,7 +97,7 @@ void createImageViews() {
 
 过滤器可以处理类似超采样的问题，考虑把纹理图像映射到一个像素更多的几何体，如果采样时直接选取最近的纹素，就会出现显著的马赛克效应，像下方的第一幅图片一样：
 
-![texture_filter](../../images/texture_filtering.png)
+![texture_filter](../../images/0231/texture_filtering.png)
 
 如果你通过周围的四个纹素进行线性插值，就可以得到右边更平滑的图片。
 
@@ -106,7 +106,7 @@ void createImageViews() {
 
 欠采样是相反的问题，将纹理图像映射到一个像素更少的几何体。当以锐角采样高频图案（如棋盘纹理）时，这将导致伪影
 
-![anisotropic_filter](../../images/anisotropic_filtering.png)
+![anisotropic_filter](../../images/0231/anisotropic_filtering.png)
 
 如左图所示，远程纹理变得混乱。解决此问题的方法是 各项异性过滤 ，它也可以有采样器设置。
 
@@ -114,7 +114,7 @@ void createImageViews() {
 
 除了过滤，采样器还可以指定 寻址模式(AddressMode) 处理一些变换，比如索引超出图像范围时显示什么内容：
 
-![texture_address](../../images/texture_addressing.png)
+![texture_address](../../images/0231/texture_addressing.png)
 
 ### 2. 创建采样器
 
@@ -238,7 +238,7 @@ m_textureSampler = m_device.createSampler(samplerInfo);
 
 如果你现在运行你的程序，你将看到这样的验证层消息
 
-![validation_layer_anisotropy](../../images/validation_layer_anisotropy.png)
+![validation_layer_anisotropy](../../images/0231/validation_layer_anisotropy.png)
 
 这是因为各向异性过滤实际上是一个可选的设备特性。 我们需要更新 `createLogicalDevice` 函数来启用它
 

@@ -4,10 +4,10 @@
 
 在 **Vulkan API** 中，**渲染通道（Render Pass）** 是一个核心概念，用于定义渲染操作的框架，包括帧缓冲（Framebuffer）的附件（Attachments）、子通道（Subpasses）之间的依赖关系以及数据如何在不同渲染阶段传递。
 
-### 1. 渲染通道（Render Pass）的核心作用
+### 1. 渲染通道的核心作用
 
 - **描述渲染目标**：定义颜色、深度、模板等附件的格式和用途（如输入、输出或保留）。  
-- **组织子通道（Subpasses）**：将渲染过程分解为多个逻辑阶段，避免冗余的内存读写（如延迟渲染中的 G-Buffer 生成和光照计算）。  
+- **组织子通道**：将渲染过程分解为多个逻辑阶段，避免冗余的内存读写（如延迟渲染中的 G-Buffer 生成和光照计算）。  
 - **优化性能**：通过明确的依赖关系，指导驱动进行内存布局转换（如从 `COLOR_ATTACHMENT_OPTIMAL` 到 `SHADER_READ_OPTIMAL`）。  
 
 
@@ -129,7 +129,7 @@ colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
 渲染通道由附件、子通道和子通道依赖组成。
 
-### 1. 附件（Attachments）
+### 1. 附件
 
 - 定义帧缓冲中每个图像视图（如颜色、深度缓冲）的格式（`VkFormat`）、加载/存储操作（Load/Store Op）。
 
@@ -147,7 +147,7 @@ colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
 > 注意这里引用的实际是“附件描述”，而此附件本身（`vk::Image`）实际绑定在帧缓冲上。
 
-### 2. 子通道（Subpasses）
+### 2. 子通道
 
 **子通道的作用：**
 
@@ -184,9 +184,9 @@ subpass.setColorAttachments( colorAttachmentRef );
 - `pPreserveAttachments`：此子通道未使用的附件，但必须保留其数据的附件
 
 
-### 3. 子通道依赖（Subpass Dependencies）
+### 3. 子通道依赖
 
-子通道依赖定义子通道之间的执行顺序和内存访问规则，解决资源竞争问题。
+子通道依赖（Subpass Dependencies）定义子通道之间的执行顺序和内存访问规则，解决资源竞争问题。
 由于我们只有单个子通道，暂时无需处理依赖问题。
 
 ## **渲染通道**

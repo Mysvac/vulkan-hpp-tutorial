@@ -165,7 +165,7 @@ pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
 m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 ```
 
-## **统一缓冲区**
+## **Uniform缓冲区**
 
 在下一章中，我们将指定包含UBO数据的缓冲区，这里我们先创建uniform缓冲区。
 
@@ -350,7 +350,7 @@ memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 
 使用 `UBO` 而不是将频繁变化的值传递给着色器是最有效的方法。
 将少量数据缓冲区传递给着色器的一种更有效的方法是推送常量。
-我们可能会在以后的章节中研究这些。
+我们会在以后的章节中介绍它。
 
 ---
 

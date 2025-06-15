@@ -1,5 +1,5 @@
 diff --git a/src/main.cpp b/src/main.cpp
-index b0d2dfe..6258fc4 100644
+index b0d2dfe..a73f3c8 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -47,6 +47,7 @@ private:
@@ -28,23 +28,26 @@ index b0d2dfe..6258fc4 100644
          createVertexBuffer();
          createIndexBuffer();
          createUniformBuffers();
-@@ -687,8 +690,15 @@ private:
+@@ -687,8 +690,18 @@ private:
          depthStencil.depthBoundsTestEnable = false; // Optional
          depthStencil.stencilTestEnable = false; // Optional
  
-+        vk::PushConstantRange pushConstantRange;
-+        pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eVertex;
-+        pushConstantRange.offset = 0;
-+        pushConstantRange.size = sizeof(PushConstantData);
++        std::array<vk::PushConstantRange, 2> pushConstantRanges;
++        pushConstantRanges[0].stageFlags = vk::ShaderStageFlagBits::eVertex;
++        pushConstantRanges[0].offset = 0;
++        pushConstantRanges[0].size = sizeof(glm::mat4);
++        pushConstantRanges[1].stageFlags = vk::ShaderStageFlagBits::eFragment;
++        pushConstantRanges[1].offset = sizeof(glm::mat4);
++        pushConstantRanges[1].size = sizeof(uint32_t);
 +
          vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
          pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
-+        pipelineLayoutInfo.setPushConstantRanges( pushConstantRange );
++        pipelineLayoutInfo.setPushConstantRanges( pushConstantRanges );
 +
          m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
  
          vk::GraphicsPipelineCreateInfo pipelineInfo;
-@@ -805,7 +815,36 @@ private:
+@@ -805,7 +818,44 @@ private:
              nullptr
          );
  
@@ -61,14 +64,22 @@ index b0d2dfe..6258fc4 100644
 +                    glm::radians(-90.0f), 
 +                    glm::vec3(0.0f, 0.0f, 1.0f)
 +                );
++                pcData.enableTexture = 1;
 +            } else {
 +                pcData.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.12f, 0.0f));
++                pcData.enableTexture = 0;
 +            }
-+            commandBuffer.pushConstants<PushConstantData>(
++            commandBuffer.pushConstants<glm::mat4>(
 +                m_pipelineLayout,
 +                vk::ShaderStageFlagBits::eVertex,
 +                0, // offset
-+                pcData
++                pcData.model
++            );
++            commandBuffer.pushConstants<uint32_t>(
++                m_pipelineLayout,
++                vk::ShaderStageFlagBits::eFragment,
++                sizeof(glm::mat4), // offset
++                pcData.enableTexture
 +            );
 +            commandBuffer.drawIndexed(
 +                counter == m_indicesOffsets.size() ? m_indices.size() - firstIndex : m_indicesOffsets[counter] - firstIndex,
@@ -82,7 +93,15 @@ index b0d2dfe..6258fc4 100644
  
          commandBuffer.endRenderPass();
          commandBuffer.end();
-@@ -1124,16 +1163,6 @@ private:
+@@ -1069,7 +1119,6 @@ private:
+     /////////////////////////////////////////////////////////////////
+     /// descriptor layout and buffer
+     struct alignas(16) UniformBufferObject {
+-        glm::mat4 model;
+         glm::mat4 view;
+         glm::mat4 proj;
+     };
+@@ -1124,16 +1173,6 @@ private:
          front = glm::normalize(front);
  
          UniformBufferObject ubo{};
@@ -99,7 +118,7 @@ index b0d2dfe..6258fc4 100644
          ubo.view = glm::lookAt(
              m_cameraPos, 
              m_cameraPos + front, 
-@@ -1573,15 +1602,17 @@ private:
+@@ -1573,17 +1612,19 @@ private:
  
      /////////////////////////////////////////////////////////////////
      /// load model
@@ -117,9 +136,12 @@ index b0d2dfe..6258fc4 100644
 +
 +        m_indicesOffsets.push_back(m_indices.size());
          
-         std::unordered_map<
+-        std::unordered_map<
++        static std::unordered_map<
              Vertex, 
-@@ -1605,10 +1636,14 @@ private:
+             uint32_t,
+             decltype( [](const Vertex& vertex) -> size_t {
+@@ -1605,10 +1646,12 @@ private:
                      attrib.vertices[3 * index.vertex_index + 2]
                  };
  
@@ -132,13 +154,11 @@ index b0d2dfe..6258fc4 100644
 +                        attrib.texcoords[2 * index.texcoord_index],
 +                        1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
 +                    };
-+                } else {
-+                    vertex.texCoord = {0.61f, 0.17f};
 +                }
  
                  vertex.color = {1.0f, 1.0f, 1.0f};
  
-@@ -1821,6 +1856,13 @@ private:
+@@ -1821,6 +1864,14 @@ private:
          );
      }
      /////////////////////////////////////////////////////////////////
@@ -147,6 +167,7 @@ index b0d2dfe..6258fc4 100644
 +    /// push constant
 +    struct PushConstantData {
 +        glm::mat4 model;
++        uint32_t enableTexture;
 +    };
 +    /////////////////////////////////////////////////////////////////
  };

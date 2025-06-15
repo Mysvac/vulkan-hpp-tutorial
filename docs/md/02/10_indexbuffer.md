@@ -4,7 +4,7 @@
 
 实际上需要渲染的3D网格会频繁出现顶点被多个三角形共用的情况，即使是最简单的矩形：
 
-![vertex](../../images/vertex_vs_index.svg)
+![vertex](../../images/0210/vertex_vs_index.svg)
 
 绘制它需要2个三角形，也就是6个顶点。
 如果像我们代码中写的那样每个顶点需要2个位置坐标和3个色彩通道，那就需要30个数据。
@@ -117,7 +117,7 @@ commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 现在可以运行程序，你应该看到这样一副图像：
 
-![矩形](../../images/indexed_rectangle.png)
+![矩形](../../images/0210/indexed_rectangle.png)
 
 你现在已经知道了如何使用索引缓冲节省内存，这非常重要，因为我们后面会导入复杂的3D模型。
 

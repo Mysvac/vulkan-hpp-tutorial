@@ -50,7 +50,7 @@ if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS) {
 
 注意 Vulkan 使用右手坐标系，（从Y轴上方往下看）从X轴正方向出发，顺时针旋转90度到达Z轴正方向，而非逆时针旋转90度。
 
-![right_handed_coordinate](../../images/right_handed_coordinate.png)
+![right_handed_coordinate](../../images/0310/right_handed_coordinate.png)
 
 ## **修改MVP变换**
 
@@ -121,7 +121,7 @@ ubo.model *= glm::rotate(
 
 现在你应该看到和之前类似的图像（实际视角与下图会有偏差）：
 
-![drawing_model](../../images/drawing_model.png)
+![drawing_model](../../images/0300/drawing_model.png)
 
 ## **处理键盘输入**
 

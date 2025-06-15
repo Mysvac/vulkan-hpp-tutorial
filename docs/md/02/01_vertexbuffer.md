@@ -250,7 +250,7 @@ commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 现在运行程序，你应该可以看到熟悉的三角形：
 
-![彩色三角形](../../images/triangle.png)
+![彩色三角形](../../images/0132/triangle.png)
 
 尝试修改顶点的颜色：
 
@@ -266,7 +266,7 @@ inline static const std::vector<Vertex> vertices = {
 
 再次构建运行，应该看到这样的三角形：
 
-![白色三角](../../images/triangle_white.png)
+![白色三角](../../images/0201/triangle_white.png)
 
 ---
 

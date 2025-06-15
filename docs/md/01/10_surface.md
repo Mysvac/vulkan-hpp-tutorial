@@ -153,7 +153,7 @@ m_presentQueue = m_device.getQueue( indices.presentFamily.value(), 0 );
 
 ---
 
-在下一章中，我们将研究交换链以及它们如何使我们能够将图像呈现到表面。
+在下一章中，我们将研究交换链以及它如何使我们能够将图像呈现到表面。
 
 ---
 
