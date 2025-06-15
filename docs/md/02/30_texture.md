@@ -97,7 +97,7 @@ void createTextureImage() {
 
 原教程已经将此图像修改成了 512*512 像素，并改名为 `texture.jpg`，你可以直接点击下方的图像并保存：
 
-![texture.jpg](../../images/texture.jpg)
+![texture.jpg](../../res/texture.jpg)
 
 现在可以像下面的代码一样加载图像：
 

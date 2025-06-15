@@ -67,7 +67,7 @@ const std::vector<Vertex> vertices = {
 现在可以添加一个额外的几何体让场景更有趣些，它会为我们展示本场景我们需要解决的问题。
 我们希望在现有矩形的下方再放置一个矩形，就像这样：
 
-![extra_square](../../images/extra_square.svg)
+![extra_square](../../images/0240/extra_square.svg)
 
 现在往顶点数据中添加内容，新顶点的Z坐标使用 `-0.5f` ，不要忘了顶点索引：
 
@@ -93,7 +93,7 @@ inline static const std::vector<uint16_t> indices = {
 
 > 片段着色器中颜色计算使用 `outColor = texture(texSampler, fragTexCoord);`
 
-![depth_issues](../../images/depth_issues.png)
+![depth_issues](../../images/0240/depth_issues.png)
 
 ### 3. 问题
 
@@ -545,7 +545,7 @@ pipelineInfo.pDepthStencilState = &depthStencil;
 
 如果您现在运行程序，那么您应该看到几何体的片段现在已正确排序：
 
-![depth_correct](../../images/depth_correct.png)
+![depth_correct](../../images/0240/depth_correct.png)
 
 ## **处理窗口大小调整**
 

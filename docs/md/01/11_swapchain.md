@@ -187,9 +187,9 @@ vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormat
 
 ### 2. 呈现模式
 
-呈现模式可以说是交换链最重要的设置，它表示将图像显示到屏幕的条件。Vulkan 中有多种可用模式，都位于`vk::PresentModeKHR`中，下面介绍常见的四种
+呈现模式可以说是交换链最重要的设置，它表示将图像显示到屏幕的条件。Vulkan 中有多种可用模式，都位于`vk::PresentModeKHR`中，下面介绍常见的四种：
 
-| 枚举 | 含义 |
+| `vk::PresentModeKHR` | 含义 |
 |------|-----|
 | `eImmediate` | 图像会立即传输到屏幕，可能会导致图像撕裂。 |  
 | `eFifo` | 先进先出的队列。若队列已满，则程序必须等待。 |  
@@ -200,7 +200,7 @@ vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormat
 | | 模式可用于尽可能快地渲染帧，通常被称为“三重缓冲”。 |  
 
 
-只有 `vk::PresentModeKHR::eFifo` 模式保证可用，因此我们将再次编写一个函数，以查找可用的最佳模式
+只有 `vk::PresentModeKHR::eFifo` 模式保证可用，因此我们将再次编写一个函数，以查找可用的最佳模式：
 
 ```cpp
 vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) {
@@ -222,11 +222,11 @@ vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& 
 }
 ```
 
-现在，让我们浏览列表，看看 `eMailbox` 是否可用
+现在，让我们浏览列表，看看 `eMailbox` 是否可用。
 
 ### 3. 交换范围
 
-这只剩下一个主要属性，为此我们将添加最后一个函数
+只剩下一个主要属性，为此我们添加最后一个函数：
 
 ```cpp
 vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
@@ -345,10 +345,10 @@ createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
 有两种方法可以处理从多个队列访问的图像
 
-| 枚举 | 含义 |
+| `vk::SharingMode` | 含义 |
 |------|------|
-| `vk::SharingMode::eExclusive` | 图像一次由一个队列族拥有，并且必须显式传输所有权，然后才能在另一个队列族中使用它。此选项提供最佳性能。 |  
-| `vk::SharingMode::eConcurrent` | 图像可以在多个队列族之间使用，而无需显式的所有权传输。 |  
+| `eExclusive` | 图像一次由一个队列族拥有，并且必须显式传输所有权，然后才能在另一个队列族中使用它。此选项提供最佳性能。 |  
+| `eConcurrent` | 图像可以在多个队列族之间使用，而无需显式的所有权传输。 |  
 
 
 

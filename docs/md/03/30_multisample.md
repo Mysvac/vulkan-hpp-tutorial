@@ -6,7 +6,7 @@
 图像现在平滑了很多，但是仔细观察你将注意到几何形状边缘可能会出现锯齿状的图案。
 这在我们早期的程序中尤其明显，当时我们渲染了一个四边形：
 
-![texcoord_visualization](../../images/texcoord_visualization.png)
+![texcoord_visualization](../../images/0232/texcoord_visualization.png)
 
 这种不良效果被称为“走样”，它是可用像素数量有限造成的。
 有很多方法可以解决这个问题，在本章中，我们将重点介绍一种常见的方法：[多重采样抗锯齿](https://en.wikipedia.org/wiki/Multisample_anti-aliasing) \(MSAA\)。
@@ -14,13 +14,13 @@
 参考下图，在光栅化过程需要考虑哪些像素位于三角形内部，我们只为三角形内的像素着色。
 特殊的是那些三角形边缘的像素（只有部分在三角形内），普通渲染时只考虑中心点在不在三角形内，就容易产生“锯齿状”的效果：
 
-![aliasing](../../images/aliasing.png)
+![aliasing](../../images/0330/aliasing.png)
 
 原因是这些部分在内的像素，要么染色要么不染色，而没有选择染部分颜色。
 MSAA 的作用就是每个像素使用多个采样点来确定其最终颜色。
 正如你想的那样，样本越多，效果越好，但在计算上也更昂贵。
 
-![antialiasing](../../images/antialiasing.png)
+![antialiasing](../../images/0330/antialiasing.png)
 
 在本节，我们重点关注最大可用采样计数。
 最大采样计数并不总是最佳方法，如果最终效果可以满足您的质量要求，则最好为了更高的性能而使用更少的采样数。
@@ -343,16 +343,16 @@ void createGraphicsPipeline() {
 
 现在运行你的程序，你应该看到以下内容
 
-![multisampling](../../images/multisampling.png)
+![multisampling](../../images/0330/multisampling.png)
 
 就像 mipmapping 一样，差异可能不是特别明显。
 仔细观察你会注意到边缘不再那么锯齿状，并且与原始图像相比，整个图像看起来更平滑一些。
 
-![multisampling_comparison](../../images/multisampling_comparison.png)
+![multisampling_comparison](../../images/0330/multisampling_comparison.png)
 
 当放大其中一个边缘时，差异较为明显（截图并放大而非移动摄像头靠近观看）
 
-![multisampling_comparison2](../../images/multisampling_comparison2.png)
+![multisampling_comparison2](../../images/0330/multisampling_comparison2.png)
 
 ## **样本着色**
 
@@ -384,7 +384,7 @@ void createGraphicsPipeline() {
 
 本章节中不会启用它，但你可以根据下面的例子或者自行启用观察差异：
 
-![sample_shading](../../images/sample_shading.png)
+![sample_shading](../../images/0330/sample_shading.png)
 
 > 注意这是一整张图像，红色的圆是白色图像的一部分，而非独立的几何体。
 

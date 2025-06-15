@@ -9,7 +9,7 @@ Mipmaps 是图像预先计算好的等比缩放的版本，每个新图像是宽
 
 Mipmaps的外观示例如下：
 
-![mipmaps_example](../../images/mipmaps_example.jpg)
+![mipmaps_example](../../images/0320/mipmaps_example.jpg)
 
 > GAME101 课程中有Mipmap更详细的介绍。
 
@@ -535,11 +535,11 @@ samplerInfo.maxLod = static_cast<float>(m_mipLevels);
 
 现在运行您的程序，您应该看到以下内容
 
-![mipmaps](../../images/mipmaps.png)
+![mipmaps](../../images/0320/mipmaps.png)
 
 差异并不显著，因为我们的场景非常简单。如果您仔细观察，应该能发现细微的差别。
 
-![mipmaps_comparison](../../images/mipmaps_comparison.png)
+![mipmaps_comparison](../../images/0320/mipmaps_comparison.png)
 
 最明显的差异是纸上的文字。
 使用 mipmaps 后文字已被平滑。不使用 mipmaps 时文字有粗糙的边缘和来自莫尔伪影的间隙。
@@ -553,7 +553,7 @@ samplerInfo.minLod = static_cast<float>(m_mipLevels / 2);
 
 此参数将生成类似下面的图像：
 
-![highmipmaps](../../images/highmipmaps.png)
+![highmipmaps](../../images/0320/highmipmaps.png)
 
 ---
 

@@ -200,7 +200,7 @@ void main() {
 您应该看到类似下图的图像。不要忘记重新编译着色器！
 
 
-![texcoord_visualization](../../images/texcoord_visualization.png)
+![texcoord_visualization](../../images/0232/texcoord_visualization.png)
 
 绿色通道代表水平坐标，红色通道代表垂直坐标。
 黑色和黄色角确认纹理坐标已从 `0, 0` 正确插值到正方形上的 `1, 1`。
@@ -228,7 +228,7 @@ void main() {
 
 现在，当您运行应用程序时，您应该在正方形上看到纹理
 
-![texture_on_square](../../images/texture_on_square.png)
+![texture_on_square](../../images/0232/texture_on_square.png)
 
 ### 3. 其他测试
 
@@ -241,7 +241,7 @@ void main() {
 }
 ```
 
-![texture_on_square_repeated](../../images/texture_on_square_repeated.png)
+![texture_on_square_repeated](../../images/0232/texture_on_square_repeated.png)
 
 
 您还可以使用顶点颜色来操作纹理颜色
@@ -254,7 +254,7 @@ void main() {
 
 我在这里分离了 RGB 和 alpha 通道，防止透明度被变换。
 
-![texture_on_square_colorized](../../images/texture_on_square_colorized.png)
+![texture_on_square_colorized](../../images/0232/texture_on_square_colorized.png)
 
 ---
 

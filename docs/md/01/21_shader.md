@@ -78,7 +78,7 @@ GLSL是一种具有C风格语法的着色语言。
 这些归一化设备坐标是 [齐次坐标](https://en.wikipedia.org/wiki/Homogeneous_coordinates)，
 它们将帧缓冲映射到 [-1, 1] x [-1, 1] 坐标系，如下所示
 
-![device_coordinates](../../images/normalized_device_coordinates.svg)
+![device_coordinates](../../images/0121/normalized_device_coordinates.svg)
 
 如果您之前涉足过计算机图形学，那么您应该已经熟悉这些概念。
 如果您以前使用过 OpenGL，那么您会注意到 Y 坐标的符号现在已翻转（Y轴朝下）。
@@ -86,7 +86,7 @@ Z 坐标现在使用的范围与 Direct3D 中的范围相同，从 0 到 1。
 
 对于我们的第一个三角形，我们不会应用任何变换，我们将直接将三个顶点的位置指定为归一化设备坐标，以创建以下形状
 
-![triangle](../../images/triangle_coordinates.svg)
+![triangle](../../images/0121/triangle_coordinates.svg)
 
 通常，这些坐标将存储在顶点缓冲中，但在 Vulkan 中创建顶点缓冲并用数据填充它并非易事。
 因此，我决定将其推迟到画出第一个基础三角形之后。
@@ -148,7 +148,7 @@ GLSL 中的颜色是 4 分量向量，R、G、B 和 alpha 通道，都在 `[0, 1
 
 将整个三角形变成红色不是很吸引人，变成下面这样的效果是不是更漂亮？
 
-![triangle_color](../../images/triangle_coordinates_colors.png)
+![triangle_color](../../images/0121//triangle_coordinates_colors.png)
 
 我们必须对两个着色器进行一些更改才能实现此目的。
 首先，我们需要为三个顶点指定不同的颜色。
@@ -303,7 +303,7 @@ add_subdirectory(shaders)
 ## **加载着色器**
 
 现在我们有了一种生成 SPIR-V 着色器的方法，是时候将它们加载到我们的程序中，以便在某个时候将它们插入到图形管线中。
-我们将首先编写一个简单的辅助函数，从文件中加载二进制数据。
+我们首先编写一个简单的辅助函数，从文件中加载二进制数据。
 
 ```cpp
 #include <fstream>
@@ -324,14 +324,14 @@ static std::vector<char> readFile(const std::string& filename) {
 - `ate`：从文件末尾开始读取
 - `binary`：将文件作为二进制文件读取（避免文本转换）
 
-从文件末尾开始读取的优点是我们可以读取位置来确定文件的大小并分配缓冲区
+从文件末尾开始读取的优点是我们可以读取位置从而确定文件的大小并分配缓冲区
 
 ```cpp
 size_t fileSize = (size_t) file.tellg();
 std::vector<char> buffer(fileSize);
 ```
 
-之后，我们可以seek回到文件开头并一次读取所有字节。
+之后，可以seek回到文件开头并一次读取所有字节。
 
 ```cpp
 file.seekg(0);

@@ -2,13 +2,13 @@
 
 在 Vulkan 中，像绘制操作和内存传输这样的命令不是直接使用函数调用来执行的。你必须在你想要执行的命令缓冲区对象中记录所有操作。
 
-这样做的好处是，当我们准备告诉 Vulkan 我们想要做什么时，所有命令都会一起提交，Vulkan 可以更有效地处理这些命令，因为所有命令都同时可用。
+这样做的好处是，当我们准备告诉 Vulkan 我们想要做什么时，所有命令都会一起提交，Vulkan 可以更有效地处理这些命令，因为所有命令同时可用。
 此外，如果需要，这允许命令记录在多个线程中进行。
 
 ## **命令池**
 
 在我们创建命令缓冲区\(Command Buffer\)之前，必须先创建一个命令池\(Command Pool\)。
-命令池管理用于管理命令缓冲的内存，命令缓冲从命令池中分配。
+命令池用于管理命令缓冲的内存，命令缓冲从命令池中分配。
 
 现在添加一个新的类成员来存储一个 `vk::CommandPool` ：
 
@@ -52,7 +52,7 @@ poolInfo.queueFamilyIndex =  queueFamilyIndices.graphicsFamily.value();
 
 命令池至少有两个可能的标志(`flags`):
 
-| 位枚举 | 含义 |
+| 枚举值 | 含义 |
 |------|------|
 | `eTransient` | 提示命令缓冲区非常频繁地用新命令重新记录（可能会改变内存分配行为） |  
 | `eResetCommandBuffer` | 允许单独重新记录命令缓冲区，如果没有此标志，则必须将它们全部一起重置 | 
@@ -148,7 +148,7 @@ commandBuffer.begin( beginInfo );
 
 `vk::CommandBufferBeginInfo` 的 `flags` 参数指定我们将如何使用命令缓冲区。以下值可用
 
-| 位枚举 | 含义 |
+| 枚举 | 含义 |
 |--------|------|
 | `eOneTimeSubmit` | 命令缓冲区将在执行一次后立即重新记录。 |  
 | `eRenderPassContinue` | 这是一个辅助命令缓冲区，它将完全在单个渲染通道内。 |  
@@ -165,7 +165,7 @@ commandBuffer.begin( beginInfo );
 
 ### 1. 初始化渲染通道信息
 
-通过 `vk::RenderPassBeginInfo`·` 结构体配置渲染通道参数
+通过 `vk::RenderPassBeginInfo` 结构体配置渲染通道参数
 
 
 ```cpp

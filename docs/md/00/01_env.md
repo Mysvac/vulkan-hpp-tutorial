@@ -1,7 +1,7 @@
 # **开发环境**
 
 ## **概述**
-本文将指导你完成Vulkan应用程序开发环境的设置，包括安装必要的工具和库。
+本文将指导你完成 Vulkan 应用程序开发环境的设置，包括安装必要的工具和库。
 
 注意，CMake和Vcpkg自身的安装，以及MSVC/Clang等编译器的安装，不是本教程的内容。
 
@@ -27,7 +27,7 @@ Vulkan SDK是开发Vulkan应用程序的核心组件，包含：
     - 运行vkcube.exe演示程序
     - 应看到旋转的立方体窗口
 
-![cube](../../images/cube_demo.png)
+![cube](../../images/0001/cube_demo.png)
 
 ### Linux
 图形界面安装，参考Windows安装方法。
@@ -55,7 +55,7 @@ vkcube
 
 确保您看到以下窗口弹出
 
-![cube](../../images/cube_demo_nowindow.png)
+![cube](../../images/0001/cube_demo_nowindow.png)
 
 
 ### MacOS安装
@@ -75,7 +75,7 @@ vkcube
 
 您应该看到以下内容
 
-![cube](../../images/cube_demo_mac.png)
+![cube](../../images/0001/cube_demo_mac.png)
 
 ## **依赖库安装**
 
@@ -99,6 +99,10 @@ vcpkg install glfw3
 ```shell
 vcpkg install glm
 ```
+
+### 其他
+
+`stb` 和 `tinyobjloader` 等库将在后面的章节（需要的时候）安装。
 
 ## **项目初始化**
 
@@ -155,7 +159,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE glfw )
 ```
 
 
-注意，`CMakeLists.txt`代码将在较长时间内不再变动，因此后面几章只给出C++代码。
+> `CMakeLists.txt`代码将在较长时间内不再变动。
 
 ### 测试代码
 
@@ -233,6 +237,11 @@ build/HelloVulkan
 如果你喜欢使用 `CMakePresets.json` （可以很好地和CLion、VSCode、Visual Studio配合），可以参考 **[这个](../../codes/00/01_env/CMakePresets.json)** 预设模板。
 
 此预设模板使用Ninja作为生成器，提供了MSVC/GNU/Clang的预设配置。但它未经过充分测试，不保证全平台可用。
+
+## **代码编辑器**
+
+建议使用一个足够智能的编辑器。
+当你不确定某些函数的参数和它的含义时，可以右键函数并跳转到它的定义，从而查看函数参数列表。Visual Studio/VSCode/CLion都能提供此功能。
 
 ---
 

@@ -109,7 +109,7 @@ vk::Viewport viewport(
 虽然视口定义了从图像到帧缓冲的转换，但裁剪矩形定义了实际存储像素的区域。
 光栅化器将丢弃裁剪矩形之外的任何像素。它们的功能类似于过滤器，而不是转换，下图说明了差异：
 
-![scissor](../../images/viewports_scissors.png)
+![scissor](../../images/0122/viewports_scissors.png)
 
 请注意，左侧的裁剪矩形只是导致该图像的众多可能性之一，只要它大于视口即可。
 

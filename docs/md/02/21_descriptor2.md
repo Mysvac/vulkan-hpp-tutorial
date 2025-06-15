@@ -189,7 +189,7 @@ rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
 
 再次运行程序，您现在应该看到以下内容
 
-![rect-rotate](../../images/spinning_quad.png)
+![rect-rotate](../../images/0221/spinning_quad.png)
 
 矩形已变为正方形，因为投影矩阵现在校正了宽高比。
 `updateUniformBuffer` 负责屏幕大小调整，因此我们不需要在 `recreateSwapChain` 中重新创建描述符集合。
