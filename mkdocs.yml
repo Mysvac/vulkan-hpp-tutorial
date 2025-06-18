@@ -79,4 +79,5 @@ nav:
     - 生成Mipmaps: md/03/20_mipmaps.md
     - 多重采样: md/03/30_multisample.md
     - 推送常量: md/03/40_pushconstant.md
+    - 动态uniform: md/03/50_dynamicuniform.md
   - 隐私政策: policy.md

@@ -1,0 +1,32 @@
+diff --git a/shaders/shader.vert b/shaders/shader.vert
+index 1986b39..ad3e2b3 100644
+--- a/shaders/shader.vert
++++ b/shaders/shader.vert
+@@ -1,14 +1,14 @@
+ #version 450
+ 
+-layout(push_constant) uniform PushConstants {
+-    mat4 model;
+-} pc;
+-
+ layout(binding = 0) uniform UniformBufferObject {
+     mat4 view;
+     mat4 proj;
+ } ubo;
+ 
++layout(binding = 2) uniform DynamicUBO {
++    mat4 model;
++} dynamicUbo;
++
+ layout(location = 0) in vec3 inPosition;
+ layout(location = 1) in vec3 inColor;
+ layout(location = 2) in vec2 inTexCoord;
+@@ -17,7 +17,7 @@ layout(location = 0) out vec3 fragColor;
+ layout(location = 1) out vec2 fragTexCoord;
+ 
+ void main() {
+-    gl_Position = ubo.proj * ubo.view * pc.model * vec4(inPosition, 1.0);
++    gl_Position = ubo.proj * ubo.view * dynamicUbo.model * vec4(inPosition, 1.0);
+     fragColor = inColor;
+     fragTexCoord = inTexCoord;
+ }

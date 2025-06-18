@@ -1,0 +1,297 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index a73f3c8..82c5866 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -13,6 +13,7 @@
+ #include <tiny_obj_loader.h>
+ 
+ #include <chrono>
++#include <random>
+ #include <iostream>
+ #include <fstream>
+ #include <vector>
+@@ -63,6 +64,7 @@ private:
+     #endif
+ 
+     static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
++    static constexpr int BUNNY_NUMBER = 5;
+     /////////////////////////////////////////////////////////////////
+ 
+     /////////////////////////////////////////////////////////////////
+@@ -79,6 +81,7 @@ private:
+     std::vector<Vertex> m_vertices;
+     std::vector<uint32_t> m_indices;
+     std::vector<uint32_t> m_indicesOffsets;
++    std::vector<glm::mat4> m_modelMatrices;
+     vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
+     vk::raii::Buffer m_vertexBuffer{ nullptr };
+     vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
+@@ -86,6 +89,9 @@ private:
+     std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
+     std::vector<vk::raii::Buffer> m_uniformBuffers;
+     std::vector<void*> m_uniformBuffersMapped;
++    std::vector<vk::raii::DeviceMemory> m_dynamicUniformBuffersMemory;
++    std::vector<vk::raii::Buffer> m_dynamicUniformBuffers;
++    std::vector<void*> m_dynamicUniformBuffersMapped;
+     vk::raii::DeviceMemory m_textureImageMemory{ nullptr };
+     uint32_t m_mipLevels;
+     vk::raii::Image m_textureImage{ nullptr };
+@@ -156,10 +162,14 @@ private:
+         createTextureImageView();
+         createTextureSampler();
+         loadModel(MODEL_PATH);
+-        loadModel(BUNNY_PATH);
++        for (int i = 0; i < BUNNY_NUMBER; ++i) {
++            loadModel(BUNNY_PATH);
++        }
++        initModelMatrices();
+         createVertexBuffer();
+         createIndexBuffer();
+         createUniformBuffers();
++        createDynamicUniformBuffers();
+         createDescriptorPool();
+         createDescriptorSets();
+         createCommandBuffers();
+@@ -180,6 +190,10 @@ private:
+             it.unmapMemory();
+         }
+ 
++        for(const auto& it : m_dynamicUniformBuffersMemory){
++            it.unmapMemory();
++        }
++
+         glfwDestroyWindow( m_window );
+         glfwTerminate();
+     }
+@@ -690,17 +704,14 @@ private:
+         depthStencil.depthBoundsTestEnable = false; // Optional
+         depthStencil.stencilTestEnable = false; // Optional
+ 
+-        std::array<vk::PushConstantRange, 2> pushConstantRanges;
+-        pushConstantRanges[0].stageFlags = vk::ShaderStageFlagBits::eVertex;
+-        pushConstantRanges[0].offset = 0;
+-        pushConstantRanges[0].size = sizeof(glm::mat4);
+-        pushConstantRanges[1].stageFlags = vk::ShaderStageFlagBits::eFragment;
+-        pushConstantRanges[1].offset = sizeof(glm::mat4);
+-        pushConstantRanges[1].size = sizeof(uint32_t);
++        vk::PushConstantRange pushConstantRange;
++        pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eFragment;
++        pushConstantRange.offset = 0;
++        pushConstantRange.size = sizeof(uint32_t);
+ 
+         vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+         pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
+-        pipelineLayoutInfo.setPushConstantRanges( pushConstantRanges );
++        pipelineLayoutInfo.setPushConstantRanges( pushConstantRange );
+ 
+         m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
+ 
+@@ -810,51 +821,31 @@ private:
+         commandBuffer.bindVertexBuffers( 0, *m_vertexBuffer, vk::DeviceSize{0} );
+         commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint32 );
+ 
+-        commandBuffer.bindDescriptorSets(
+-            vk::PipelineBindPoint::eGraphics, 
+-            m_pipelineLayout,
+-            0,
+-            *m_descriptorSets[m_currentFrame],
+-            nullptr
+-        );
+-
+-        for(size_t counter = 1; const uint32_t firstIndex : m_indicesOffsets) {
++        for(size_t index = 0; const uint32_t firstIndex : m_indicesOffsets) {
+             PushConstantData pcData;
+-            if(counter == 1) {
+-                pcData.model = glm::rotate(
+-                    glm::mat4(1.0f), 
+-                    glm::radians(-90.0f), 
+-                    glm::vec3(1.0f, 0.0f, 0.0f)
+-                )  * glm::rotate(
+-                    glm::mat4(1.0f), 
+-                    glm::radians(-90.0f), 
+-                    glm::vec3(0.0f, 0.0f, 1.0f)
+-                );
+-                pcData.enableTexture = 1;
+-            } else {
+-                pcData.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.12f, 0.0f));
+-                pcData.enableTexture = 0;
+-            }
+-            commandBuffer.pushConstants<glm::mat4>(
+-                m_pipelineLayout,
+-                vk::ShaderStageFlagBits::eVertex,
+-                0, // offset
+-                pcData.model
+-            );
++            pcData.enableTexture = (index == 0 ? 1 : 0);
+             commandBuffer.pushConstants<uint32_t>(
+                 m_pipelineLayout,
+                 vk::ShaderStageFlagBits::eFragment,
+-                sizeof(glm::mat4), // offset
++                0, // offset
+                 pcData.enableTexture
+             );
++            uint32_t dynamicOffset = index * sizeof(glm::mat4);
++            commandBuffer.bindDescriptorSets(
++                vk::PipelineBindPoint::eGraphics,
++                m_pipelineLayout,
++                0,
++                *m_descriptorSets[m_currentFrame],
++                dynamicOffset
++            );
+             commandBuffer.drawIndexed(
+-                counter == m_indicesOffsets.size() ? m_indices.size() - firstIndex : m_indicesOffsets[counter] - firstIndex,
++                index + 1 == m_indicesOffsets.size() ? m_indices.size() - firstIndex : m_indicesOffsets[index + 1] - firstIndex,
+                 1,
+                 firstIndex,
+                 0,
+                 0
+             );
+-            ++counter;
++            ++index;
+         }
+ 
+         commandBuffer.endRenderPass();
+@@ -896,6 +887,7 @@ private:
+         m_device.resetFences( *m_inFlightFences[m_currentFrame] );
+ 
+         updateUniformBuffer(m_currentFrame);
++        updateDynamicUniformBuffer(m_currentFrame);
+ 
+         m_commandBuffers[m_currentFrame].reset();
+         recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
+@@ -1135,7 +1127,13 @@ private:
+         samplerLayoutBinding.descriptorCount = 1;
+         samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+ 
+-        std::array<vk::DescriptorSetLayoutBinding, 2> bindings{ uboLayoutBinding, samplerLayoutBinding };
++        vk::DescriptorSetLayoutBinding dynamicUboLayoutBinding;
++        dynamicUboLayoutBinding.binding = 2;
++        dynamicUboLayoutBinding.descriptorType = vk::DescriptorType::eUniformBufferDynamic;
++        dynamicUboLayoutBinding.descriptorCount = 1;
++        dynamicUboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
++
++        auto bindings = { uboLayoutBinding, samplerLayoutBinding, dynamicUboLayoutBinding };
+         vk::DescriptorSetLayoutCreateInfo layoutInfo;
+         layoutInfo.setBindings( bindings );
+ 
+@@ -1194,11 +1192,13 @@ private:
+     /////////////////////////////////////////////////////////////////
+     /// descriptor pool and sets
+     void createDescriptorPool() {
+-        std::array<vk::DescriptorPoolSize, 2> poolSizes;
++        std::array<vk::DescriptorPoolSize, 3> poolSizes;
+         poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
+         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+         poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
+         poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
++        poolSizes[2].type = vk::DescriptorType::eUniformBufferDynamic;
++        poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+ 
+         vk::DescriptorPoolCreateInfo poolInfo;
+         poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+@@ -1226,18 +1226,30 @@ private:
+             imageInfo.imageView = m_textureImageView;
+             imageInfo.sampler = m_textureSampler;
+ 
+-            std::array<vk::WriteDescriptorSet, 2> descriptorWrites;
++            vk::DescriptorBufferInfo dynamicBufferInfo;
++            dynamicBufferInfo.buffer = m_dynamicUniformBuffers[i];
++            dynamicBufferInfo.offset = 0;
++            dynamicBufferInfo.range = sizeof(glm::mat4);
++
++            std::array<vk::WriteDescriptorSet, 3> descriptorWrites;
+             descriptorWrites[0].dstSet = m_descriptorSets[i];
+             descriptorWrites[0].dstBinding = 0;
+             descriptorWrites[0].dstArrayElement = 0;
+             descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+             descriptorWrites[0].setBufferInfo(bufferInfo);
++
+             descriptorWrites[1].dstSet = m_descriptorSets[i];
+             descriptorWrites[1].dstBinding = 1;
+             descriptorWrites[1].dstArrayElement = 0;
+             descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+             descriptorWrites[1].setImageInfo(imageInfo);
+ 
++            descriptorWrites[2].dstSet = m_descriptorSets[i];
++            descriptorWrites[2].dstBinding = 2;
++            descriptorWrites[2].dstArrayElement = 0;
++            descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBufferDynamic;
++            descriptorWrites[2].setBufferInfo(dynamicBufferInfo);
++
+             m_device.updateDescriptorSets(descriptorWrites, nullptr);
+         }
+     }
+@@ -1868,10 +1880,72 @@ private:
+     /////////////////////////////////////////////////////////////////
+     /// push constant
+     struct PushConstantData {
+-        glm::mat4 model;
+         uint32_t enableTexture;
+     };
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// model matrices
++    void initModelMatrices() {
++        m_modelMatrices.reserve(BUNNY_NUMBER+1);
++        // add a static model matrix for the room
++        glm::mat4 roomModel = glm::rotate(
++            glm::mat4(1.0f), 
++            glm::radians(-90.0f), 
++            glm::vec3(1.0f, 0.0f, 0.0f)
++        )  * glm::rotate(
++            glm::mat4(1.0f), 
++            glm::radians(-90.0f), 
++            glm::vec3(0.0f, 0.0f, 1.0f)
++        );
++        m_modelMatrices.emplace_back( roomModel );
++        // random number generator
++        std::random_device rd;
++        std::mt19937 gen(rd());
++        std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
++        // initialize model matrices
++        for (int i = 0; i < BUNNY_NUMBER; ++i) {
++            glm::mat4 model = glm::mat4(1.0f);
++            // random translation and rotation
++            model = glm::translate(model, glm::vec3(dis(gen), dis(gen), dis(gen)));
++            model = glm::rotate(model, glm::radians(dis(gen) * 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
++            m_modelMatrices.emplace_back( model );
++        }
++    }
++    void createDynamicUniformBuffers() {
++        vk::DeviceSize bufferSize  = sizeof(glm::mat4) * m_modelMatrices.size();
++
++        m_dynamicUniformBuffers.reserve(MAX_FRAMES_IN_FLIGHT);
++        m_dynamicUniformBuffersMemory.reserve(MAX_FRAMES_IN_FLIGHT);
++        m_dynamicUniformBuffersMapped.reserve(MAX_FRAMES_IN_FLIGHT);
++
++        for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
++            m_dynamicUniformBuffers.emplace_back( nullptr );
++            m_dynamicUniformBuffersMemory.emplace_back( nullptr );
++            m_dynamicUniformBuffersMapped.emplace_back( nullptr );
++            createBuffer(bufferSize, 
++                vk::BufferUsageFlagBits::eUniformBuffer, 
++                vk::MemoryPropertyFlagBits::eHostVisible | 
++                vk::MemoryPropertyFlagBits::eHostCoherent, 
++                m_dynamicUniformBuffers[i], 
++                m_dynamicUniformBuffersMemory[i]
++            );
++
++            m_dynamicUniformBuffersMapped[i] = m_dynamicUniformBuffersMemory[i].mapMemory(0, bufferSize);
++        }
++    }
++    void updateDynamicUniformBuffer(uint32_t currentImage) {
++        vk::DeviceSize modelSize = sizeof(glm::mat4);
++
++        for (size_t i = 0; i < m_modelMatrices.size(); ++i) {
++            memcpy(
++                static_cast<char*>(m_dynamicUniformBuffersMapped[currentImage]) + i * modelSize,
++                &m_modelMatrices[i],
++                modelSize
++            );
++        }
++    }
++    /////////////////////////////////////////////////////////////////
+ };
+ 
+ 
