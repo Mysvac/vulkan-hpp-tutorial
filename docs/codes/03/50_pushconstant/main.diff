@@ -1,0 +1,94 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 7b5d695..fb6b964 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -716,8 +716,15 @@ private:
+         depthStencil.depthBoundsTestEnable = false; // Optional
+         depthStencil.stencilTestEnable = false; // Optional
+ 
++        vk::PushConstantRange pushConstantRange;
++        pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eFragment;
++        pushConstantRange.offset = 0;
++        pushConstantRange.size = sizeof(uint32_t);
++
+         vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
++        pipelineLayoutInfo.setPushConstantRanges( pushConstantRange );
+         pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
++
+         m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
+ 
+         vk::GraphicsPipelineCreateInfo pipelineInfo;
+@@ -834,6 +841,13 @@ private:
+             nullptr
+         );
+ 
++        uint32_t enableTexture = 1; // enable texture
++        commandBuffer.pushConstants<uint32_t>(
++            m_pipelineLayout,
++            vk::ShaderStageFlagBits::eFragment,
++            0,              // offset
++            enableTexture   // value
++        );
+         commandBuffer.drawIndexed( // draw the room
+             m_firstIndices[1],
+             1,
+@@ -841,6 +855,14 @@ private:
+             0,
+             0
+         );
++
++        enableTexture = 0; // disable texture for the bunny
++        commandBuffer.pushConstants<uint32_t>(
++            m_pipelineLayout,
++            vk::ShaderStageFlagBits::eFragment,
++            0,              // offset
++            enableTexture   // value
++        );
+         commandBuffer.drawIndexed( // draw the bunny
+             static_cast<uint32_t>(m_indices.size() - m_firstIndices[1]),
+             BUNNY_NUMBER,
+@@ -1864,7 +1886,6 @@ private:
+     /// instance data
+     struct alignas(16) InstanceData {
+         glm::mat4 model;
+-        uint32_t enableTexture;
+ 
+         static vk::VertexInputBindingDescription getBindingDescription() {
+             vk::VertexInputBindingDescription bindingDescription;
+@@ -1875,18 +1896,14 @@ private:
+             return bindingDescription;
+         }
+ 
+-        static std::array<vk::VertexInputAttributeDescription, 5>  getAttributeDescriptions() {
+-            std::array<vk::VertexInputAttributeDescription, 5> attributeDescriptions;
++        static std::array<vk::VertexInputAttributeDescription, 4>  getAttributeDescriptions() {
++            std::array<vk::VertexInputAttributeDescription, 4> attributeDescriptions;
+             for(uint32_t i = 0; i < 4; ++i) {
+                 attributeDescriptions[i].binding = 1; // binding 1 for instance data
+                 attributeDescriptions[i].location = 3 + i; // location 3, 4, 5, 6
+                 attributeDescriptions[i].format = vk::Format::eR32G32B32A32Sfloat;
+                 attributeDescriptions[i].offset = sizeof(glm::vec4) * i;
+             }
+-            attributeDescriptions[4].binding = 1;
+-            attributeDescriptions[4].location = 7;
+-            attributeDescriptions[4].format = vk::Format::eR32Uint;
+-            attributeDescriptions[4].offset = sizeof(glm::mat4);
+             return attributeDescriptions;
+         }
+     };
+@@ -1903,7 +1920,6 @@ private:
+             glm::radians(-90.0f), 
+             glm::vec3(0.0f, 0.0f, 1.0f)
+         );
+-        instanceData.enableTexture = 1; // enable texture sampling
+         m_instanceDatas.emplace_back( instanceData );
+ 
+         std::random_device rd;
+@@ -1920,7 +1936,6 @@ private:
+                 glm::radians(dis(gen) * 180.0f), 
+                 glm::vec3(0.0f, 1.0f, 0.0f)
+             );
+-            instanceData.enableTexture = 0; // disable texture sampling
+             m_instanceDatas.emplace_back( instanceData );
+         }
+     }

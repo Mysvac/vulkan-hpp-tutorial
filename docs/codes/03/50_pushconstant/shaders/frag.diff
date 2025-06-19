@@ -1,25 +1,25 @@
 diff --git a/shaders/shader.frag b/shaders/shader.frag
-index 873f541..c763702 100644
+index d0368a0..0970799 100644
 --- a/shaders/shader.frag
 +++ b/shaders/shader.frag
-@@ -1,5 +1,9 @@
+@@ -1,15 +1,18 @@
  #version 450
  
 +layout(push_constant) uniform PushConstants {
-+    layout(offset = 64) uint enableTexture;
++    uint enableTexture;
 +} pc;
 +
  layout(binding = 1) uniform sampler2D texSampler;
  
  layout(location = 0) in vec3 fragColor;
-@@ -8,5 +12,9 @@ layout(location = 1) in vec2 fragTexCoord;
+ layout(location = 1) in vec2 fragTexCoord;
+-layout(location = 2) flat in uint enableTexture;
+ 
  layout(location = 0) out vec4 outColor;
  
  void main() {
--    outColor = texture(texSampler, fragTexCoord);
+-    if (enableTexture > 0) {
 +    if (pc.enableTexture > 0) {
-+        outColor = texture(texSampler, fragTexCoord);
-+    } else {
-+        outColor = vec4(fragColor, 1);
-+    }
- }
+         outColor = texture(texSampler, fragTexCoord);
+     } else {
+         outColor = vec4(fragColor, 1.0);

@@ -1,7 +1,7 @@
 #version 450
 
 layout(push_constant) uniform PushConstants {
-    layout(offset = 64) uint enableTexture;
+    uint enableTexture;
 } pc;
 
 layout(binding = 1) uniform sampler2D texSampler;
@@ -15,6 +15,6 @@ void main() {
     if (pc.enableTexture > 0) {
         outColor = texture(texSampler, fragTexCoord);
     } else {
-        outColor = vec4(fragColor, 1);
+        outColor = vec4(fragColor, 1.0);
     }
 }

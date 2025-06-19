@@ -15,6 +15,6 @@ void main() {
     if (pc.enableTexture > 0) {
         outColor = texture(texSampler, fragTexCoord);
     } else {
-        outColor = vec4(fragColor, 1);
+        outColor = vec4(fragColor, 1.0);
     }
 }

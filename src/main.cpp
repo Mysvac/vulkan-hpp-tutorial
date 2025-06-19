@@ -39,6 +39,7 @@ private:
     /////////////////////////////////////////////////////////////////
     /// forwoard declare
     struct Vertex;
+    struct InstanceData;
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
@@ -79,11 +80,14 @@ private:
     vk::raii::Queue m_graphicsQueue{ nullptr };
     vk::raii::Queue m_presentQueue{ nullptr };
     std::vector<Vertex> m_vertices;
+    std::vector<InstanceData> m_instanceDatas;
+    std::vector<glm::mat4> m_dynamicUboMatrices;
     std::vector<uint32_t> m_indices;
-    std::vector<uint32_t> m_indicesOffsets;
-    std::vector<glm::mat4> m_modelMatrices;
+    std::vector<uint32_t> m_firstIndices;
     vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
     vk::raii::Buffer m_vertexBuffer{ nullptr };
+    vk::raii::DeviceMemory m_instanceBufferMemory{ nullptr };
+    vk::raii::Buffer m_instanceBuffer{ nullptr };
     vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
     vk::raii::Buffer m_indexBuffer{ nullptr };
     std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
@@ -162,11 +166,11 @@ private:
         createTextureImageView();
         createTextureSampler();
         loadModel(MODEL_PATH);
-        for (int i = 0; i < BUNNY_NUMBER; ++i) {
-            loadModel(BUNNY_PATH);
-        }
-        initModelMatrices();
+        loadModel(BUNNY_PATH);
+        initInstanceDatas();
+        initDynamicUboMatrices();
         createVertexBuffer();
+        createInstanceBuffer();
         createIndexBuffer();
         createUniformBuffers();
         createDynamicUniformBuffers();
@@ -186,11 +190,11 @@ private:
     }
 
     void cleanup() {
-        for(const auto& it : m_uniformBuffersMemory){
+        for(const auto& it : m_dynamicUniformBuffersMemory){
             it.unmapMemory();
         }
 
-        for(const auto& it : m_dynamicUniformBuffersMemory){
+        for(const auto& it : m_uniformBuffersMemory){
             it.unmapMemory();
         }
 
@@ -657,10 +661,28 @@ private:
 
         vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 
-        auto bindingDescription = Vertex::getBindingDescription();
-        auto attributeDescriptions = Vertex::getAttributeDescriptions();
+        auto vertexBindingDescription = Vertex::getBindingDescription();
+        auto vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
+        auto instanceBindingDescription = InstanceData::getBindingDescription();
+        auto instanceAttributeDescriptions = InstanceData::getAttributeDescriptions();
 
-        vertexInputInfo.setVertexBindingDescriptions(bindingDescription);
+        std::vector<vk::VertexInputBindingDescription> bindingDescriptions = { 
+            vertexBindingDescription, 
+            instanceBindingDescription 
+        };
+        std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+        attributeDescriptions.insert(
+            attributeDescriptions.end(),
+            vertexAttributeDescriptions.begin(),
+            vertexAttributeDescriptions.end()
+        );
+        attributeDescriptions.insert(
+            attributeDescriptions.end(),
+            instanceAttributeDescriptions.begin(),
+            instanceAttributeDescriptions.end()
+        );
+
+        vertexInputInfo.setVertexBindingDescriptions(bindingDescriptions);
         vertexInputInfo.setVertexAttributeDescriptions(attributeDescriptions);
 
         vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
@@ -710,8 +732,8 @@ private:
         pushConstantRange.size = sizeof(uint32_t);
 
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
-        pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
         pipelineLayoutInfo.setPushConstantRanges( pushConstantRange );
+        pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
 
         m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 
@@ -816,37 +838,56 @@ private:
         );
         commandBuffer.setScissor(0, scissor);
 
-        // std::array<vk::Buffer,1> vertexBuffers { m_vertexBuffer };
-        // std::array<vk::DeviceSize,1> offsets { 0 };
-        commandBuffer.bindVertexBuffers( 0, *m_vertexBuffer, vk::DeviceSize{0} );
+        vk::Buffer vertexBuffers[] = { *m_vertexBuffer, *m_instanceBuffer };
+        vk::DeviceSize offsets[] = { 0, 0 };
+        commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
         commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint32 );
 
-        for(size_t index = 0; const uint32_t firstIndex : m_indicesOffsets) {
-            PushConstantData pcData;
-            pcData.enableTexture = (index == 0 ? 1 : 0);
-            commandBuffer.pushConstants<uint32_t>(
-                m_pipelineLayout,
-                vk::ShaderStageFlagBits::eFragment,
-                0, // offset
-                pcData.enableTexture
-            );
-            uint32_t dynamicOffset = index * sizeof(glm::mat4);
-            commandBuffer.bindDescriptorSets(
-                vk::PipelineBindPoint::eGraphics,
-                m_pipelineLayout,
-                0,
-                *m_descriptorSets[m_currentFrame],
-                dynamicOffset
-            );
-            commandBuffer.drawIndexed(
-                index + 1 == m_indicesOffsets.size() ? m_indices.size() - firstIndex : m_indicesOffsets[index + 1] - firstIndex,
-                1,
-                firstIndex,
-                0,
-                0
-            );
-            ++index;
-        }
+        uint32_t dynamicOffset = 0;
+        commandBuffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics, 
+            m_pipelineLayout,
+            0,
+            *m_descriptorSets[m_currentFrame],
+            dynamicOffset
+        );
+        uint32_t enableTexture = 1; // enable texture
+        commandBuffer.pushConstants<uint32_t>(
+            m_pipelineLayout,
+            vk::ShaderStageFlagBits::eFragment,
+            0,              // offset
+            enableTexture   // value
+        );
+        commandBuffer.drawIndexed( // draw the room
+            m_firstIndices[1],
+            1,
+            0,
+            0,
+            0
+        );
+
+        dynamicOffset = sizeof(glm::mat4);
+        commandBuffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics, 
+            m_pipelineLayout,
+            0,
+            *m_descriptorSets[m_currentFrame],
+            dynamicOffset
+        );
+        enableTexture = 0; // disable texture for the bunny
+        commandBuffer.pushConstants<uint32_t>(
+            m_pipelineLayout,
+            vk::ShaderStageFlagBits::eFragment,
+            0,              // offset
+            enableTexture   // value
+        );
+        commandBuffer.drawIndexed( // draw the bunny
+            static_cast<uint32_t>(m_indices.size() - m_firstIndices[1]),
+            BUNNY_NUMBER,
+            m_firstIndices[1],
+            0, 
+            1
+        );
 
         commandBuffer.endRenderPass();
         commandBuffer.end();
@@ -1011,7 +1052,8 @@ private:
         vk::BufferUsageFlags usage, 
         vk::MemoryPropertyFlags properties, 
         vk::raii::Buffer& buffer, 
-        vk::raii::DeviceMemory& bufferMemory) {
+        vk::raii::DeviceMemory& bufferMemory
+    ) {
 
         vk::BufferCreateInfo bufferInfo;
         bufferInfo.size = size;
@@ -1193,10 +1235,13 @@ private:
     /// descriptor pool and sets
     void createDescriptorPool() {
         std::array<vk::DescriptorPoolSize, 3> poolSizes;
+
         poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
         poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
         poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
         poolSizes[2].type = vk::DescriptorType::eUniformBufferDynamic;
         poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -1634,7 +1679,7 @@ private:
             throw std::runtime_error(warn + err);
         }
 
-        m_indicesOffsets.push_back(m_indices.size());
+        m_firstIndices.push_back(m_indices.size());
         
         static std::unordered_map<
             Vertex, 
@@ -1663,6 +1708,8 @@ private:
                         attrib.texcoords[2 * index.texcoord_index],
                         1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
                     };
+                } else {
+                    vertex.texCoord = {0.0f, 0.0f};
                 }
 
                 vertex.color = {1.0f, 1.0f, 1.0f};
@@ -1848,8 +1895,8 @@ private:
         if(counts & vk::SampleCountFlagBits::e32) return vk::SampleCountFlagBits::e32;
         if(counts & vk::SampleCountFlagBits::e16) return vk::SampleCountFlagBits::e16;
         if(counts & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e8;
-        if(counts & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e4;
-        if(counts & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e2;
+        if(counts & vk::SampleCountFlagBits::e4) return vk::SampleCountFlagBits::e4;
+        if(counts & vk::SampleCountFlagBits::e2) return vk::SampleCountFlagBits::e2;
         return vk::SampleCountFlagBits::e1;
     }
     void createColorResources() {
@@ -1878,42 +1925,97 @@ private:
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
-    /// push constant
-    struct PushConstantData {
-        uint32_t enableTexture;
-    };
-    /////////////////////////////////////////////////////////////////
+    /// instance data
+    struct alignas(16) InstanceData {
+        glm::mat4 model;
 
-    /////////////////////////////////////////////////////////////////
-    /// model matrices
-    void initModelMatrices() {
-        m_modelMatrices.reserve(BUNNY_NUMBER+1);
-        // add a static model matrix for the room
-        glm::mat4 roomModel = glm::rotate(
+        static vk::VertexInputBindingDescription getBindingDescription() {
+            vk::VertexInputBindingDescription bindingDescription;
+            bindingDescription.binding = 1; // binding 1 for instance data
+            bindingDescription.stride = sizeof(InstanceData);
+            bindingDescription.inputRate = vk::VertexInputRate::eInstance;
+
+            return bindingDescription;
+        }
+
+        static std::array<vk::VertexInputAttributeDescription, 4>  getAttributeDescriptions() {
+            std::array<vk::VertexInputAttributeDescription, 4> attributeDescriptions;
+            for(uint32_t i = 0; i < 4; ++i) {
+                attributeDescriptions[i].binding = 1; // binding 1 for instance data
+                attributeDescriptions[i].location = 3 + i; // location 3, 4, 5, 6
+                attributeDescriptions[i].format = vk::Format::eR32G32B32A32Sfloat;
+                attributeDescriptions[i].offset = sizeof(glm::vec4) * i;
+            }
+            return attributeDescriptions;
+        }
+    };
+    void initInstanceDatas() {
+        InstanceData instanceData;
+        m_instanceDatas.reserve(BUNNY_NUMBER + 1);
+        // room model
+        instanceData.model = glm::rotate(
             glm::mat4(1.0f), 
             glm::radians(-90.0f), 
             glm::vec3(1.0f, 0.0f, 0.0f)
-        )  * glm::rotate(
+        ) *  glm::rotate(
             glm::mat4(1.0f), 
             glm::radians(-90.0f), 
             glm::vec3(0.0f, 0.0f, 1.0f)
         );
-        m_modelMatrices.emplace_back( roomModel );
-        // random number generator
+        m_instanceDatas.emplace_back( instanceData );
+
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
-        // initialize model matrices
+        // initialize BUNNY_NUMBER instances
         for (int i = 0; i < BUNNY_NUMBER; ++i) {
-            glm::mat4 model = glm::mat4(1.0f);
-            // random translation and rotation
-            model = glm::translate(model, glm::vec3(dis(gen), dis(gen), dis(gen)));
-            model = glm::rotate(model, glm::radians(dis(gen) * 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            m_modelMatrices.emplace_back( model );
+            // randomly generate position and rotation
+            instanceData.model = glm::translate(
+                glm::mat4(1.0f), 
+                glm::vec3(dis(gen), dis(gen), dis(gen))
+            ) * glm::rotate(
+                glm::mat4(1.0f), 
+                glm::radians(dis(gen) * 180.0f), 
+                glm::vec3(0.0f, 1.0f, 0.0f)
+            );
+            m_instanceDatas.emplace_back( instanceData );
         }
     }
+    void createInstanceBuffer() {
+        vk::DeviceSize bufferSize = sizeof(InstanceData) * m_instanceDatas.size();
+
+        vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
+        vk::raii::Buffer stagingBuffer{ nullptr };
+        createBuffer(bufferSize,
+            vk::BufferUsageFlagBits::eTransferSrc,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            stagingBuffer,
+            stagingBufferMemory
+        );
+
+        void* data = stagingBufferMemory.mapMemory(0, bufferSize);
+        memcpy(data, m_instanceDatas.data(), static_cast<size_t>(bufferSize));
+        stagingBufferMemory.unmapMemory();
+
+        createBuffer(bufferSize,
+            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            m_instanceBuffer,
+            m_instanceBufferMemory
+        );
+
+        copyBuffer(stagingBuffer, m_instanceBuffer, bufferSize);
+    }
+    /////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////
+    /// dynamic uniform buffer
+    void initDynamicUboMatrices() {
+        m_dynamicUboMatrices.push_back(glm::mat4(1.0f));
+        m_dynamicUboMatrices.push_back(glm::mat4(1.0f));
+    }
     void createDynamicUniformBuffers() {
-        vk::DeviceSize bufferSize  = sizeof(glm::mat4) * m_modelMatrices.size();
+        vk::DeviceSize bufferSize  = sizeof(glm::mat4) * m_dynamicUboMatrices.size();
 
         m_dynamicUniformBuffers.reserve(MAX_FRAMES_IN_FLIGHT);
         m_dynamicUniformBuffersMemory.reserve(MAX_FRAMES_IN_FLIGHT);
@@ -1935,15 +2037,22 @@ private:
         }
     }
     void updateDynamicUniformBuffer(uint32_t currentImage) {
-        vk::DeviceSize modelSize = sizeof(glm::mat4);
+        static auto startTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        startTime = currentTime;
 
-        for (size_t i = 0; i < m_modelMatrices.size(); ++i) {
-            memcpy(
-                static_cast<char*>(m_dynamicUniformBuffersMapped[currentImage]) + i * modelSize,
-                &m_modelMatrices[i],
-                modelSize
-            );
-        }
+        m_dynamicUboMatrices[1] = glm::rotate(
+            m_dynamicUboMatrices[1], 
+            glm::radians(time * 60.0f), 
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+
+        memcpy(
+            m_dynamicUniformBuffersMapped[currentImage],
+            m_dynamicUboMatrices.data(),
+            sizeof(glm::mat4) * m_dynamicUboMatrices.size()
+        );
     }
     /////////////////////////////////////////////////////////////////
 };

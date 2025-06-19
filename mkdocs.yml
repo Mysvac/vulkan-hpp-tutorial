@@ -78,6 +78,7 @@ nav:
     - 移动摄像机: md/03/10_movecamera.md
     - 生成Mipmaps: md/03/20_mipmaps.md
     - 多重采样: md/03/30_multisample.md
-    - 推送常量: md/03/40_pushconstant.md
-    - 动态uniform: md/03/50_dynamicuniform.md
+    - 实例化渲染: md/03/40_instancedrendering.md
+    - 推送常量: md/03/50_pushconstant.md
+    - 动态uniform: md/03/60_dynamicuniform.md
   - 隐私政策: policy.md

@@ -13,6 +13,7 @@
 #include <tiny_obj_loader.h>
 
 #include <chrono>
+#include <random>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -38,6 +39,7 @@ private:
     /////////////////////////////////////////////////////////////////
     /// forwoard declare
     struct Vertex;
+    struct InstanceData;
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
@@ -63,6 +65,7 @@ private:
     #endif
 
     static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+    static constexpr int BUNNY_NUMBER = 5;
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
@@ -77,10 +80,13 @@ private:
     vk::raii::Queue m_graphicsQueue{ nullptr };
     vk::raii::Queue m_presentQueue{ nullptr };
     std::vector<Vertex> m_vertices;
+    std::vector<InstanceData> m_instanceDatas;
     std::vector<uint32_t> m_indices;
-    std::vector<uint32_t> m_indicesOffsets;
+    std::vector<uint32_t> m_firstIndices;
     vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
     vk::raii::Buffer m_vertexBuffer{ nullptr };
+    vk::raii::DeviceMemory m_instanceBufferMemory{ nullptr };
+    vk::raii::Buffer m_instanceBuffer{ nullptr };
     vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
     vk::raii::Buffer m_indexBuffer{ nullptr };
     std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
@@ -157,7 +163,9 @@ private:
         createTextureSampler();
         loadModel(MODEL_PATH);
         loadModel(BUNNY_PATH);
+        initInstanceDatas();
         createVertexBuffer();
+        createInstanceBuffer();
         createIndexBuffer();
         createUniformBuffers();
         createDescriptorPool();
@@ -643,10 +651,28 @@ private:
 
         vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 
-        auto bindingDescription = Vertex::getBindingDescription();
-        auto attributeDescriptions = Vertex::getAttributeDescriptions();
+        auto vertexBindingDescription = Vertex::getBindingDescription();
+        auto vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
+        auto instanceBindingDescription = InstanceData::getBindingDescription();
+        auto instanceAttributeDescriptions = InstanceData::getAttributeDescriptions();
 
-        vertexInputInfo.setVertexBindingDescriptions(bindingDescription);
+        std::vector<vk::VertexInputBindingDescription> bindingDescriptions = { 
+            vertexBindingDescription, 
+            instanceBindingDescription 
+        };
+        std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+        attributeDescriptions.insert(
+            attributeDescriptions.end(),
+            vertexAttributeDescriptions.begin(),
+            vertexAttributeDescriptions.end()
+        );
+        attributeDescriptions.insert(
+            attributeDescriptions.end(),
+            instanceAttributeDescriptions.begin(),
+            instanceAttributeDescriptions.end()
+        );
+
+        vertexInputInfo.setVertexBindingDescriptions(bindingDescriptions);
         vertexInputInfo.setVertexAttributeDescriptions(attributeDescriptions);
 
         vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
@@ -690,18 +716,8 @@ private:
         depthStencil.depthBoundsTestEnable = false; // Optional
         depthStencil.stencilTestEnable = false; // Optional
 
-        std::array<vk::PushConstantRange, 2> pushConstantRanges;
-        pushConstantRanges[0].stageFlags = vk::ShaderStageFlagBits::eVertex;
-        pushConstantRanges[0].offset = 0;
-        pushConstantRanges[0].size = sizeof(glm::mat4);
-        pushConstantRanges[1].stageFlags = vk::ShaderStageFlagBits::eFragment;
-        pushConstantRanges[1].offset = sizeof(glm::mat4);
-        pushConstantRanges[1].size = sizeof(uint32_t);
-
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
         pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
-        pipelineLayoutInfo.setPushConstantRanges( pushConstantRanges );
-
         m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 
         vk::GraphicsPipelineCreateInfo pipelineInfo;
@@ -805,9 +821,9 @@ private:
         );
         commandBuffer.setScissor(0, scissor);
 
-        // std::array<vk::Buffer,1> vertexBuffers { m_vertexBuffer };
-        // std::array<vk::DeviceSize,1> offsets { 0 };
-        commandBuffer.bindVertexBuffers( 0, *m_vertexBuffer, vk::DeviceSize{0} );
+        vk::Buffer vertexBuffers[] = { *m_vertexBuffer, *m_instanceBuffer };
+        vk::DeviceSize offsets[] = { 0, 0 };
+        commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
         commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint32 );
 
         commandBuffer.bindDescriptorSets(
@@ -818,44 +834,20 @@ private:
             nullptr
         );
 
-        for(size_t counter = 1; const uint32_t firstIndex : m_indicesOffsets) {
-            PushConstantData pcData;
-            if(counter == 1) {
-                pcData.model = glm::rotate(
-                    glm::mat4(1.0f), 
-                    glm::radians(-90.0f), 
-                    glm::vec3(1.0f, 0.0f, 0.0f)
-                )  * glm::rotate(
-                    glm::mat4(1.0f), 
-                    glm::radians(-90.0f), 
-                    glm::vec3(0.0f, 0.0f, 1.0f)
-                );
-                pcData.enableTexture = 1;
-            } else {
-                pcData.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.12f, 0.0f));
-                pcData.enableTexture = 0;
-            }
-            commandBuffer.pushConstants<glm::mat4>(
-                m_pipelineLayout,
-                vk::ShaderStageFlagBits::eVertex,
-                0, // offset
-                pcData.model
-            );
-            commandBuffer.pushConstants<uint32_t>(
-                m_pipelineLayout,
-                vk::ShaderStageFlagBits::eFragment,
-                sizeof(glm::mat4), // offset
-                pcData.enableTexture
-            );
-            commandBuffer.drawIndexed(
-                counter == m_indicesOffsets.size() ? m_indices.size() - firstIndex : m_indicesOffsets[counter] - firstIndex,
-                1,
-                firstIndex,
-                0,
-                0
-            );
-            ++counter;
-        }
+        commandBuffer.drawIndexed( // draw the room
+            m_firstIndices[1],
+            1,
+            0,
+            0,
+            0
+        );
+        commandBuffer.drawIndexed( // draw the bunny
+            static_cast<uint32_t>(m_indices.size() - m_firstIndices[1]),
+            BUNNY_NUMBER,
+            m_firstIndices[1],
+            0, 
+            1
+        );
 
         commandBuffer.endRenderPass();
         commandBuffer.end();
@@ -1019,7 +1011,8 @@ private:
         vk::BufferUsageFlags usage, 
         vk::MemoryPropertyFlags properties, 
         vk::raii::Buffer& buffer, 
-        vk::raii::DeviceMemory& bufferMemory) {
+        vk::raii::DeviceMemory& bufferMemory
+    ) {
 
         vk::BufferCreateInfo bufferInfo;
         bufferInfo.size = size;
@@ -1119,7 +1112,6 @@ private:
     /////////////////////////////////////////////////////////////////
     /// descriptor layout and buffer
     struct alignas(16) UniformBufferObject {
-        glm::mat4 model;
         glm::mat4 view;
         glm::mat4 proj;
     };
@@ -1623,7 +1615,7 @@ private:
             throw std::runtime_error(warn + err);
         }
 
-        m_indicesOffsets.push_back(m_indices.size());
+        m_firstIndices.push_back(m_indices.size());
         
         static std::unordered_map<
             Vertex, 
@@ -1652,6 +1644,8 @@ private:
                         attrib.texcoords[2 * index.texcoord_index],
                         1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
                     };
+                } else {
+                    vertex.texCoord = {0.0f, 0.0f};
                 }
 
                 vertex.color = {1.0f, 1.0f, 1.0f};
@@ -1837,8 +1831,8 @@ private:
         if(counts & vk::SampleCountFlagBits::e32) return vk::SampleCountFlagBits::e32;
         if(counts & vk::SampleCountFlagBits::e16) return vk::SampleCountFlagBits::e16;
         if(counts & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e8;
-        if(counts & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e4;
-        if(counts & vk::SampleCountFlagBits::e8) return vk::SampleCountFlagBits::e2;
+        if(counts & vk::SampleCountFlagBits::e4) return vk::SampleCountFlagBits::e4;
+        if(counts & vk::SampleCountFlagBits::e2) return vk::SampleCountFlagBits::e2;
         return vk::SampleCountFlagBits::e1;
     }
     void createColorResources() {
@@ -1867,11 +1861,94 @@ private:
     /////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////
-    /// push constant
-    struct PushConstantData {
+    /// instance data
+    struct alignas(16) InstanceData {
         glm::mat4 model;
         uint32_t enableTexture;
+
+        static vk::VertexInputBindingDescription getBindingDescription() {
+            vk::VertexInputBindingDescription bindingDescription;
+            bindingDescription.binding = 1; // binding 1 for instance data
+            bindingDescription.stride = sizeof(InstanceData);
+            bindingDescription.inputRate = vk::VertexInputRate::eInstance;
+
+            return bindingDescription;
+        }
+
+        static std::array<vk::VertexInputAttributeDescription, 5>  getAttributeDescriptions() {
+            std::array<vk::VertexInputAttributeDescription, 5> attributeDescriptions;
+            for(uint32_t i = 0; i < 4; ++i) {
+                attributeDescriptions[i].binding = 1; // binding 1 for instance data
+                attributeDescriptions[i].location = 3 + i; // location 3, 4, 5, 6
+                attributeDescriptions[i].format = vk::Format::eR32G32B32A32Sfloat;
+                attributeDescriptions[i].offset = sizeof(glm::vec4) * i;
+            }
+            attributeDescriptions[4].binding = 1;
+            attributeDescriptions[4].location = 7;
+            attributeDescriptions[4].format = vk::Format::eR32Uint;
+            attributeDescriptions[4].offset = sizeof(glm::mat4);
+            return attributeDescriptions;
+        }
     };
+    void initInstanceDatas() {
+        InstanceData instanceData;
+        m_instanceDatas.reserve(BUNNY_NUMBER + 1);
+        // room model
+        instanceData.model = glm::rotate(
+            glm::mat4(1.0f), 
+            glm::radians(-90.0f), 
+            glm::vec3(1.0f, 0.0f, 0.0f)
+        ) *  glm::rotate(
+            glm::mat4(1.0f), 
+            glm::radians(-90.0f), 
+            glm::vec3(0.0f, 0.0f, 1.0f)
+        );
+        instanceData.enableTexture = 1; // enable texture sampling
+        m_instanceDatas.emplace_back( instanceData );
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
+        // initialize BUNNY_NUMBER instances
+        for (int i = 0; i < BUNNY_NUMBER; ++i) {
+            // randomly generate position and rotation
+            instanceData.model = glm::translate(
+                glm::mat4(1.0f), 
+                glm::vec3(dis(gen), dis(gen), dis(gen))
+            ) * glm::rotate(
+                glm::mat4(1.0f), 
+                glm::radians(dis(gen) * 180.0f), 
+                glm::vec3(0.0f, 1.0f, 0.0f)
+            );
+            instanceData.enableTexture = 0; // disable texture sampling
+            m_instanceDatas.emplace_back( instanceData );
+        }
+    }
+    void createInstanceBuffer() {
+        vk::DeviceSize bufferSize = sizeof(InstanceData) * m_instanceDatas.size();
+
+        vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
+        vk::raii::Buffer stagingBuffer{ nullptr };
+        createBuffer(bufferSize,
+            vk::BufferUsageFlagBits::eTransferSrc,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            stagingBuffer,
+            stagingBufferMemory
+        );
+
+        void* data = stagingBufferMemory.mapMemory(0, bufferSize);
+        memcpy(data, m_instanceDatas.data(), static_cast<size_t>(bufferSize));
+        stagingBufferMemory.unmapMemory();
+
+        createBuffer(bufferSize,
+            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            m_instanceBuffer,
+            m_instanceBufferMemory
+        );
+
+        copyBuffer(stagingBuffer, m_instanceBuffer, bufferSize);
+    }
     /////////////////////////////////////////////////////////////////
 };
 
