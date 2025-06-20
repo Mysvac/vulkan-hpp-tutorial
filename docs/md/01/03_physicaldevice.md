@@ -1,11 +1,13 @@
 # **物理设备与队列族**
 
-在创建实例之后，我们需要查找并选择系统中合适的显卡。
+在创建实例之后，我们需要查找并选择系统中合适的物理设备\(通常为 GPU \)。
 实际上，我们可以选择任意数量的显卡并同时使用它们，但在本教程中，我们只使用第一张满足我们需求的显卡。
 
-## **成员变量和函数声明**
+## **选择物理设备**
 
-首先在 `m_debugMessenger` 下方添加一个成员变量：
+### 1. 成员变量与辅助函数
+
+首先在 `m_debugMessenger` 下方添加一个成员变量管理物理设备句柄：
 
 ```cpp
 vk::raii::PhysicalDevice m_physicalDevice{ nullptr };
@@ -25,9 +27,7 @@ void pickPhysicalDevice() {
 }
 ```
 
-## **物理设备枚举与选择**
-
-### 1. 获取可用设备列表
+### 2. 获取可用设备列表
 
 ```cpp
 void pickPhysicalDevice() {
@@ -42,9 +42,9 @@ void pickPhysicalDevice() {
 > 你可能见过 `vk::raii::PhysicalDevices` 类型，它末尾多了个 `s`。  
 > 他实际上继承了 `std::vector<vk::raii::PhysicalDevice>` ，二者功能基本一致。
 
-### 2. 设备适用性检查
+### 3. 设备适用性检查
 
-现在我们需要评估每个设备，并检查它们是否适合满足要求。为此，我们将引入一个新函数
+现在我们需要评估每个设备，并检查它们是否适合满足要求。为此我们引入一个新函数：
 
 ```cpp
 bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
@@ -52,9 +52,9 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 }
 ```
 
-### 3. 选择第一个合适的设备
+### 4. 选择第一个合适的设备
 
-遍历并挑选一个满足的物理设备，如果没有就抛出异常。
+遍历并挑选一个满足的物理设备，如果没有就抛出异常：
 
 ```cpp
 for (const auto& it : physicalDevices) {
@@ -68,10 +68,8 @@ if(m_physicalDevice == nullptr){
 }
 ```
 
-注意到`vk::raii::PhysicalDevice`可以直接拷贝，这很特殊。
-因为物理设备资源实际由`vk::Instance`管理，所以`vk::raii::PhysicalDevice`销毁时没有调用任何`vkDestory`。
-
-> 作者认为此处API设计有误，它应该直接返回`vk::PhysicalDevice`，不应携带`raii::`。
+注意到 `vk::raii::PhysicalDevice` 可以直接拷贝赋值，这很特殊。
+因为物理设备句柄实际由 `vk::Instance` 管理，所以 `vk::raii::PhysicalDevice` 销毁时没有调用任何 `vkDestory` 。
 
 ## **设备评估标准**
 
@@ -101,7 +99,7 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 
 ### 2. 评分机制示例
 
-你还可以创建自己的评分机制，然后挑选最好的显卡，像这样
+你还可以创建自己的评分机制，然后挑选最好的显卡，像这样：
 
 ```cpp
 int rateDeviceSuitability(const vk::raii::PhysicalDevice& physicalDevice) {
@@ -127,7 +125,7 @@ int rateDeviceSuitability(const vk::raii::PhysicalDevice& physicalDevice) {
 
 ###  注意！！
 
-因为我们才刚刚开始，所以 Vulkan 支持是我们唯一需要的，下面教程将暂时使用这个最简单的判断函数：
+作为教程的开始部分，我们目前仅需要 Vulkan 支持，下面暂时使用这个最简单的判断函数：
 
 ```cpp
 bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
@@ -135,7 +133,7 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 }
 ```
 
-在下一节中，我们将讨论第一个真正需要检查的功能。
+在下一节，我们将讨论第一个真正需要检查的功能。
 
 ## **队列族管理**
 
@@ -146,17 +144,17 @@ Vulkan 中的几乎每个操作，从绘制到上传纹理，都需要将命令�
 队列有不同的类型，这些类型源自不同的队列族，并且每个队列族仅允许一些特定的命令。
 例如，可能有一个队列族仅允许处理计算命令，或者一个队列族仅允许与内存传输相关的命令。
 
-为此，我们将添加一个新函数 `findQueueFamilies`，用于查找我们需要的所有队列族。
+为此，我们将添加一个新函数 `findQueueFamilies` ，用于查找我们需要的所有队列族。
 
-现在我们只打算查找支持图形命令的队列，因此该函数可能如下所示
+现在我们只打算查找支持图形命令的队列族，因此该函数可能如下所示：
 
 ```cpp
 uint32_t findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
-    // Logic to find graphics queue family
+    // 查找图像队列族
 }
 ```
 
-由于我们后面需要找的队列不止一个，可以返回一个结构体：
+队列族的查找返回整数索引，由于我们后面需要找的队列不止一个，可以返回一个结构体：
 
 ```cpp
 struct QueueFamilyIndices {
@@ -165,18 +163,18 @@ struct QueueFamilyIndices {
 
 QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
     QueueFamilyIndices indices;
-    // Logic to find queue family indices to populate struct with
+    // 查找图像队列族
     return indices;
 }
 ```
 
 ### 2. 更好的队列存储
 
-此函数可能找不到有用的队列族。但是有时候找不到也可以正常执行，
-比如我们可能希望使用具有专用传输队列族的设备，但不强制要求。
+此函数可能找不到有用的队列族。
+但是有时候找不到也可以正常执行，比如我们可能希望使用具有专用传输队列族的设备，但不强制要求。
 
 不应该使用魔术值来指示队列族的不存在，因为 `uint32_t` 的任何值都可能是有效的队列族索引，包括 `0`。
-幸运的是，C++17 引入了一种数据结构 `std::optional<>` 来区分值存在与不存在的情况，它可以这样使用
+幸运的是，C++17 引入了一种数据结构 `std::optional<>` 来区分值存在与不存在的情况，它可以这样使用：
 
 ```cpp
 std::optional<uint32_t> graphicsFamily;
@@ -191,9 +189,11 @@ std::cout << std::boolalpha << graphicsFamily.has_value() << std::endl; // true
 于是我们可以将代码修改成这样：
 
 ```cpp
-// ......
+......
+
 #include <optional>
-// ......
+
+......
 
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
@@ -208,7 +208,7 @@ QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDev
 
 ### 3. 实现队列族查找
 
-我们现在可以开始实现 `findQueueFamilies`，使用 `getQueueFamilyProperties` 成员函数即可
+我们现在可以开始实现 `findQueueFamilies`，使用 `getQueueFamilyProperties` 成员函数即可：
 
 ```cpp
 // std::vector<vk::QueueFamilyProperties>
@@ -233,7 +233,7 @@ for (int i = 0; const auto& queueFamily : queueFamilies) {
 
 ### 4. 改进设备适用性检查
 
-现在我们可以在 `isDeviceSuitable` 函数中使用它作为检查，以确保设备可以处理我们想要使用的命令
+现在我们可以在 `isDeviceSuitable` 函数中使用它作为检查，以确保设备可以处理我们想要使用的命令：
 
 ```cpp
 bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
@@ -243,7 +243,7 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 }
 ```
 
-为了更方便一点，我们可以在结构体中添加一个通用检查
+为了更方便一点，我们可以在结构体中添加一个通用检查：
 
 ```cpp
 struct QueueFamilyIndices {
@@ -254,7 +254,7 @@ struct QueueFamilyIndices {
     }
 };
 
-// ...
+......
 
 bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
     QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
@@ -263,11 +263,11 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 }
 ```
 
-我们现在也可以使用它从 `findQueueFamilies` 中提前退出
+我们现在可以使用它，在需要的时候从 `findQueueFamilies` 中提前退出：
 
 ```cpp
 for (int i = 0; const auto& queueFamily : queueFamilies) {
-    // ...
+     ...
 
     if (indices.isComplete()) {
         break;
@@ -285,7 +285,7 @@ for (int i = 0; const auto& queueFamily : queueFamilies) {
 
 ---
 
-太棒了，我们现在足以找到合适的物理设备，下一步是创建逻辑设备以与之交互。
+我们现在足以找到合适的物理设备，下一步是创建逻辑设备以与之交互。
 
 ---
 

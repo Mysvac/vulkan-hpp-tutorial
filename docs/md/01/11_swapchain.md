@@ -1,14 +1,19 @@
 # **交换链**
 
-## **基础概念**
+## **前言**
 
-- Vulkan 没有默认帧缓冲，需要显式创建交换链
+正如“教程前言”中的比喻，交换链\(SwapChain\)用于处理窗口表面和实际绘制之间的图像中转：
 
-- 交换链\(swapchain\)是一组等待显示到屏幕的图像队列
+- 交换链是一组等待显示到屏幕的图像队列
 
 - 应用程序从队列获取图像进行渲染，完成后返回队列
 
+- 窗口表面从队列获取渲染完成的图像并呈现到窗口
+
 - 交换链同步图像呈现与屏幕刷新率
+
+- Vulkan 没有默认的帧缓冲区，需要显式创建交换链
+
 
 ## **检查交换链支持**
 
@@ -47,7 +52,7 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 
 ### 3. 设备适用性检查
 
-修改函数体以枚举扩展，并检查所有必需的扩展是否都在其中。
+修改函数体以枚举扩展，并检查所有必需的扩展是否都在其中：
 
 ```cpp
 bool checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice) {
@@ -63,7 +68,7 @@ bool checkDeviceExtensionSupport(const vk::raii::PhysicalDevice& physicalDevice)
 
 ### 4. 启用设备扩展
 
-启用扩展只需要对逻辑设备创建结构进行少量更改，现在修改 `createLogicalDevice` 函数，添加内容
+启用扩展只需要对逻辑设备创建结构进行少量更改，现在修改 `createLogicalDevice` 函数，添加内容：
 
 ```cpp
 createInfo.setPEnabledExtensionNames( deviceExtensions );
@@ -74,7 +79,7 @@ createInfo.setPEnabledExtensionNames( deviceExtensions );
 ## **查询交换链支持详情**
 
 仅检查交换链是否可用是不够的，因为它可能与我们的窗口表面不兼容。
-基本上我们还需要检查三种属性
+一般而言，我们还需要检查三种属性：
 
 - 基本表面功能（交换链中图像的最小/最大数量，图像的最小/最大宽度和高度）
 - 表面格式（像素格式，色彩空间）
@@ -82,7 +87,7 @@ createInfo.setPEnabledExtensionNames( deviceExtensions );
 
 ### 1. 交换链信息存储
 
-我们创建一个结构来存储和传递这些详细信息
+我们创建一个结构来存储和传递这些详细信息：
 
 ```cpp
 struct SwapChainSupportDetails {
@@ -92,7 +97,7 @@ struct SwapChainSupportDetails {
 };
 ```
 
-再创建一个新函数 `querySwapChainSupport` 用于填充此结构
+再创建一个新函数 `querySwapChainSupport` 用于填充此结构：
 
 ```cpp
 SwapChainSupportDetails querySwapChainSupport(const vk::raii::PhysicalDevice& physicalDevice) {
@@ -222,7 +227,7 @@ vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& 
 }
 ```
 
-现在，让我们浏览列表，看看 `eMailbox` 是否可用。
+现在，可以通过打印输出浏览列表，看看 `eMailbox` 是否可用。
 
 ### 3. 交换范围
 
@@ -279,7 +284,7 @@ vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
 
 ### 1. 基础结构
 
-创建一个 `createSwapChain` 函数，并确保在逻辑设备创建后从 `initVulkan` 调用它。
+创建一个 `createSwapChain` 函数，并确保在逻辑设备创建后调用它。
 
 ```cpp
 void initVulkan() {
@@ -308,7 +313,7 @@ void createSwapChain() {
 uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 ```
 
-我们还应该确保在执行此操作时不要超过图像的最大数量，其中 0 是一个特殊值，表示没有最大值
+我们还应该确保在执行此操作时不超过图像的最大数量，其中 0 是一个特殊值，表示没有最大值
 
 ```cpp
 if (swapChainSupport.capabilities.maxImageCount > 0 && 
@@ -317,7 +322,7 @@ if (swapChainSupport.capabilities.maxImageCount > 0 &&
 }
 ```
 
-### 2. CreateInfo
+### 2. 创建配置
 
 然后创建我们熟悉的 `CreateInfo`
 
@@ -336,7 +341,7 @@ createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
 - `imageUsage` 位字段指定交换链中图像的操作类型。
 
-在本教程中，我们将直接渲染到它们，这意味着它们用作颜色附件。
+在本教程中，我们将直接渲染它们，这意味着它们用作颜色附件。
 
 ### 3. 队列族信息设置
 
@@ -352,8 +357,8 @@ createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
 
 
-如果队列族不同，那么我们将在本教程中使用并发模式。
-如果图形队列族和呈现队列族相同（大多数硬件都是这种情况），那么我们应该使用独占模式，因为并发模式要求您指定至少两个不同的队列族。
+如果队列族不同，我们将使用并发模式。
+如果图形队列族和呈现队列族相同（大多数硬件都是这种情况），我们应该使用独占模式，因为并发模式要求您指定至少两个不同的队列族。
 
 ```cpp
 QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
@@ -400,7 +405,7 @@ createInfo.clipped = true;
 
 使用 Vulkan，您的交换链可能会在应用程序运行时变为无效或未优化，例如窗口调整了大小。
 在这种情况下，需要重新创建交换链，并且必须在此字段中指定对旧交换链的引用。
-这是一个复杂的主题，我们将在以后的章节中了解更多信息。现在，我们假设只会创建一个交换链
+这是一个复杂的主题，我们将在以后的章节中了解更多信息。现在，我们假设只会创建一个交换链。
 
 ```cpp
 createInfo.oldSwapchain = nullptr;
@@ -429,7 +434,7 @@ vk::raii::SwapchainKHR m_swapChain{ nullptr };
 m_swapChain = m_device.createSwapchainKHR( createInfo );
 ```
 
-现在运行应用程序以确保交换链已成功创建！！
+现在运行应用程序以确保交换链已成功创建。
 
 ## **检索交换链图像**
 
@@ -446,13 +451,11 @@ m_swapChainImages = m_swapChain.getImages();
 ```
 
 > 注意，`vk::image` 的资源释放由`swapChain`管理，交换链释放时会自动释放此资源，所以无需RAII。  
-> 情况类似`vk::PhysicalDevice`，但物理设备API加了`raii::`，这里却没有，十分奇怪。
-> 
-> 我们仅在交换链中指定了最少数量的图像，而实现允许创建具有更多图像的交换链。
+> 情况类似`PhysicalDevice`，但物理设备加了`raii::`，这里却没有，可能是因为 `raii` 封装中物理设备需要特殊的成员函数。
 
 ## **存储交换链参数**
 
-最后一件事，将我们为交换链图像选择的格式 `vk::Format` 和范围 `vk::Extent2D` 存储在成员变量中。我们以后的章节需要用到它们。
+最后一件事，将我们为交换链图像选择的格式 `vk::Format` 和范围 `vk::Extent2D` 存储在成员变量中，我们以后的章节需要用到它们。
 
 ```cpp
 // class member
@@ -475,7 +478,7 @@ m_swapChainExtent = extent;
 ---
 
 我们现在有了一组可以绘制并呈现到窗口的图像。
-下一章将开始介绍如何将图像设置为渲染目标，然后我们将开始研究实际的图形管线和绘制命令！
+下一章将开始介绍如何将图像设置为渲染目标，然后我们将开始研究实际的图形管线和绘制命令。
 
 ---
 

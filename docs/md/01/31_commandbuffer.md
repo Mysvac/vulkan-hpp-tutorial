@@ -40,7 +40,7 @@ void createCommandPool() {
 }
 ```
 
-命令池创建只需要两个参数
+命令池创建只需要两个参数：
 
 ```cpp
 QueueFamilyIndices queueFamilyIndices = findQueueFamilies( m_physicalDevice );
@@ -120,7 +120,7 @@ void createCommandBuffer() {
 
 `level` 参数指定分配的命令缓冲区是主命令缓冲区还是辅助命令缓冲区：
 
-| 枚举 |  含义  |
+| `vk::CommandBufferLevel` |  含义  |
 |------|--------|
 | `ePrimary` | 可以提交到队列以执行，但不能从其他命令缓冲区调用。 |  
 | `eSecondary` | 不能直接提交，但可以从主命令缓冲区调用。 |
@@ -128,7 +128,7 @@ void createCommandBuffer() {
 
 由于我们只分配一个命令缓冲区，因此 `commandBufferCount` 参数仅为 `1` 。
 
-## **命令缓冲区记录**
+## **记录命令**
 
 我们现在将开始处理 `recordCommandBuffer` 函数，该函数将我们想要执行的命令写入命令缓冲区。
 使用的 `vk::raii::CommandBuffer` 将作为参数传入，以及我们想要写入的当前交换链图像的索引。
@@ -139,7 +139,7 @@ void recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, uint32_t 
 }
 ```
 
-我们通过调用 `begin` 开始记录命令缓冲区，并使用 `vk::CommandBufferBeginInfo` 结构体作为参数，指定有关此特定命令缓冲区用法的一些详细信息。
+我们通过调用 `begin` 开始记录命令缓冲区，并使用 `vk::CommandBufferBeginInfo` 结构体作为参数，指定一些关于此命令缓冲区的详细信息。
 
 ```cpp
 vk::CommandBufferBeginInfo beginInfo;
@@ -159,13 +159,13 @@ commandBuffer.begin( beginInfo );
 
 它还有一个 `pInheritanceInfo` 参数，仅与辅助命令缓冲区相关。它指定要从调用的主命令缓冲区继承的状态。
 
-如果命令缓冲区已经记录过一次，那么调用 `begin` 将隐式地重置它。稍后无法将命令附加到缓冲区。
+如果命令缓冲区已经记录过一次，那么调用 `begin` 将隐式地重置它。
 
 ## **开始渲染通道**
 
 ### 1. 初始化渲染通道信息
 
-通过 `vk::RenderPassBeginInfo` 结构体配置渲染通道参数
+通过 `vk::RenderPassBeginInfo` 结构体配置渲染通道参数：
 
 
 ```cpp

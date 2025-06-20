@@ -61,7 +61,7 @@ vk::AttachmentDescription colorAttachment;
 
 ### 1. 颜色附件格式
 
-**必须与交换链图像格式一致**，确保渲染输出与显示兼容。所以我们使用`m_swapChainImageFormat`。
+**必须与交换链图像格式一致**，确保渲染输出与显示兼容，所以使用 `m_swapChainImageFormat` ：
 
 ```cpp
 colorAttachment.format = m_swapChainImageFormat;
@@ -111,7 +111,7 @@ Vulkan 要求图像按操作类型切换布局以优化内存访问：
 | `vk::ImageLayout::ePresentSrcKHR`          | 渲染完成后准备显示到交换链。    |
 | `vk::ImageLayout::eTransferDstOptimal`     | 作为数据拷贝目标时使用（如纹理上传）。        |
 
-我们将在纹理章节中更深入地讨论这个主题，但现在重要的是要知道图像需要转换为特定的布局，这些布局适合它们接下来要参与的操作。
+我们将在“纹理映射”章节中更深入地讨论这个主题，但现在重要的是知道图像需要转换为特定的布局，这些布局符合它们接下来要参与的操作。
 
 ```cpp
 colorAttachment.initialLayout = vk::ImageLayout::eUndefined;

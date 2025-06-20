@@ -118,7 +118,7 @@ private:
             1,                  // applicationVersion
             "No Engine",        // pEngineName
             1,                  // engineVersion
-            VK_API_VERSION_1_1  // apiVersion
+            VK_API_VERSION_1_4  // apiVersion
         );
         
         vk::InstanceCreateInfo createInfo( 

@@ -74,7 +74,7 @@ GLSL是一种具有C风格语法的着色语言。
 输出是裁剪坐标中的最终位置以及需要传递给片段着色器的属性，例如颜色和纹理坐标。
 然后，这些值将由光栅化器在片段上进行插值，以产生平滑的渐变。
 
-*裁剪坐标* 是来自顶点着色器的四维向量，随后通过将整个向量除以其最后一个分量而转换为归一化设备坐标。
+**裁剪坐标** 是来自顶点着色器的四维向量，随后通过将整个向量除以其最后一个分量而转换为归一化设备坐标。
 这些归一化设备坐标是 [齐次坐标](https://en.wikipedia.org/wiki/Homogeneous_coordinates)，
 它们将帧缓冲映射到 [-1, 1] x [-1, 1] 坐标系，如下所示
 
@@ -84,13 +84,13 @@ GLSL是一种具有C风格语法的着色语言。
 如果您以前使用过 OpenGL，那么您会注意到 Y 坐标的符号现在已翻转（Y轴朝下）。
 Z 坐标现在使用的范围与 Direct3D 中的范围相同，从 0 到 1。
 
-对于我们的第一个三角形，我们不会应用任何变换，我们将直接将三个顶点的位置指定为归一化设备坐标，以创建以下形状
+对于我们的第一个三角形，我们不会应用任何变换，将直接把三个顶点的位置指定为归一化设备坐标，以创建以下形状：
 
 ![triangle](../../images/0121/triangle_coordinates.svg)
 
 通常，这些坐标将存储在顶点缓冲中，但在 Vulkan 中创建顶点缓冲并用数据填充它并非易事。
 因此，我决定将其推迟到画出第一个基础三角形之后。
-在此期间，我们将做一些不太寻常的事情：直接在顶点着色器代码中包含坐标。代码如下所示
+在此期间，我们将做一些不太寻常的事情：直接在顶点着色器代码中包含坐标。代码如下所示：
 
 ```glsl
 #version 450
@@ -120,7 +120,7 @@ void main() {
 
 由顶点着色器中的位置形成的三角形在屏幕上填充一个区域，其中包含片段。
 片段着色器在这些片段上调用，以生成帧缓冲（或多个帧缓冲）的颜色和深度。
-一个简单的片段着色器，为整个三角形输出红色，如下所示
+一个简单的片段着色器，为整个三角形输出红色，如下所示：
 
 ```glsl
 #version 450
@@ -152,7 +152,7 @@ GLSL 中的颜色是 4 分量向量，R、G、B 和 alpha 通道，都在 `[0, 1
 
 我们必须对两个着色器进行一些更改才能实现此目的。
 首先，我们需要为三个顶点指定不同的颜色。
-顶点着色器现在应该包含一个颜色数组，就像它对位置所做的那样
+顶点着色器现在应该包含一个颜色数组，就像它对位置所做的那样：
 
 ```glsl
 vec3 colors[3] = vec3[](
@@ -163,7 +163,7 @@ vec3 colors[3] = vec3[](
 ```
 
 现在我们只需要将这些逐顶点颜色传递给片段着色器，以便它可以将其插值输出到帧缓冲。
-向顶点着色器添加颜色输出并在 `main` 函数中写入它
+向顶点着色器添加颜色输出并在 `main` 函数中写入它：
 
 ```glsl
 layout(location = 0) out vec3 fragColor;
@@ -174,7 +174,7 @@ void main() {
 }
 ```
 
-接下来，我们需要在片段着色器中添加一个匹配的输入
+接下来，我们需要在片段着色器中添加一个匹配的输入：
 
 ```glsl
 layout(location = 0) in vec3 fragColor;
@@ -188,7 +188,7 @@ void main() {
 
 ### 4. 编译着色器
 
-现在 `shader.vert` 的内容应该是
+现在 `shader.vert` 的内容应该是：
 
 ```glsl
 #version 450
@@ -213,7 +213,7 @@ void main() {
 }
 ```
 
-`shader.frag` 的内容应该是
+`shader.frag` 的内容应该是：
 
 ```glsl
 #version 450
@@ -252,7 +252,7 @@ Vulkan SDK 包含 libshaderc，这是一个从您的程序中将 GLSL 代码编�
 
 ### 5. CMake编译着色器
 
-直接命令行显然不够优秀，且写明路径导致无法跨平台，所以我们借助CMake执行命令。
+直接使用命令行显然不够优秀，且写明路径导致无法跨平台，所以我们借助CMake执行命令。
 
 现在让我们在 `shaders/` 文件夹中创建新的 `CMakeLists.txt`，内容如下所示：
 
@@ -324,7 +324,7 @@ static std::vector<char> readFile(const std::string& filename) {
 - `ate`：从文件末尾开始读取
 - `binary`：将文件作为二进制文件读取（避免文本转换）
 
-从文件末尾开始读取的优点是我们可以读取位置从而确定文件的大小并分配缓冲区
+从文件末尾开始读取的优点是我们可以读取位置从而确定文件的大小并分配缓冲区。
 
 ```cpp
 size_t fileSize = (size_t) file.tellg();
@@ -359,15 +359,14 @@ void createGraphicsPipeline() {
 
 我们通过打印缓冲区的大小并检查它们是否与字节的实际文件大小匹配，确保着色器已正确加载。
 
-> 注意我们使用了相对路径，这要求你运行可执行程序时，当前路径必须位于项目根目录。
->
+> 注意我们使用了相对路径，这要求你运行可执行程序时，当前路径必须位于项目根目录。  
 > 或者你可以将着色器文件夹复制一份到你的执行目录。
 
 ## **创建着色器模块**
 
 ### 1. 读取着色器代码
 
-在我们可以将代码传递给管线之前，我们必须将其包装在 `vk:ShaderModel` 对象中。让我们创建一个辅助函数 `createShaderModule` 来执行此操作。
+在可以将代码传递给管线之前，我们必须将其包装在 `vk:ShaderModel` 对象中。让我们创建一个辅助函数 `createShaderModule` 来执行此操作。
 
 ```cpp
 vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) {
@@ -377,19 +376,20 @@ vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) {
 
 该函数将采用带有字节码的缓冲区作为参数，并从中创建 `vk::raii::ShaderModule` 。
 
-创建着色器模块很简单，我们只需要指定指向带有字节码的缓冲区的指针及其长度。
+创建着色器模块很简单，我们只需要指定字节码缓冲区的开始指针和缓冲区长度。
 此信息在 `vk::ShaderModuleCreateInfo` 结构中指定。
 
 需要注意的一点是，字节码的大小以字节为单位指定，但字节码指针是 uint32_t 指针，而不是 char 指针。
-因此，我们需要使用 `reinterpret_cast` 强制转换指针，如下所示。
-当您执行这样的强制转换时，还需要确保数据满足 `uint32_t` 的对齐要求。
-幸运的是，数据存储在 `std::vector` 中，其中默认分配器已经确保数据满足最坏情况的对齐要求。
+因此，我们需要使用 `reinterpret_cast` 强制转换指针，如下所示：
 
 ```cpp
 vk::ShaderModuleCreateInfo createInfo;
 createInfo.codeSize = code.size();
 createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 ```
+
+当您执行这样的强制转换时，还需要确保数据满足 `uint32_t` 的对齐要求。
+幸运的是，数据存储在 `std::vector` 中，其中默认分配器已经确保数据满足最坏情况的对齐要求。
 
 > 你无法使用`setCode()`，它接受`uint32_t`类型的代理数组。
 
@@ -420,7 +420,7 @@ void createGraphicsPipeline() {
 
 要实际使用着色器，我们需要通过 `vk::PipelineShaderStageCreateInfo` 结构将它们分配给特定的管线阶段，作为实际管线创建过程的一部分。
 
-我们将从填充顶点着色器的结构开始，同样在 `createGraphicsPipeline` 函数中。
+我们将从填充顶点着色器的结构开始，同样在 `createGraphicsPipeline` 函数中指定：
 
 ```cpp
 vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
@@ -431,7 +431,7 @@ vertShaderStageInfo.pName = "main";
 
 `stage` 字段指定了着色器在哪个阶段工作。
 
-接下来的两个字段指定包含代码的着色器模块以及要调用的函数，称为入口点。
+接下来的两个字段指定着色器的代码模块以及要调用的函数，称为入口点。
 这意味着可以将多个片段着色器组合到一个着色器模块中，并使用不同的入口点来区分它们的行为。
 我们使用标准的 `main` 入口。
 
@@ -449,7 +449,7 @@ fragShaderStageInfo.module = fragShaderModule;
 fragShaderStageInfo.pName = "main";
 ```
 
-最后，定义一个包含这两个结构的数组，我们稍后将在实际的管线创建步骤中使用它来引用它们。
+最后，定义一个包含这两个结构的数组，我们稍后将在实际的管线创建步骤中使用它。
 
 ```cpp
 std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo, fragShaderStageInfo };
@@ -461,7 +461,7 @@ std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo
 
 ---
 
-在下一章中，我们将研究固定功能阶段。
+本章我们学习了两个可编程阶段。在下一章中，我们将研究图形管线的固定功能阶段。
 
 ---
 

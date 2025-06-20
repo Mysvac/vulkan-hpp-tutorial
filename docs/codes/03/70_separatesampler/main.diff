@@ -1,0 +1,344 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index ee52ca8..519824c 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -50,6 +50,8 @@ private:
+     inline static const std::string MODEL_PATH = "models/viking_room.obj";
+     inline static const std::string TEXTURE_PATH = "textures/viking_room.png";
+     inline static const std::string BUNNY_PATH = "models/bunny.obj";
++    inline static const std::string CRATE_OBJ_PATH = "models/crate.obj";
++    inline static const std::string CRATE_TEXTURE_PATH = "textures/crate.jpg";
+ 
+     inline static const std::vector<const char*> validationLayers {
+         "VK_LAYER_KHRONOS_validation"
+@@ -96,11 +98,11 @@ private:
+     std::vector<vk::raii::DeviceMemory> m_dynamicUniformBuffersMemory;
+     std::vector<vk::raii::Buffer> m_dynamicUniformBuffers;
+     std::vector<void*> m_dynamicUniformBuffersMapped;
+-    vk::raii::DeviceMemory m_textureImageMemory{ nullptr };
+-    uint32_t m_mipLevels;
+-    vk::raii::Image m_textureImage{ nullptr };
+-    vk::raii::ImageView m_textureImageView{ nullptr };
++    std::vector<vk::raii::DeviceMemory> m_textureImageMemory;
++    std::vector<vk::raii::Image> m_textureImages;
++    std::vector<vk::raii::ImageView> m_textureImageViews;
+     vk::raii::Sampler m_textureSampler{ nullptr };
++    uint32_t m_mipLevels;
+     vk::raii::SwapchainKHR m_swapChain{ nullptr };
+     std::vector<vk::Image> m_swapChainImages;
+     vk::Format m_swapChainImageFormat;
+@@ -162,11 +164,13 @@ private:
+         createColorResources();
+         createDepthResources();
+         createFramebuffers();
+-        createTextureImage();
++        createTextureImage(TEXTURE_PATH);
++        createTextureImage(CRATE_TEXTURE_PATH);
+         createTextureImageView();
+         createTextureSampler();
+         loadModel(MODEL_PATH);
+         loadModel(BUNNY_PATH);
++        loadModel(CRATE_OBJ_PATH);
+         initInstanceDatas();
+         initDynamicUboMatrices();
+         createVertexBuffer();
+@@ -729,7 +733,7 @@ private:
+         vk::PushConstantRange pushConstantRange;
+         pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eFragment;
+         pushConstantRange.offset = 0;
+-        pushConstantRange.size = sizeof(uint32_t);
++        pushConstantRange.size = sizeof(int32_t);
+ 
+         vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+         pipelineLayoutInfo.setPushConstantRanges( pushConstantRange );
+@@ -844,6 +848,7 @@ private:
+         commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint32 );
+ 
+         uint32_t dynamicOffset = 0;
++        int32_t enableTexture = 0;
+         commandBuffer.bindDescriptorSets(
+             vk::PipelineBindPoint::eGraphics, 
+             m_pipelineLayout,
+@@ -851,7 +856,6 @@ private:
+             *m_descriptorSets[m_currentFrame],
+             dynamicOffset
+         );
+-        uint32_t enableTexture = 1; // enable texture
+         commandBuffer.pushConstants<uint32_t>(
+             m_pipelineLayout,
+             vk::ShaderStageFlagBits::eFragment,
+@@ -867,6 +871,7 @@ private:
+         );
+ 
+         dynamicOffset = sizeof(glm::mat4);
++        enableTexture = -1;
+         commandBuffer.bindDescriptorSets(
+             vk::PipelineBindPoint::eGraphics, 
+             m_pipelineLayout,
+@@ -874,7 +879,6 @@ private:
+             *m_descriptorSets[m_currentFrame],
+             dynamicOffset
+         );
+-        enableTexture = 0; // disable texture for the bunny
+         commandBuffer.pushConstants<uint32_t>(
+             m_pipelineLayout,
+             vk::ShaderStageFlagBits::eFragment,
+@@ -882,13 +886,36 @@ private:
+             enableTexture   // value
+         );
+         commandBuffer.drawIndexed( // draw the bunny
+-            static_cast<uint32_t>(m_indices.size() - m_firstIndices[1]),
++            m_firstIndices[2] - m_firstIndices[1],
+             BUNNY_NUMBER,
+             m_firstIndices[1],
+             0, 
+             1
+         );
+ 
++        dynamicOffset = 2 * sizeof(glm::mat4);
++        enableTexture = 1;
++        commandBuffer.bindDescriptorSets(
++            vk::PipelineBindPoint::eGraphics, 
++            m_pipelineLayout,
++            0,
++            *m_descriptorSets[m_currentFrame],
++            dynamicOffset
++        );
++        commandBuffer.pushConstants<uint32_t>( // optional
++            m_pipelineLayout,
++            vk::ShaderStageFlagBits::eFragment,
++            0,
++            enableTexture
++        );
++        commandBuffer.drawIndexed( // draw the crate
++            static_cast<uint32_t>(m_indices.size() - m_firstIndices[2]),
++            1,
++            m_firstIndices[2],
++            0,
++            BUNNY_NUMBER + 1
++        );
++
+         commandBuffer.endRenderPass();
+         commandBuffer.end();
+     }
+@@ -1165,7 +1192,8 @@ private:
+ 
+         vk::DescriptorSetLayoutBinding samplerLayoutBinding;
+         samplerLayoutBinding.binding = 1;
+-        samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
++        // samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
++        samplerLayoutBinding.descriptorType = vk::DescriptorType::eSampler;
+         samplerLayoutBinding.descriptorCount = 1;
+         samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+ 
+@@ -1175,7 +1203,18 @@ private:
+         dynamicUboLayoutBinding.descriptorCount = 1;
+         dynamicUboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+ 
+-        auto bindings = { uboLayoutBinding, samplerLayoutBinding, dynamicUboLayoutBinding };
++        vk::DescriptorSetLayoutBinding textureLayoutBinding;
++        textureLayoutBinding.binding = 3;
++        textureLayoutBinding.descriptorType = vk::DescriptorType::eSampledImage;
++        textureLayoutBinding.descriptorCount = 2;
++        textureLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
++
++        auto bindings = { 
++            uboLayoutBinding, 
++            samplerLayoutBinding, 
++            dynamicUboLayoutBinding,
++            textureLayoutBinding
++        };
+         vk::DescriptorSetLayoutCreateInfo layoutInfo;
+         layoutInfo.setBindings( bindings );
+ 
+@@ -1234,17 +1273,20 @@ private:
+     /////////////////////////////////////////////////////////////////
+     /// descriptor pool and sets
+     void createDescriptorPool() {
+-        std::array<vk::DescriptorPoolSize, 3> poolSizes;
++        std::array<vk::DescriptorPoolSize, 4> poolSizes;
+ 
+         poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
+         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+ 
+-        poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
++        poolSizes[1].type = vk::DescriptorType::eSampler;
+         poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+ 
+         poolSizes[2].type = vk::DescriptorType::eUniformBufferDynamic;
+         poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+ 
++        poolSizes[3].type = vk::DescriptorType::eSampledImage;
++        poolSizes[3].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 2);
++
+         vk::DescriptorPoolCreateInfo poolInfo;
+         poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+         poolInfo.setPoolSizes( poolSizes );
+@@ -1266,17 +1308,22 @@ private:
+             bufferInfo.offset = 0;
+             bufferInfo.range = sizeof(UniformBufferObject);
+ 
+-            vk::DescriptorImageInfo imageInfo;
+-            imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+-            imageInfo.imageView = m_textureImageView;
+-            imageInfo.sampler = m_textureSampler;
++            vk::DescriptorImageInfo samplerInfo;
++            samplerInfo.sampler = m_textureSampler;
+ 
+             vk::DescriptorBufferInfo dynamicBufferInfo;
+             dynamicBufferInfo.buffer = m_dynamicUniformBuffers[i];
+             dynamicBufferInfo.offset = 0;
+             dynamicBufferInfo.range = sizeof(glm::mat4);
+ 
+-            std::array<vk::WriteDescriptorSet, 3> descriptorWrites;
++            std::array<vk::DescriptorImageInfo, 2> textureInfos;
++            for (size_t index = 0; auto& info : textureInfos) {
++                info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
++                info.imageView = m_textureImageViews[index];
++                ++index;
++            }
++
++            std::array<vk::WriteDescriptorSet, 4> descriptorWrites;
+             descriptorWrites[0].dstSet = m_descriptorSets[i];
+             descriptorWrites[0].dstBinding = 0;
+             descriptorWrites[0].dstArrayElement = 0;
+@@ -1286,8 +1333,8 @@ private:
+             descriptorWrites[1].dstSet = m_descriptorSets[i];
+             descriptorWrites[1].dstBinding = 1;
+             descriptorWrites[1].dstArrayElement = 0;
+-            descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+-            descriptorWrites[1].setImageInfo(imageInfo);
++            descriptorWrites[1].descriptorType = vk::DescriptorType::eSampler;
++            descriptorWrites[1].setImageInfo(samplerInfo);
+ 
+             descriptorWrites[2].dstSet = m_descriptorSets[i];
+             descriptorWrites[2].dstBinding = 2;
+@@ -1295,6 +1342,12 @@ private:
+             descriptorWrites[2].descriptorType = vk::DescriptorType::eUniformBufferDynamic;
+             descriptorWrites[2].setBufferInfo(dynamicBufferInfo);
+ 
++            descriptorWrites[3].dstSet = m_descriptorSets[i];
++            descriptorWrites[3].dstBinding = 3;
++            descriptorWrites[3].dstArrayElement = 0;
++            descriptorWrites[3].descriptorType = vk::DescriptorType::eSampledImage;
++            descriptorWrites[3].setImageInfo(textureInfos);
++
+             m_device.updateDescriptorSets(descriptorWrites, nullptr);
+         }
+     }
+@@ -1465,9 +1518,9 @@ private:
+ 
+         endSingleTimeCommands( std::move(commandBuffer) );
+     }
+-    void createTextureImage() {
++    void createTextureImage(const std::string& texturePath) {
+         int texWidth, texHeight, texChannels;
+-        stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
++        stbi_uc* pixels = stbi_load(texturePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+         if (!pixels) {
+             throw std::runtime_error("failed to load texture image!");
+         }
+@@ -1476,6 +1529,8 @@ private:
+ 
+         vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
+         vk::raii::Buffer stagingBuffer{ nullptr };
++        vk::raii::DeviceMemory tmpTextureBufferMemory{ nullptr };
++        vk::raii::Image tmpTextureBuffer{ nullptr };
+ 
+         createBuffer(
+             imageSize,
+@@ -1503,12 +1558,12 @@ private:
+             vk::ImageUsageFlagBits::eTransferDst | 
+             vk::ImageUsageFlagBits::eSampled,
+             vk::MemoryPropertyFlagBits::eDeviceLocal,
+-            m_textureImage,
+-            m_textureImageMemory
++            tmpTextureBuffer,
++            tmpTextureBufferMemory
+         );
+ 
+         transitionImageLayout(
+-            m_textureImage,
++            tmpTextureBuffer,
+             vk::Format::eR8G8B8A8Srgb,
+             vk::ImageLayout::eUndefined,
+             vk::ImageLayout::eTransferDstOptimal,
+@@ -1517,27 +1572,21 @@ private:
+ 
+         copyBufferToImage(
+             stagingBuffer,
+-            m_textureImage,
++            tmpTextureBuffer,
+             static_cast<uint32_t>(texWidth),
+             static_cast<uint32_t>(texHeight)
+         );
+ 
+         generateMipmaps(
+-            m_textureImage,
++            tmpTextureBuffer,
+             vk::Format::eR8G8B8A8Srgb,
+             texWidth,
+             texHeight,
+             m_mipLevels
+         );
+ 
+-        // transitionImageLayout(
+-        //     m_textureImage,
+-        //     vk::Format::eR8G8B8A8Srgb,
+-        //     vk::ImageLayout::eTransferDstOptimal,
+-        //     vk::ImageLayout::eShaderReadOnlyOptimal,
+-        //     m_mipLevels
+-        // );
+-        
++        m_textureImages.emplace_back( std::move(tmpTextureBuffer) );
++        m_textureImageMemory.emplace_back( std::move(tmpTextureBufferMemory) );
+     }
+     /////////////////////////////////////////////////////////////////
+ 
+@@ -1562,12 +1611,16 @@ private:
+         return m_device.createImageView(viewInfo);
+     }
+     void createTextureImageView() {
+-        m_textureImageView = createImageView(
+-            m_textureImage, 
+-            vk::Format::eR8G8B8A8Srgb, 
+-            vk::ImageAspectFlagBits::eColor,
+-            m_mipLevels
+-        );
++        for (vk::raii::Image& image : m_textureImages) {
++            m_textureImageViews.emplace_back(
++                createImageView(
++                    *image, 
++                    vk::Format::eR8G8B8A8Srgb, 
++                    vk::ImageAspectFlagBits::eColor,
++                    m_mipLevels
++                )
++            );
++        }
+     }
+     void createTextureSampler() {
+         vk::SamplerCreateInfo samplerInfo;
+@@ -1980,6 +2033,15 @@ private:
+             );
+             m_instanceDatas.emplace_back( instanceData );
+         }
++
++        instanceData.model = glm::translate(
++            glm::mat4(1.0f),
++            glm::vec3(0.0f, 0.0f, 1.2f)
++        ) * glm::scale(
++            glm::mat4(1.0f),
++            glm::vec3(0.2f, 0.2f, 0.2f)
++        );
++        m_instanceDatas.emplace_back( instanceData );
+     }
+     void createInstanceBuffer() {
+         vk::DeviceSize bufferSize = sizeof(InstanceData) * m_instanceDatas.size();
+@@ -2013,6 +2075,7 @@ private:
+     void initDynamicUboMatrices() {
+         m_dynamicUboMatrices.push_back(glm::mat4(1.0f));
+         m_dynamicUboMatrices.push_back(glm::mat4(1.0f));
++        m_dynamicUboMatrices.push_back(glm::mat4(1.0f));
+     }
+     void createDynamicUniformBuffers() {
+         vk::DeviceSize bufferSize  = sizeof(glm::mat4) * m_dynamicUboMatrices.size();

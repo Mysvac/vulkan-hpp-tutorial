@@ -16,6 +16,7 @@
 4. 扩展基础功能
 5. 介绍进阶功能
 
+> 如果你发现了文档的错误，请点击右上角前往Github仓库，提交 Issue 或 PR 。
 
 ## **代码说明**
 
@@ -35,7 +36,7 @@
 
 > 在最后的扩展或进阶章节中可能会尝试启用模块
 
-`CMake` 用于项目构建，实现跨平台的项目配置，但要求读者了解 CMake 的基础使用。
+`CMake` 用于项目构建，实现跨平台的项目配置，要求读者了解 CMake 的基础使用。
 
 `Vcpkg` 用于管理第三方库，主要用于安装 `glfw3` 和 `glm` 等依赖，这非常简单。
 
@@ -49,13 +50,13 @@ Vulkan SDK 本身由 C 编写，因此具有更好的跨语言兼容性，可通
 
 - 基于Vulkano封装的Rust教程 [Vulkan-tutorial-rs](https://github.com/bwasty/vulkan-tutorial-rs)
 
-## **项目参考资料**
+## **致谢**
 
-Vulkan-hpp文档 [vulkan-hpp](https://github.com/KhronosGroup/Vulkan-Hpp) 。
+项目文档与知识点参考以下内容：
 
-Vulkan英文教程 [Vulkan-Tutorial](https://github.com/Overv/VulkanTutorial) 。
+- [vulkan-hpp](https://github.com/KhronosGroup/Vulkan-Hpp) 
 
-Vulkan中文教程 [Vulkan-Tutorial](https://tutorial.vulkan.net.cn/Introduction) 。
+- [Vulkan-Tutorial](https://github.com/Overv/VulkanTutorial) 
 
-> 如果你发现了文档的错误，请点击右上角前往Github仓库，提交 Issue 或 PR 。  
-> 如果觉得内容有帮助，可以 GitHub 仓库点个 Star ，谢谢喵！
+- [EasyVulkan](https://easyvulkan.github.io/index.html) 
+

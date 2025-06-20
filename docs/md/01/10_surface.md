@@ -1,9 +1,10 @@
 # **窗口表面**
 
+## **前言**
+
 Vulkan作为平台无关的API，需要通过WSI（窗口系统集成）扩展与窗口系统交互。
 
-
-在本章中，我们讨论的第一个扩展是 `VK_KHR_surface`。
+在本章中，我们讨论的第一个扩展是 `VK_KHR_surface` 。
 它提供了一个 `vk::SurfaceKHR` 窗口表面对象，该对象表示一种抽象的表面类型，用于呈现渲染后的图像。
 
 实际上我们已经启用了此扩展，因为它在 `glfwGetRequiredInstanceExtensions` 返回的列表中。
@@ -11,10 +12,12 @@ Vulkan作为平台无关的API，需要通过WSI（窗口系统集成）扩展�
 
 > 注意 Vulkan 进行离屏渲染不需要窗口系统，也就不需要这些扩展。
 
-## **添加表面成员变量**
+## **创建窗口表面**
+
+### 1. 基础结构
 
 窗口表面需要在实例创建之后立即创建，因为它会影响物理设备的选择。
-由于它还涉及了呈现和渲染的内容，推迟到现在才说明是为了使教程结构更清晰。
+由于它还涉及了呈现和渲染的内容，推迟到现在才说明是为了使教程结构更加清晰。
 
 首先**在调试回调下方**添加一个 `m_surface` 类成员。现在成员变量列表应该是：
 
@@ -45,10 +48,10 @@ void createSurface() {
 }
 ```
 
-## **创建窗口表面**
+### 2. 创建资源
 
 虽然 `vk::raii::SurfaceKHR` 对象及其用法与平台无关，但其创建并非如此，因为它取决于窗口系统的详细信息。
-值得庆幸的是，所需的平台特定扩展已在 `glfwGetRequiredInstanceExtensions` 返回的列表中，无需手动添加。
+好消息是，所需的平台特定扩展已在 `glfwGetRequiredInstanceExtensions` 返回的列表中，无需手动添加。
 
 我们将直接使用 GLFW 的 `glfwCreateWindowSurface` 函数，它自动为我们处理平台的差异。但下面的代码还不能运行！！
 
@@ -71,15 +74,18 @@ void createSurface() {
 }
 ```
 
-> 这里 `*m_instance` 的 `*` 是运算符重载，返回内部 `VkInstance` 的引用。  
-> 这没有内存泄漏风险，无需担心。
+这里 `*m_instance` 的 `*` 是运算符重载，返回内部 `VkInstance` 的引用。  
 
-## **扩展队列族支持检查**
+我们使用原始 C 风格的 `VkSurfaceKHR` 类型接受句柄，并将句柄交给 `raii` 封装类进行管理。
+
+## **呈现队列**
 
 Vulkan 支持窗口系统，但设备可能不支持。
 我们需要扩展 `isDeviceSuitable` 以确保设备可以将图像呈现到我们创建的表面。
 
-由于呈现是特定于队列的功能，此问题实际上是找到一个支持呈现到表面的队列族。
+由于呈现是特定队列的功能，此问题实际上是寻找一个支持呈现到表面的队列族。
+
+### 1. 获取呈现队列句柄
 
 支持绘制的队列族和支持呈现的队列族可能不重叠，因此需要修改 `QueueFamilyIndices` 结构体，添加新内容：
 
@@ -103,10 +109,11 @@ if(physicalDevice.getSurfaceSupportKHR(i, m_surface)){
 }
 ```
 
-请注意，最终它们很可能是同一个队列族，但在整个程序中，我们将把它们视为独立的队列，以便采用统一的方法。  
-尽管如此，您可以添加额外的逻辑，偏好具有同时支持绘制和呈现功能的队列的物理设备，以提高性能。
+注意，它们最终很可能是同一个队列族，但在整个程序中，我们可以将它们视为独立的队列使用。  
 
-## **创建呈现队列**
+尽管如此，您可以添加额外的逻辑，偏好那些具有同时支持绘制和呈现功能的队列族的物理设备，从而提高性能。
+
+### 2. 创建呈现队列
 
 剩下的最后一件事是修改逻辑设备创建过程，从而创建呈现队列。在 `m_graphicsQueue` 下方添加一个成员变量
 
@@ -119,7 +126,7 @@ vk::raii::Queue m_presentQueue{ nullptr };
 
 ```cpp
 std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-// isDeviceSuitable() ensure queue availability
+// isDeviceSuitable() 函数已经保证了队列族可用
 std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
 float queuePriority = 1.0f;
@@ -131,7 +138,7 @@ for (uint32_t queueFamily : uniqueQueueFamilies) {
 }
 ```
 
-并修改 `setQueueCreateInfos` 以指向创建信息数组（参数变量名加个`s`）
+然后修改 `setQueueCreateInfos` 以指向创建信息数组：（参数变量名加个`s`）
 
 ```cpp
 vk::DeviceCreateInfo createInfo;
@@ -139,21 +146,17 @@ createInfo.setQueueCreateInfos( queueCreateInfos );
 createInfo.pEnabledFeatures = &deviceFeatures;
 ```
 
-最后，不要忘了在函数末尾添加创建队列的语句：
+最后，不要忘了在函数末尾获取队列句柄：
 
 ```cpp
 m_presentQueue = m_device.getQueue( indices.presentFamily.value(), 0 );
 ```
 
-如果队列族相同，则这两个句柄现在很可能具有相同的值，这依然可以正常运行。
+如果队列族相同，这两个句柄很可能具有相同的值，但这依然可以正常运行。
 
 ## **测试**
 
 现在构建与运行程序，保证没有报错。
-
----
-
-在下一章中，我们将研究交换链以及它如何使我们能够将图像呈现到表面。
 
 ---
 

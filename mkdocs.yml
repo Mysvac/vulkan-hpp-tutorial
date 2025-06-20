@@ -33,7 +33,7 @@ extra_css:
 
 nav:
   - 首页: index.md
-  - 项目介绍: md/00/00_intro.md
+  - 教程前言: md/00/00_intro.md
   - 开发环境: md/00/01_env.md
   - 接口介绍: md/00/02_diff.md
   - 绘制三角形:
@@ -81,4 +81,5 @@ nav:
     - 实例化渲染: md/03/40_instancedrendering.md
     - 推送常量: md/03/50_pushconstant.md
     - 动态uniform: md/03/60_dynamicuniform.md
+    - 分离图像与采样器: md/03/70_separatesampler.md
   - 隐私政策: policy.md

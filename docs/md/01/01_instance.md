@@ -2,16 +2,16 @@
 
 ## **RAII上下文初始化**
 
-`vk::raii::Context` 的作用是 初始化 Vulkan 的动态加载层（Loader），自动加载全局函数指针，它是 RAII 封装的基础。
+`vk::raii::Context` 的作用是 **初始化 Vulkan 的动态加载层\(Loader\)**，自动加载全局函数指针，它是 RAII 封装的基础。
 
 > 在C风格接口中，部分扩展函数需要通过加载函数获取函数指针，无法直接通过函数名调用。  
 > 而 `vk::raii::Context` 隐藏了这些加载操作，让我们可以直接调用相关类的成员函数。
 
 - 我们必须初始化它，且只初始化一次
 - 保证它的生命周期覆盖其他Vulkan组件
-- 可以无参构造，不可`nullptr`构造（特殊）
+- 可以无参构造，不可 `nullptr` 构造（特殊）
 
-所以我们可以直接将它作为成员变量，类实例化时自动创建并加载上下文：
+根据上面的要求，我们可以将它作为成员变量，在类实例化时自动创建并加载上下文：
 
 ```cpp
 private:
@@ -27,7 +27,7 @@ private:
 
 ## **创建实例**
 
-还需要创建一个实例来初始化 Vulkan 库，实例是您的应用程序和 Vulkan 库之间沟通的桥梁。
+还需要创建一个**实例**来初始化 Vulkan 库，实例是您的应用程序和 Vulkan 库之间沟通的桥梁。
 
 ### 1. 创建成员变量和辅助函数
 
@@ -48,11 +48,11 @@ void createInstance(){
 }
 ```
 
-> 之前提到大部分 `raii` 资源不支持无参构造，要使用 `nullptr` 初始化表示无资源
+> 之前提到大部分 `raii` 资源不支持无参构造，要使用 `nullptr` 初始化表示无资源。
 
 ### 2. 添加应用程序信息
 
-需要添加应用程序信息结构体，它是可选的，但是填写它能够让驱动程序更好的进行优化。
+然后添加应用程序信息结构体，它是可选的，但是填写它能够让驱动程序更好的进行优化。
 
 ```cpp
 void createInstance(){
@@ -61,10 +61,12 @@ void createInstance(){
         1,                  // applicationVersion
         "No Engine",        // pEngineName
         1,                  // engineVersion
-        VK_API_VERSION_1_1  // apiVersion
+        VK_API_VERSION_1_4  // apiVersion
     );
 }
 ```
+
+> `VK_API_VERSION_X_X` 用于指定 API 版本，请依据需要自行选择。
 
 注意到，它并不是RAII的，因为它只是个配置信息，不含特殊资源。
 所以我们可以无参构造，然后直接修改成员变量，像这样：
@@ -90,9 +92,8 @@ vk::InstanceCreateInfo createInfo(
 
 **说明**：
 
-1. `flags` 参数是特殊的标志位类型，用于控制特殊行为。
-2. `flags` 参数默认初始化为空标志，大多时候无需修改。
-3. 还有其他参数，但都提供了默认初始化，无需手动设置。
+- `flags` 参数是标志位，用于控制特殊行为，默认认初始化为空，大多时候无需修改。
+- 还有其他参数，但都提供了默认初始化，无需手动设置。
 
 注意到，`&applicationInfo`传入指针，需要注意生命周期！
 
@@ -147,12 +148,12 @@ createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 ### 2. 特殊setter函数说明
 
 由于数组类型传参时会隐式退化成指针，底层C风格接口都使用“开始指针+元素数量”的方式引用数组。
-Vulkan-hpp需要调用底层C接口，所以这些配置信息采用相同的方式记录。
+vulkan-hpp 需要调用底层C接口，所以这些配置信息采用相同的方式记录。
 
 但 vulkan-hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::ArrayProxyNoTemporaries` 模板参数简化了数组参数的设置。
 
 > 这些函数的命名大致是： `set......s` ，末尾`s`表示多个。  
-> 假如是 `setAs`，那么应该有类似 `pA` 和 `aCount` 的成员变量，分别表示开始指针和数量。
+> 假如是 `setTs`，那么应该有类似 `pT` 和 `tCount` 的成员变量，分别表示开始指针和数量。
 
 这些函数能够自动处理数组参数：
 
@@ -171,13 +172,13 @@ Vulkan-hpp需要调用底层C接口，所以这些配置信息采用相同的方
 
 > 特征：err.code() 为  `vk::Result::eErrorIncompatibleDriver`
 
-在使用最新 MoltenVK SDK 的 MacOS 上，可能抛出异常，因为MacOS在运行Vulkan时必须启用转换层扩展。
+在使用最新 MoltenVK SDK 的 MacOS 上，可能抛出异常，因为 MacOS 在运行 Vulkan 时必须启用转换层扩展。
 
 **解决方案：**
 
-1. 添加 `VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME` 扩展
-2. 修改 `CreateInfo`
-3. 添加标志位 `vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR`
+1. 修改 `CreateInfo` 
+2. 添加 `VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME` 扩展
+3. 添加 `vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR` 标志位
 
 
 通常代码可能如下所示
@@ -198,7 +199,7 @@ createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
 我们可以主动检查哪些扩展是支持的，使用 `enumerateInstanceExtensionProperties` 函数，会返回一个 `std::vector` ，表示支持的扩展类型。
 
-每个 `vk::ExtensionProperties` 结构体包含扩展的名称和版本。我们可以用一个简单的 for 循环列出它们
+每个 `vk::ExtensionProperties` 结构体包含扩展的名称和版本。我们可以用一个简单的 for 循环列出它们：
 ```cpp
 // std::vector<vk::ExtensionProperties>
 auto extensions = m_context.enumerateInstanceExtensionProperties();

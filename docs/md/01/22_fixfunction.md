@@ -26,7 +26,7 @@
 - 裁剪区域（Scissor）
 - 线宽和混合因子
 
-如果您想使用动态状态并保留这些属性，那么您必须填写一个 `vk::PipelineDynamicStateCreateInfo` 结构，如下所示
+如果您想使用动态状态并保留某些属性，那么需要填写一个 `PipelineDynamicStateCreateInfo` 结构，如下所示：
 
 ```cpp
 // 启用视口和裁剪矩形动态状态
@@ -54,7 +54,7 @@ dynamicState.setDynamicStates( dynamicStates );
 vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 ```
 
-> 具体配置将在后续顶点章节详细说明
+> 具体配置将在后续“顶点缓冲”章节详细说明。
 
 ## **输入装配**
 
@@ -76,7 +76,7 @@ vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 这允许您执行诸如重用顶点之类的优化。如果您将 `primitiveRestartEnable` 成员设置为 `true`，
 则可以通过使用特殊的索引 `0xFFFF` 或 `0xFFFFFFFF` 在 `Strip` 拓扑模式中打断线和三角形。
 
-我们打算在本教程中绘制三角形，因此以下结构数据
+我们打算在本教程中绘制三角形，因此使用以下结构：
 
 ```cpp
 vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
@@ -113,7 +113,7 @@ vk::Viewport viewport(
 
 请注意，左侧的裁剪矩形只是导致该图像的众多可能性之一，只要它大于视口即可。
 
-因此，如果我们想绘制到整个帧缓冲，我们将指定一个覆盖它的裁剪矩形
+因此，如果我们想绘制到整个帧缓冲，可以指定一个覆盖它的裁剪矩形：
 
 ```cpp
 vk::Rect2D scissor(
@@ -156,13 +156,12 @@ viewportState.setScissors( 0, scissor );
 使用动态状态，甚至可以在单个命令缓冲区中指定不同的视口和/或裁剪矩形。
 
 无论您如何设置它们，都可以在某些显卡上使用多个视口和裁剪矩形，通过结构成员引用它们的数组。
-使用多个需要启用 GPU 功能（请参阅逻辑设备创建）。
 
 ## **光栅化器**
 
-光栅化器获取由顶点着色器中的顶点形成的几何图形，并将其转换为片段，以便由片段着色器着色。
-它还执行 深度测试、面剔除和裁剪测试，并且可以配置输出为填充整个多边形或仅边缘（线框渲染）的片段。
-所有这些都使用 `vk::PipelineRasterizationStateCreateInfo` 结构进行配置。
+光栅化器获取由顶点着色器中的顶点形成的几何图形，称之为“**图元**”，并将其拆分为片段，以便由片段着色器着色。
+它还执行“深度测试、面剔除和裁剪测试”等内容，且可以配置输出的片段是包含整个多边形还是仅边缘线条。
+这些都使用 `vk::PipelineRasterizationStateCreateInfo` 结构进行配置。
 
 需要的参数较多，所以我们逐个设置并解释：
 
@@ -207,7 +206,7 @@ rasterizer.frontFace = vk::FrontFace::eClockwise;
 ```
 
 - `cullMode` 变量确定要使用的面剔除类型。您可以禁用剔除、剔除正面、剔除背面或两者都剔除。
-- `frontFace` 变量指定要被视为正面的面的顶点顺序，可以是顺时针或逆时针。
+- `frontFace` 变量指定要被视为正面的顶点绘制顺序，可以是顺时针或逆时针。
 
 ```cpp
 rasterizer.depthBiasEnable = false;
@@ -237,18 +236,18 @@ multisampling.sampleShadingEnable = false;
 如果您正在使用深度或模板缓冲，那么您需要使用 `vk::PipelineDepthStencilStateCreateInfo` 配置深度和模板测试。
 我们现在没有，所以后面会简单地传递一个 `nullptr` 代替它。
 
-> 我们将在后面的深度缓冲章节重新讨论它。
+> 我们将在后面的“深度缓冲”章节重新讨论它。
 
 ## **颜色混合**
 
-在片段着色器返回颜色后，需要将其与帧缓冲中已有的颜色组合。这种转换称为颜色混合，有两种方法可以做到这一点
+在片段着色器返回颜色后，需要将其与帧缓冲区中已有的颜色组合。这种转换称为颜色混合，有两种方法可以做到这一点
 
 - 混合旧值和新值以产生最终颜色
 - 使用按位运算组合旧值和新值
 
 有两种类型的结构体可以配置颜色混合。第一个 `vk::PipelineColorBlendAttachmentState` 包含每个附加帧缓冲的配置，
 第二个 `vk::PipelineColorBlendStateCreateInfo` 包含全局颜色混合设置。
-在我们的例子中，我们只有一个帧缓冲
+在我们的例子中，我们只有一个帧缓冲。
 
 ```cpp
 vk::PipelineColorBlendAttachmentState colorBlendAttachment;
@@ -263,7 +262,7 @@ colorBlendAttachment.colorWriteMask = (
 > `colorWriteMask = vk::FlagTraits<vk::ColorComponentFlagBits>::allFlags;`
 
 
-此逐帧缓冲结构允许您配置第一种颜色混合方式。将要执行的操作最好使用以下伪代码进行演示
+此逐帧缓冲结构允许您配置第一种颜色混合方式。具体操作最好使用以下伪代码进行演示：
 
 ```cpp
 if (blendEnable) {
@@ -319,15 +318,15 @@ colorBlending.setAttachments( colorBlendAttachment );
 
 也可以禁用两种模式，就像我们在这里所做的一样，在此情况下，片段颜色将未经修改地写入帧缓冲。
 
-## **管线布局**
+## **创建管线布局**
 
 您可以在着色器中使用 `uniform` 值，这些值是类似于动态状态变量的全局变量，可以在绘制时更改，以更改着色器的行为，而无需重新创建它们。
 它们通常用于将变换矩阵传递给顶点着色器，或在片段着色器中创建纹理采样器。
 
 这些 `uniform` 值需要在管线创建期间通过创建 `vk::PipelineLayout` 对象来指定。
-即使我们在未来的章节中才会使用它们，我们仍然需要创建一个空的管线布局。
+即使我们在未来的章节中才会使用它们，现在仍然需要创建一个空的管线布局。
 
-创建一个类成员来保存此对象，因为我们将在稍后的时间点从其他函数引用它
+创建一个类成员来保存此对象，因为我们将在稍后的章节从其他函数中引用它：
 
 ```c++
 vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
@@ -349,7 +348,7 @@ m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 从头开始设置所有这些工作量很大，但优点是我们现在几乎完全了解了图形管线中发生的一切！
 这减少了因某些组件的默认状态不是您期望的那样而遇到意外行为的可能性。
 
-但是在我们最终创建图形管线之前，还需要创建一个对象，那就是 渲染通道。
+但是在我们最终创建图形管线之前，还需要创建一个对象，那就是 **渲染通道**。
 
 ---
 

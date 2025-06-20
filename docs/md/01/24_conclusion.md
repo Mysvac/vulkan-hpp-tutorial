@@ -18,7 +18,7 @@ vk::GraphicsPipelineCreateInfo pipelineInfo;
 pipelineInfo.setStages( shaderStages );
 ```
 
-我们首先填写了 `vk::PipelineShaderStageCreateInfo` 结构体数组
+我们首先填写了 `vk::PipelineShaderStageCreateInfo` 结构体数组。
 
 然后我们引用所有描述固定功能阶段的结构体。
 
@@ -40,7 +40,7 @@ pipelineInfo.layout = m_pipelineLayout;
 ```
 
 最后我们有对渲染通道的引用，以及此图形管线将要使用的子通道的**索引**。
-也可以将此管线与其他的渲染通道一起使用，而不是这个特定的实例，但它们必须与 renderPass兼容。
+也可以将此管线与其他的渲染通道一起使用，而不是这个特定的实例，但它们必须保持兼容。
 兼容性的要求在 [这里](https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/chap8.html#renderpass-compatibility) 描述，
 但我们不会在本教程中使用该功能。
 
@@ -51,7 +51,7 @@ pipelineInfo.subpass = 0;
 
 实际上还有两个参数：`basePipelineHandle` 和 `basePipelineIndex`。
 
-Vulkan 允许您通过派生自现有管线来创建新的图形管线。
+Vulkan 允许您通过派生自现有管线创建新的图形管线。
 管线派生的想法是，当它们与现有管线具有许多共同的功能时，设置管线的成本较低，并且在来自同一父级的管线之间切换也可以更快地完成。
 您可以使用 `basePipelineHandle` 指定现有管线的句柄，或者使用 `basePipelineIndex` 引用另一个即将通过索引创建的管线。
 
@@ -81,7 +81,7 @@ m_graphicsPipeline = m_device.createGraphicsPipeline( nullptr, pipelineInfo );
 
 > 注意到我们多传入了一个 `nullptr`，他等于宏 `VK_NULL_HANDLE`。 
 > 此位置的参数简写是 `optional<PipelineCache>` 管线缓存。  
-> 我们将在管线缓存章节中深入探讨这一点。
+> 我们将在“管线缓存”章节中深入探讨这一点。
 
 ## **测试**
 

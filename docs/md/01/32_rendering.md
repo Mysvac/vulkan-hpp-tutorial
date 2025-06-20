@@ -202,7 +202,7 @@ m_device.waitForFences( *m_inFlightFence, true, UINT64_MAX );
 事实上在Vulkan-hpp中，`waitForFences`操作失败依然会抛出异常，且不同类型的异常表示了不同类型的错误。
 此处`vk::Result`的最大作用是区别成功时的状况（当然失败时也会对应的错误码）。
 
-`vk::Result::eSuccess`是完全成功的状态，还有部分状态表示成功，但是不是最佳情况（建议程序调整），我们后面会介绍。
+`vk::Result::eSuccess`是完全成功的状态，还有部分状态表示成功，但不是最佳情况（建议程序调整），我们后面会介绍。
 此处我们只需要保证它完全成功，可以这样写：
 
 ```cpp
@@ -280,9 +280,6 @@ submitInfo.setWaitSemaphores( *m_imageAvailableSemaphore );
 std::array<vk::PipelineStageFlags,1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 submitInfo.setWaitDstStageMask( waitStages );
 ```
-
-> 因为我们会频繁调用此函数，这里使用`std::array`从而使用栈内存而非堆，
-> 可以略微提高效率。你甚至可以使用普通的数组。
 
 这两个参数指定在执行开始之前要等待哪些信号量以及在管线的哪些阶段等待。
 我们希望在图像可用之前等待向图像写入颜色，因此我们指定写入颜色附件的图形管线的阶段。
@@ -409,7 +406,7 @@ if( auto res = m_presentQueue.presentKHR( presentInfo );
 > 这种彩色三角形可能看起来与您在图形教程中看到的三角形略有不同。
 > 这是因为本教程让着色器在线性颜色空间中插值，然后在之后转换为 sRGB 颜色空间。
 
-嘿！不幸的是，您可能会看到程序在您关闭它后立即崩溃。当启用验证层时，打印到终端的消息告诉了我们原因
+嘿！不幸的是，您可能会看到程序在您关闭它后立即崩溃。当启用验证层时，打印到终端的消息告诉了我们原因：
 
 ![error](../../images/0132/semaphore_in_use.png)
 

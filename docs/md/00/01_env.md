@@ -3,34 +3,36 @@
 ## **概述**
 本文将指导你完成 Vulkan 应用程序开发环境的设置，包括安装必要的工具和库。
 
-注意，CMake和Vcpkg自身的安装，以及MSVC/Clang等编译器的安装，不是本教程的内容。
+注意，CMake 和 vcpkg 自身的安装，以及 MSVC/Clang 等编译器的安装，不是本教程的内容。
 
-## **Vulkan SDK安装**
-Vulkan SDK是开发Vulkan应用程序的核心组件，包含：
+## **安装 Vulkan SDK**
+Vulkan SDK 是开发Vulkan应用程序的核心组件，包含：
 
 - 头文件
 - 标准验证层
 - 调试工具
-- Vulkan函数加载器
-- shader编译支持
+- Vulkan 函数加载器
+- Shader 编译支持
 - ······
 
 可以从 [LunarG官网](https://vulkan.lunarg.com/) 下载SDK，无需注册账户。
 
 
-### Windows安装
-1. 建议使用Visual Studio 2022以获得完整C++20支持
-2. 从 [官网](https://vulkan.lunarg.com/) 下载Vulkan SDK并运行安装程序
+### Windows 安装
+1. 建议使用 Visual Studio 2022 以获得完整C++20支持
+2. 从 [官网](https://vulkan.lunarg.com/) 下载 Vulkan SDK 并运行安装程序
 3. 重要：允许安装程序设置环境变量
 4. 验证安装：
-    - 进入SDK安装目录的Bin子目录
-    - 运行vkcube.exe演示程序
+    - 进入 SDK 安装目录的 Bin 子目录
+    - 运行 vkcube.exe 演示程序
     - 应看到旋转的立方体窗口
 
 ![cube](../../images/0001/cube_demo.png)
 
 ### Linux
-图形界面安装，参考Windows安装方法。
+
+#### 图形界面安装
+参考Windows安装方法。
 
 #### 命令行安装：
 Ubuntu/Debian系
@@ -58,7 +60,7 @@ vkcube
 ![cube](../../images/0001/cube_demo_nowindow.png)
 
 
-### MacOS安装
+### MacOS 安装
 
 要求：
 
@@ -71,7 +73,7 @@ vkcube
 
 2. 解压到选定目录
 
-3. 运行`Applications`目录下的`vkcube`演示程序
+3. 运行 `Applications` 目录下的 `vkcube` 演示程序
 
 您应该看到以下内容
 
@@ -79,12 +81,12 @@ vkcube
 
 ## **依赖库安装**
 
-我们使用Vcpkg作为跨平台包管理器。
+我们使用 vcpkg 作为跨平台包管理器。
 
-Vcpkg安装参考 [官方文档](https://learn.microsoft.com/zh-cn/vcpkg/get_started/overview)
+vcpkg 安装参考 [官方文档](https://learn.microsoft.com/zh-cn/vcpkg/get_started/overview)
 
 ### GLFW
-如前所述，Vulkan 本身是一个平台无关的 API，不包含用于创建窗口以显示渲染结果的工具。  
+Vulkan 本身是一个平台无关的 API，不包含用于创建窗口以显示渲染结果的工具。
 我们将使用 [GLFW 库](http://www.glfw.org/) 来创建窗口，它支持 Windows、Linux 和 MacOS，且和 Vulkan 有很好的集成。
 
 安装命令：
@@ -234,9 +236,9 @@ build/HelloVulkan
 
 **注意：CMake预设不是必须的，我们没有复杂的配置需求，你完全可以通过上面两行简单的CMake指令构建项目！**
 
-如果你喜欢使用 `CMakePresets.json` （可以很好地和CLion、VSCode、Visual Studio配合），可以参考 **[这个](../../codes/00/01_env/CMakePresets.json)** 预设模板。
+如果你喜欢使用 `CMakePresets.json` （它可以很好地和 CLion、VSCode、Visual Studio 配合），可以参考 **[这个](../../codes/00/01_env/CMakePresets.json)** 预设模板。
 
-此预设模板使用Ninja作为生成器，提供了MSVC/GNU/Clang的预设配置。但它未经过充分测试，不保证全平台可用。
+此预设模板使用 Ninja 作为生成器，提供了 MSVC/GNU/Clang 工具链的预设配置。但它未经过充分测试，不保证全平台可用。
 
 ## **代码编辑器**
 

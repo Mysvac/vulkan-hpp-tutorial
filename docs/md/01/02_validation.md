@@ -5,12 +5,9 @@
 Vulkan API 的设计理念: **尽量减少驱动程序开销**
 
 这导致 **默认情况下 API 中的错误检查非常有限**。
-
-Vulkan要求你对所做的一切都非常明确，因此很容易犯许多小错误。  
-例如使用新的 GPU 功能，却忘记在创建逻辑设备时请求它。
 即使像 "错误的枚举值" 或 "错误的空指针" 这样简单的错误，通常也不会被显式处理，只会导致崩溃或未定义的行为。
 
-Vulkan 引入了一个优雅的系统来实现程序检查，称为验证层 \( Validation Layer \)。
+Vulkan 引入了一个优雅的系统来实现程序检查，称为 **验证层\(Validation Layer\)**。
 
 它是Vulkan的核心调试工具，通过拦截API调用来实现：
 
@@ -27,12 +24,12 @@ Vulkan 引入了一个优雅的系统来实现程序检查，称为验证层 \( 
 // 伪代码示例：验证层内部实现原理
 VkResult vkCreateInstance_WithValidation(
     const VkInstanceCreateInfo* pCreateInfo,
-    VkInstance* instance) {
-    
+    VkInstance* instance
+) {
     // 前置验证
     if (pCreateInfo == nullptr) {
         logError("Null pointer passed to pCreateInfo");
-        return VK_ERROR_INITIALIZATION_FAILED;
+        ......
     }
     
     // 调用真实函数
@@ -41,6 +38,7 @@ VkResult vkCreateInstance_WithValidation(
     // 后置检查
     if (result != VK_SUCCESS) {
         logWarning("Instance creation failed");
+        ......
     }
     
     return result;
@@ -49,21 +47,18 @@ VkResult vkCreateInstance_WithValidation(
 
 你可以**在调试时启用验证层**，在**发布时完全禁用它**，两全其美！！
 
-> Vulkan本身不附带任何内置的验证层，但 LunarG Vulkan SDK 提供了一组很好的验证层，用于检查常见错误。
-> 它们也是完全开源的，因此你可以查看它们检查哪些类型的错误并做出贡献。
+> Vulkan 本身不附带任何内置的验证层，但 LunarG Vulkan SDK 提供了一组很好的验证层，用于检查常见错误。
+> 它们是完全开源的，你可以查看它们能够检查哪些的错误或做出贡献。
 > 
 > Vulkan 以前有两种不同类型的验证层：实例特定和设备特定。  
-> 设备特定层现在已被弃用，这意味着实例验证层适用于所有 Vulkan 调用。
-> 
-> 规范文档仍然建议你在设备级别也启用验证层以获得更好的兼容性。
-> 我们只需在创建逻辑设备时指定与实例相同的层，稍后你就会看到。
+> 设备特定层现在已被弃用，这意味着实例验证层适用于所有 Vulkan 调用。  
+> 你依然可以启用设备级验证层，但它会被最新的 API 忽略。
 
 ## **使用验证层**
 
 ### 1. 标准验证层配置
 
-与扩展一样，验证层需要通过指定其名称来启用。
-所有有用的标准验证都捆绑在 SDK 的一个层中，该层称为 `VK_LAYER_KHRONOS_validation`。
+与扩展一样，验证层需要显式指定名称并启用，该层称为 `VK_LAYER_KHRONOS_validation` 。
 
 让我们在类中添加代码：
 
@@ -94,13 +89,9 @@ inline static const std::vector<const char*> validationLayers {
 
 ### 2. 验证层可用性检查
 
-**添加可用性检测函数**
+添加一个成员函数 `checkValidationLayerSupport`，用于检查所有请求的层是否可用。
 
-1. 添加一个成员函数 `checkValidationLayerSupport`，用于检查所有请求的层是否可用。
-
-2. 使用 `m_context.enumerateInstanceLayerProperties` 函数列出所有可用的层。
-
-使用任意方式判断是否都可以，此处借助 `std::set` ：
+可以使用 `m_context.enumerateInstanceLayerProperties` 函数列出所有可用的层，然后使用任意方式判断需要的层是否都被包含，此处借助 `std::set` ：
 
 ```cpp
 // ...
@@ -118,9 +109,7 @@ bool checkValidationLayerSupport() {
 
 > 需要判断的数量很少，且只会执行一次，暴力判断也可以，无需担心性能问题。
 
-**使用检测函数**
-
-现在我们可以在 `createInstance` 中使用此函数
+现在我们可以在 `createInstance` 中使用此函数：
 
 ```cpp
 void createInstance() {
@@ -135,7 +124,7 @@ void createInstance() {
 
 ### 3. 实例创建时启用验证层
 
-在 `createInstance` 中添加内容，修改 `vk::InstanceCreateInfo` 结构体，以包含验证层名称（如果已启用）
+在 `createInstance` 中添加内容，修改 `vk::InstanceCreateInfo` 结构体，以包含验证层名称：
 
 ```cpp
 if (enableValidationLayers) {
@@ -147,11 +136,8 @@ if (enableValidationLayers) {
 
 ## **设置调试回调**
 
-默认情况下，验证层会将调试消息打印到标准输出，但我们也可以在程序中提供显式回调来自己处理它们。
-
-如果你现在不想这样做，则可以跳到本章的最后一节。
-
-为了在程序中设置回调以处理消息和相关详细信息，我们必须使用 `VK_EXT_debug_utils` 扩展程序设置一个带有回调的调试信使。
+我们需要使用 `VK_EXT_debug_utils` 扩展程序创建一个带有回调函数的调试信使。
+调试信使用于接受验证层信息并执行回调函数，我们可以在回调中根据验证层信息执行想要的操作。
 
 ### 1. 优化扩展获取
 
@@ -187,9 +173,7 @@ createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
 现在运行程序以确保你没有收到错误。
 
-### 2. 编写注册函数
-
-**添加回调函数**
+### 2. 编写回调函数
 
 添加一个新的静态成员函数，名为 `debugCallback`。
 
@@ -206,7 +190,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 }
 ```
 
-**回调函数说明**
+此函数只做了一件事，把验证层反馈数据中的信息输出到标准错误流。
+
+### 3. 函数参数说明
 
 `VKAPI_ATTR` 和 `VKAPI_CALL` 确保该函数具有 Vulkan 调用它的正确签名。
 
@@ -228,7 +214,7 @@ if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
 }
 ```
 
-第二个参数 MessageType 可以具有以下值：
+第二个参数 `messageTypes` 可以具有以下值：
 
 | `vk::DebugUtilsMessageTypeFlagsEXT` | 含义 |  
 |---------------------|--------------------|
@@ -248,17 +234,16 @@ if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
 
 最后的参数 `pUserData` 参数包含一个指针，供用户自己使用，可以传入任意内容。
 
-函数返回布尔值，指示是否应中止触发了验证层消息的 Vulkan 行为。  
-如果回调返回 true，则调用将中止并抛出 `vk::SystemError` 异常，错误代码为 `vk::Result::eErrorValidationFailedEXT`。
+函数返回布尔值，如果返回 true，则触发此回调的位置将抛出 `vk::SystemError` 异常，错误代码为 `vk::Result::eErrorValidationFailedEXT`。
 这通常仅用于测试验证层本身，因此**你应始终返回 false**;
 
-### 3. 创建调试信使对象
-在 `vk::raii::Instance instance;` 下方添加一个成员
+### 4. 创建调试信使对象
+在 `vk::raii::Instance instance;` 下方添加一个成员用于管理调试信使的句柄：
 ```cpp
 vk::raii::DebugUtilsMessengerEXT m_debugMessenger{ nullptr };
 ```
 
-现在添加一个函数 `setupDebugMessenger`，在 `createInstance` 之后调用
+现在添加一个函数 `setupDebugMessenger` 用于创建调试信使，在 `createInstance` 之后调用：
 ```cpp
 void initVulkan() {
     createInstance();
@@ -271,7 +256,7 @@ void setupDebugMessenger() {
 }
 ```
 
-我们需要填写一个结构体，其中包含有关信使及其回调的详细信息
+我们需要填写一个结构体，其中包含有关信使及其回调的详细信息：
 ```cpp
 vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( 
     vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
@@ -293,13 +278,13 @@ vk::DebugUtilsMessengerCreateInfoEXT createInfo(
 );
 ```
 
-- `messageSeverity` 允许你指定回调调用的严重性类型。这里指定不输出 `info` 信息，输出其他另外三类信息。
+- `messageSeverity` 根据严重性过滤信息，这里指定不输出 `info` 信息，输出另外三类信息。
 
-- `messageType` 字段允许你过滤消息类型。我在此处简单地启用了所有类型。
+- `messageType` 字段允许你过滤消息类型，在此处简单地启用了所有类型。
 
 - `pfnUserCallback` 字段指定指向回调函数的指针。
 
-- `pUserData` 字段没有设置，构造函数会将其设置为 `nullptr` ，你也可以传递自行喜欢的东西。 
+- `pUserData` 字段未设置，构造函数会将其设为 `nullptr` ，你可以传递任何需要的东西。 
 
 最后，让我们创建对象：
 
@@ -309,11 +294,11 @@ m_debugMessenger = m_instance.createDebugUtilsMessengerEXT( createInfo );
 
 ## **扩展调试层**
 
-显然调试信使的创建晚于Vulkan实例，销毁又要求早于 Vulkan 实例，这使你无法看到 Vulkan 实例创建和销毁时遇到的任何问题。
+显然调试信使的创建晚于 Vulkan 实例，又要求销毁早于 Vulkan 实例，这使你无法看到 Vulkan 实例创建和销毁时遇到的任何问题。
 
-此问题有方法解决，你只需在 `vk::InstanceCreateInfo` 的 `pNext` 扩展字段中传递指向 `vk::DebugUtilsMessengerCreateInfoEXT` 结构体的指针。
+为了解决此问题，你只需在 `vk::InstanceCreateInfo` 的 `pNext` 扩展字段中传递指向 `vk::DebugUtilsMessengerCreateInfoEXT` 结构体的指针。
 
-首先将信使创建信息的填充提取到一个单独的函数中
+首先创建一个单独的函数用于填充信使的创建信息：
 
 ```cpp
 vk::DebugUtilsMessengerCreateInfoEXT populateDebugMessengerCreateInfo() {
@@ -338,7 +323,7 @@ void setupDebugMessenger(){
 }
 ```
 
-我们现在可以在 `createInstance` 函数中重用它
+然后可以在 `createInstance` 函数中重用它：
 
 ```cpp
 // vk::DebugUtilsMessengerCreateInfoEXT
@@ -353,13 +338,13 @@ if (enableValidationLayers) {
 
 ## **更多配置**
 
-验证层行为的设置远不止 `vk::DebugUtilsMessengerCreateInfoEXT` 结构体中指定的标志。
+验证层行为的可用设置远不止 `DebugUtilsMessengerCreateInfoEXT` 结构体中的这些标志。
 
-浏览到 Vulkan SDK 并转到 `Config` 目录。
-在那里，你将找到一个 `vk_layer_settings.txt` 文件，其中说明了如何配置层。
+浏览你的 Vulkan SDK 安装目录并进入 `Config` 子目录。
+在那里，你将找到一个 `vk_layer_settings.txt` 文件，它说明了如何配置层。
 
-要为自己的应用程序配置层设置，请将该文件复制到项目的 `Debug` 和 `Release` 目录，并按照说明设置所需的行为。
-但在本教程的其余部分中，我将假设你使用的是默认设置。
+要为自己的应用程序配置层设置，可以将该文件复制到项目的 `Debug` 和 `Release` 目录，并按照说明设置所需的行为。
+注意本教程的后续章节只使用了本章教授的基础内容。
 
 ## **测试**
 
@@ -369,7 +354,7 @@ if (enableValidationLayers) {
 
 ---
 
-下一章我们会寻找合适的GPU用于渲染图像。
+下一章我们会寻找合适的 GPU 用于渲染图像。
 
 ---
 

@@ -221,7 +221,7 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 
 还有另一种情况，交换链可能会过期，那是一种特殊的窗口大小调整：窗口最小化。
 这种情况很特殊，因为它会导致帧缓冲区大小为 `0`。
-在本教程中，我们将通过暂停直到窗口再次位于前台来处理这种情况。现在扩展 `recreateSwapChain` 函数
+在本教程中，我们将通过暂停程序（直到窗口再次位于前台）来处理这种情况。现在扩展 `recreateSwapChain` 函数：
 
 ```cpp
 void recreateSwapChain() {
