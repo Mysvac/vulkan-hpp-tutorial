@@ -1,59 +1,28 @@
 # **描述符布局与缓冲**
 
+## **前言**
+
+我们在之前的章节中介绍了顶点输入，它必须由顶点着色器获取，片段着色器需要由顶点着色器转发数据。
+此外，顶点输入的数据通常使用“设备本地缓存”获得最高性能，导致我们需要使用暂存缓冲进行更新，非常麻烦。
+
+有没有什么方式，能直接将数据绑定在需要的着色器阶段，而且可以直接更新呢？
+这用到了本节将介绍的**资源描述符(resource descriptors)**。
+
+资源描述符用于描述着色器需要的资源，让着色器可以**直接**访问内存中的数据，对应着色器代码中的 `uniform` 关键字。
+
 | 名称 | 含义 |
 |------|------|
 | 描述符\(Descriptor\) | 对资源的抽象引用，告诉着色器如何访问某个资源 |
-| 描述符集\(DescriptorSet\) | 实际可用的描述符的集合 |
-| 描述符集布局\(DescriptorSetLayout\) | 定义描述符集的结构，即描述符的类型、数量和绑定点 |
-| 描述符池\(Descriptor Pool\) | 用于分配描述符集的内存池 |
+| 描述符集布局\(DescriptorSetLayout\) | 图形管线\(布局\)的一部分，定义所有描述符的类型、数量和绑定点 |
+| 描述符集\(DescriptorSet\) | 实际描述符的集合，描述符必须以描述符集的方式绑定管线 |
+| 描述符池\(Descriptor Pool\) | 用于分配描述符的内存池 |
 
-## **前言**
-
-我们将从这一节开始介绍3D的图形，以及它需要的“模型-视口-投影”变换矩阵。
-这个矩阵很容易发生变化，比如摄像机角度的变动时就需要调整。
-
-如果将他像顶点数据一样输入，既浪费内存又麻烦，需要经常更新双重缓冲。
-较好的方式是将其作为“全局变量”，对应着色器代码中的 uniform 关键字。
-
-可以使用**资源描述符(resource descriptors)**允许着色器自由访问资源（比如缓冲和图片）。
-我们将设置一个缓冲用于存放变换矩阵，然后通过描述符允许着色器访问它。
-
-使用描述符大致需要这三步：
-
-1. 创建管线时指定描述符布局
-2. 从描述符池分配标识符集
-3. 渲染时绑定描述符集
+在本章中，我们会使用一个缓冲区存放 MVP\(模型-视口-投影\) 变换矩阵，使用这个矩阵让我们的正方形不断旋转。
+并通过描述符允许顶点着色器访问 MVP 矩阵并使用。
 
 描述符的类型很多，我们这一章使用统一缓冲对象(UBO, uniform buffer objects)。
 后面几章会看到其他描述符类型，但它们的基本操作流程是一样的。
 
-假如我们希望顶点缓冲有这样一个结构体：
-
-```cpp
-struct UniformBufferObject {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
-};
-```
-
-那么我们可以把数据拷贝到 `vk::Buffer` ，然后顶点着色器通过UBO描述符访问它。
-像这样：
-
-```glsl
-layout(binding = 0) uniform UniformBufferObject {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-} ubo;
-
-void main() {
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 0.0, 1.0);
-    fragColor = inColor;
-}
-```
-
-后面我们会在每一帧更新这三个矩阵，让上一章的矩形在三维空间旋转。
 
 ## **顶点着色器**
 
@@ -86,9 +55,13 @@ void main() {
 注意`uniform`、`in`和`out`三中变量是声明顺序是任意的。
 `binding`和`location`指令类似，我们将在描述符布局中引用此绑定。
 
+> `UniformBufferObject` 不是自定义的类型名，不能修改。
+
 ## **描述符集布局**
 
 下一步要在C++代码中定义UBO然后告诉Vulkan它在顶点着色器中对应的描述符。
+
+### 1. 数据格式
 
 首先添加一个结构体：
 
@@ -100,7 +73,11 @@ struct UniformBufferObject {
 };
 ```
 
+> 这里的 `UniformBufferObject` 是自定义类名，可以随意设置。
+
 我们使用GLM的类型，它的内存布局完全匹配着色器中的定义，所以我们可以直接使用`memcpy`。
+
+### 2. 辅助函数
 
 我们需要在图形管线创建时指定描述符的细节，就像我们为顶点参数指定了`location`一样。
 现在创建一个新函数`createDescriptorSetLayout`，在图形管线创建之前调用：
@@ -120,17 +97,31 @@ void createDescriptorSetLayout() {
 }
 ```
 
-所有绑定都通过`vk::DescriptorSetLayoutBinding`结构体指定：
+### 3. 描述符绑定信息
+
+“描述符”的绑定信息结构体和“顶点输入”的绑定信息结构体不同，顶点输入的绑定信息用于描述数据的传输“数率”，而描述符的绑定信息用于至少资源可以被哪个着色器访问、通过什么方式访问以及数据的大小。
+
+所有绑定信息都通过`vk::DescriptorSetLayoutBinding`结构体指定：
 
 ```cpp
 vk::DescriptorSetLayoutBinding uboLayoutBinding;
 uboLayoutBinding.binding = 0;
+```
+
+我们使用 `binding=0` ，对应着色器中的 `layout(binding = 0)` 。
+
+顶点输入的 `binding` 对应缓冲区数组的索引，而描述符的绑定对应着色器的 `layout(binding = ...)` 。
+可以这样理解，着色器的每个 `layout(binding = ...)` 对应一个窗口，着色器通过不同的窗口访问不同的资源，我们也需要将不同的内存资源放在不同的窗口。
+
+然后设置描述符类型和数量：
+
+```cpp
 uboLayoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
 uboLayoutBinding.descriptorCount = 1;
 ```
 
-第一个参数指定绑定的位置，第二个参数指定描述符的类型。
-着色器变量支持数组类型的UBO，而我们只有一个对象，所以第三个参数指定为1。
+第一个参数指定描述符的类型，本章使用 `eUniformBuffer`。
+着色器变量支持数组类型的UBO，而我们只有一个对象，所以第二个参数指定为 1 。
 
 我们还需要指定描述符将在哪些着色阶段被引用，使用 `vk::ShaderStageFlagBits` 位掩码。
 我们只在顶点着色器使用，所以使用`eVertex`：
@@ -140,6 +131,8 @@ uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
 ```
 
 `pImmutableSamplers` 字段仅与图像采样相关的描述符有关，暂时无需设置。
+
+### 4. 创建描述符布局
 
 我们需要使用`vk::DescriptorSetLayout`对象定义描述符集合的布局信息，所以我们在`m_pipelineLayout`上面创建新成员变量：
 
@@ -156,6 +149,8 @@ layoutInfo.setBindings( uboLayoutBinding );
 
 m_descriptorSetLayout = m_device.createDescriptorSetLayout( layoutInfo );
 ```
+
+### 5. 修改管线布局
 
 我们需要在管线创建期间指定描述符布局，现在回到 `createGraphicsPipeline` 函数修改 `PipelineLayoutCreateInfo` 以引用布局对象：
 

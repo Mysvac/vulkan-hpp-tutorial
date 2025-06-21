@@ -82,4 +82,5 @@ nav:
     - 推送常量: md/03/50_pushconstant.md
     - 动态uniform: md/03/60_dynamicuniform.md
     - 分离图像与采样器: md/03/70_separatesampler.md
+    - 管线缓存: md/03/80_pipelinecache.md
   - 隐私政策: policy.md

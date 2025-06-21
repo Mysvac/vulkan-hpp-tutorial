@@ -3,7 +3,7 @@
 ## **前言**
 
 我们上一章定义的描述符布局描述了可以绑定的描述符类型。
-在这一章，我们将为每个 `vk::Buffer` 资源创建描述符集，从而绑定到对应的`uniform`缓冲描述符。
+在这一章，我们将为每个 `vk::Buffer` 资源创建描述符集，从而绑定到对应的 `uniform` 。
 
 ## **描述符池**
 
@@ -43,11 +43,14 @@ poolInfo.setPoolSizes( poolSize );
 
 我们使用了RAII封装，必须指定`eFreeDescriptorSet`标志位，从而在描述符集合释放时将控制权交还给描述符池。
 
-除了可用的单个描述符的最大数量外，我们还需要指定可能分配的描述符集合的最大数量：
+除了可用的单种描述符的最大数量外，我们还需要指定可能分配的描述符集合的最大数量：
 
 ```cpp
 poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 ```
+
+> 假如 `descriptorCount` 是 4 ，而 `maxSets` 是 2 。
+> 那么你可以分配 2 个描述符集，每个集包含 2 个描述符；或只分配 1 个描述符集，它包含 1~4 个描述符。（描述符总数不超过4。）
 
 在`m_descriptorSetLayout`下方添加一个新的类成员来存储描述符池的句柄，并调用 `createDescriptorPool` 来创建它。
 
@@ -104,7 +107,7 @@ std::vector<vk::raii::DescriptorSet> m_descriptorSets;
 m_descriptorSets = m_device.allocateDescriptorSets(allocInfo);
 ```
 
-描述符集合现在已经分配，但是描述符任然需要配置，现在添加一个循环来填充每个描述符：
+描述符集现在已经分配，但任然需要配置，现在添加一个循环来填充每个描述符集：
 
 ```cpp
 for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
@@ -132,7 +135,9 @@ descriptorWrite.dstBinding = 0;
 descriptorWrite.dstArrayElement = 0;
 ```
 
-前两个字段指定要更新的描述符集合和绑定，我们的 `uniform` 缓冲绑定的是索引 `0` 。
+前两个字段指定要更新的描述符集合和绑定。
+`dstBinding` 通用指的是着色器的 `layout(binding = xxx)` ，和描述符布局的设置保存一致。
+
 由于描述符可以是数组，我们还需要指定更新数组元素的开始索引。我们没有使用数组，所以这里是 `0` 。
 
 我们还需要再次指定描述符的类型和数量：
@@ -144,7 +149,7 @@ descriptorWrite.setBufferInfo(bufferInfo);
 
 注意 `setBufferInfo` 设置了 `descriptorCount` 和 `pBufferInfo` 两个字段。
 
-不同的描述符需要设置不同的字段，比如 `BufferInfo` 自动用于引用缓冲区数据的描述符， `ImageInfo` 用于引用图像数据的描述符， `TexelBufferView` 则用于引用缓冲区视图的描述符。我们使用 `BufferInfo` 。
+不同的描述符需要设置不同的字段，比如 `BufferInfo` 用于引用缓冲区数据的描述符、 `ImageInfo` 用于引用图像数据的描述符、 `TexelBufferView` 则用于引用缓冲区视图的描述符，我们使用 `BufferInfo` 。
 
 最后使用 `updateDescriptorSets` 更新描述符集合：
 

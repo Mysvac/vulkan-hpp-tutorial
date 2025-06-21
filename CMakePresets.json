@@ -62,6 +62,7 @@
       "description": "Linux/macOS Clang Debug config presets(Clang + Ninja)",
       "inherits": "ninja-base",
       "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_C_COMPILER": "clang"
@@ -72,6 +73,7 @@
       "description": "Linux/macOS Clang Release config presets(Clang + Ninja)",
       "inherits": "ninja-base",
       "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_C_COMPILER": "clang"

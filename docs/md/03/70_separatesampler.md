@@ -489,24 +489,6 @@ void main() {
 
 ---
 
-## **最后**
-
-你现在掌握的 Vulkan 基本知识应该足以开始探索更多功能，例如
-
-- 管线缓存\(Pipeline cache\)
-- 查询与查询池\(Query and QueryPool\)
-- 多线程命令缓冲生成\(Multi-threaded command buffer generation\)
-- 多个子通道\(Multiple subpasses\)
-- 几何着色器\(Geometry shader\)
-- 计算着色器\(Compute shaders\)
-
-当前的程序可以通过多种方式扩展，例如添加 Blinn-Phong 光照、后期处理效果和阴影贴图。
-你应该能够从其他 API 的教程中学习这些效果是如何工作。尽管 Vulkan API 很细致，但许多概念仍然是相同的。
-
-> 理论上，作者会慢慢更新这些内容，你可以看看Github仓库的最近更新时间。
-
----
-
 **[C++代码](../../codes/03/70_separatesampler/main.cpp)**
 
 **[C++代码差异](../../codes/03/70_separatesampler/main.diff)**

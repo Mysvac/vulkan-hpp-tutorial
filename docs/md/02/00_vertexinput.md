@@ -2,9 +2,12 @@
 
 ## **前言**
 
-在后面几章，我们将使用内存中的顶点缓冲区\(vertex buffers\)数据代替Shader中的硬编码数据。
+在后面几章，我们将使用内存中的**顶点缓冲区\(vertex buffers\)**数据代替Shader中的硬编码数据。
 
-我们将从最简单的方式开始，创建CPU可见缓冲区然后直接用 `memcpy` 将顶点数据复制进去。
+图形管线的第一个阶段是输入装配，如果你回顾“图形管线-固定功能”章节，会看到一个“**顶点输入**”模块。
+我们要做的是将顶点数据放入顶点缓冲区，然后将此缓冲区绑定到管线的顶点输入。
+
+我们将从最简单的方式开始，创建主机\(CPU\)可见缓冲区然后直接用 `memcpy` 将顶点数据复制进去。
 之后我们将了解如何使用暂存缓冲区\(staging buffers\)将顶点数据复制进高性能显存中。
 
 ## **顶点着色器**
@@ -26,12 +29,12 @@ void main() {
 }
 ```
 
-`inPosition` 和 `inColor` 是顶点参数，是每个顶点在顶点缓冲中指定的属性。
+`inPosition` 和 `inColor` 是顶点参数，这些数据将从管线的顶点输入获取。
 
 我们之前提过，一个`location`只能放一个资源，所以我们的位置和颜色信息需要放在不同的`location`中。
-注意 `inPosition` 是外部->顶点着色器，`fragColor`是顶点着色器->片段着色器，所以二者不冲突。
+注意 `inPosition` 是“顶点输入->顶点着色器”，`fragColor`是“顶点着色器->片段着色器”，所以二者不冲突。
 
-特殊的是，某些类型需要多个槽位，比如使用`dvec3`时，后一个变量的索引至少要高2：
+特殊的是，一个槽位最多 16 字节，因此某些类型需要多个槽位。比如使用`dvec3`时，后一个变量的索引至少要高 2 ：
 
 ```glsl
 layout(location = 0) in dvec3 inPosition;
@@ -60,7 +63,7 @@ struct Vertex {
 };
 ```
 
-GLM 方便地为我们提供了与着色器语言中使用的向量类型完全匹配的 C++ 类型。
+GLM 提供的 C++ 类型的内存布局与着色器中的类型完全匹配，这让我们无需调整位域信息。
 
 现在使用 `Vertex` 结构来指定顶点数据数组。
 
@@ -74,12 +77,12 @@ inline static const std::vector<Vertex> vertices = {
 
 我们使用的位置和颜色值与之前完全相同，但现在它们组合成一个顶点数组，这被称为“交错顶点属性”。
 
-下一步要告诉 Vulkan 这些数据上传到GPU内存后如何传递给顶点着色器。
+下一步要告诉 Vulkan 这些数据绑定到顶点输入后如何传递给顶点着色器。
 我们需要两个结构体传达这些信息。
 
 ## **绑定描述**
 
-第一个结构体是 `vk::VertexInputBindingDescription` ，我们添加一个静态成员函数用于填充信息：
+第一个结构体是 `vk::VertexInputBindingDescription` ，添加一个静态成员函数用于填充信息：
 
 ```cpp
 struct Vertex {
@@ -94,31 +97,40 @@ struct Vertex {
 };
 ```
 
-顶点绑定描述结构体描述了从内存中通过顶点集合加载顶点的“速率”。
-它规定了单个数据条目的字节数，以及要在每个顶点还是每个实例时读取一条数据。
+顶点输入可以一次性绑定多个缓冲区，用一个数组表示，使用 `binding` 字段指定缓冲区索引。
+我们目前只有一个缓冲区，所以这个缓冲区将在数组的 0 号位：
 
 ```cpp
 bindingDescription.binding = 0;
+```
+
+> 具体的缓冲区数组将在下一节创建。
+
+“绑定描述”结构体主要描述了顶点着色器从输入的缓冲区中加载数据的“速率”。
+它规定了单个数据条目的字节数，以及要在每个顶点还是每个实例时切换一条数据：
+
+```cpp
 bindingDescription.stride = sizeof(Vertex);
 bindingDescription.inputRate = vk::VertexInputRate::eVertex;
 ```
 
-我们把所有顶点数据都放在了一个数组中，所以我们只有一个绑定。
-
-`binding`参数指定绑定数组的索引，`stride`参数则指定一个条目的字节数。
-
-`inputRate`参数具有以下两种枚举值：
+`stride`参数则指定一个条目的字节数，`inputRate` 参数具有以下两种枚举值：
 
 | `vk::VertexInputRate` | 意义 |  
 |------|------|
 | `eVertex` | 在处理每个顶点时读取一条 |
 | `eInstance` | 在处理每个实例时读取一条 |
 
-我们不会使用实例化渲染，因此使用每个顶点读取一条。实际我们每条数据就对应一个顶点。
+实例化渲染会在后续章节介绍，我们的缓冲区存放顶点数据，所以使用 `eVertex` 。
 
 ## **属性描述**
 
 第二个结构体是 `vk::VertexInputAttributeDescription` ，它描述了如何处理顶点的输入数据。
+
+我们在顶点着色器中使用了两个 `location` ，分别接收两种不同类型的数据。
+而“属性描述”结构体做的就是这件事，将 C++ 类中的数据与顶点着色器中的数据一一对应，每块数据的大小以及对应哪个 `location` 。
+
+
 我们依然添加一个静态成员函数：
 
 ```cpp
@@ -130,21 +142,27 @@ static std::array<vk::VertexInputAttributeDescription, 2>  getAttributeDescripti
 }
 ```
 
-正如函数签名表示的那样，我们需要两个这样的结构。属性描述结构体描述了如何从绑定描述的数据块中获取需要的数据。
-我们有两个属性，分别是位置`position`和颜色`color`，所以我们需要两个属性描述。
+一般而言，一个“属性描述”对应着色器中的一个 `location` ，所以我们需要两个属性描述。
+
+第一个字段是 `binding` ，它的作用和“绑定描述”中的完全一致，你应该指定相同的值：
 
 ```cpp
 attributeDescriptions[0].binding = 0;
+```
+
+> 顶点输入需要三个数组，缓冲区数组+绑定描述数组+参数描述数组，因此每个绑定描述和参数描述都需要指定对应的缓冲区索引。
+
+然后设置实际的属性信息：
+
+```cpp
 attributeDescriptions[0].location = 0;
 attributeDescriptions[0].format = vk::Format::eR32G32Sfloat;
 attributeDescriptions[0].offset = offsetof(Vertex, pos);
 ```
 
-- `binding` 参数告诉 Vulkan 每个顶点数据来自哪个绑定。
-
 - `location` 参数对应着色器中的 `layout(location = ...)` 。
 
-- `format` 参数表示了数据的格式。奇怪的是需要使用颜色格式的枚举值。下面给出常见shader格式与颜色枚举的对应关系，你应该能够理解对应关系：
+- `format` 参数表示了数据的格式，特殊的是需要使用颜色格式的枚举值。下面给出常见shader格式与颜色枚举的对应关系，你应该能够理解对应关系：
 
 | Shader类型 | 颜色格式枚举 | 说明 |
 |------------|-------------|------|
@@ -167,11 +185,11 @@ attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
 attributeDescriptions[1].offset = offsetof(Vertex, color);
 ```
 
-> 注意这里的`format`对应的是`vec3`。
+> 注意这里的 `format` 对应的是 `vec3` 。
 
 ## **管线顶点输入**
 
-我们现在需要设置图形管线的配置，让它接收这些数据。现在修改`createGraphicsPipeline`函数，找到`vertexInputInfo`变量并添加信息：
+我们现在需要设置图形管线的配置，让它接收这些数据。现在修改 `createGraphicsPipeline` 函数，找到 `vertexInputInfo` 变量并添加信息：
 
 ```cpp
 vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
@@ -182,6 +200,9 @@ auto attributeDescriptions = Vertex::getAttributeDescriptions();
 vertexInputInfo.setVertexBindingDescriptions(bindingDescription);
 vertexInputInfo.setVertexAttributeDescriptions(attributeDescriptions);
 ```
+
+就像上面说的，我们需要三个数据，缓冲区数组+绑定描述数组+属性描述数组。
+我们还没有创建缓冲区，所以现在只设置了后两者。
 
 ## **最后**
 
