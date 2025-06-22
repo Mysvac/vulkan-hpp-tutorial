@@ -105,7 +105,10 @@ void main() {
 }
 ```
 
-因为推送常量只有一个数据区，直接使用 `push_constant` 和 `PushConstants` 标记即可。
+因为推送常量只有一个数据区，直接使用 `push_constant` 标记即可。
+
+> `PushConstants` 是自定义的类型名。
+
 之前提到可以使用 `Range` 和 `offset` 划分数据段，假设某个数据段的起始偏移是 64 字节，那么可以这样读取：
 
 ```glsl

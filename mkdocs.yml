@@ -73,7 +73,7 @@ nav:
       - 图像视图和采样器: md/02/31_sampler.md
       - 组合图像采样器: md/02/32_combined.md
     - 深度缓冲: md/02/40_depthbuffer.md
-  - 扩展基础功能:
+  - 基础功能:
     - 加载模型: md/03/00_loadmodel.md
     - 移动摄像机: md/03/10_movecamera.md
     - 生成Mipmaps: md/03/20_mipmaps.md
@@ -83,4 +83,35 @@ nav:
     - 动态uniform: md/03/60_dynamicuniform.md
     - 分离图像与采样器: md/03/70_separatesampler.md
     - 管线缓存: md/03/80_pipelinecache.md
+    - 计算着色器与SSBO: md/03/90_compute.md
+  - 进阶功能:
+    - C++模块化: md/04/00_cxxmodule.md
+    - 查询池: md/04/10_querypool.md
+    - 多线程渲染:
+      - 并行命令录制: md/04/20_multithreading.md
+      - 资源加载系统: md/04/21_resourceloading.md
+    - 着色器进阶:
+      - 几何着色器: md/04/30_geometry.md
+      - 细分着色器: md/04/31_tessellation.md
+      - 任务与网格着色器: md/04/32_taskmesh.md
+    - 多管线渲染:
+      - 多子通道: md/04/40_multipipeline.md
+      - 延迟渲染: md/04/41_deferred.md
+    - 离屏渲染:
+      - 离屏渲染: md/04/50_offscreen.md
+      - 帧缓冲分离: md/04/51_separateframebuffer.md
+    - 光线追踪:
+      - 加速结构: md/04/60_acceleration.md
+      - 光追管线: md/04/61_raytracing.md
+      - 光追着色器: md/04/62_raytracingshader.md
+      - 实例化处理: md/04/63_raytracinginstance.md
+    - 性能优化:
+      - 内存管理: md/04/70_memorymgmt.md
+      - 管线屏障: md/04/71_barriers.md
+      - 队列并发: md/04/72_multiqueue.md
+    - 高级计算:
+      - 共享内存与工作组: md/04/80_sharedmemory.md
+      - 异步计算: md/04/81_asynccompute.md
+      - 原子操作: md/04/82_atomics.md
+      - 子组操作: md/04/83_subgroups.md
   - 隐私政策: policy.md

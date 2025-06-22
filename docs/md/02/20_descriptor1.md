@@ -55,7 +55,7 @@ void main() {
 注意`uniform`、`in`和`out`三中变量是声明顺序是任意的。
 `binding`和`location`指令类似，我们将在描述符布局中引用此绑定。
 
-> `UniformBufferObject` 不是自定义的类型名，不能修改。
+> `UniformBufferObject` 自定义的类型名，可以任意编写。
 
 ## **描述符集布局**
 
@@ -73,9 +73,9 @@ struct UniformBufferObject {
 };
 ```
 
-> 这里的 `UniformBufferObject` 是自定义类名，可以随意设置。
-
 我们使用GLM的类型，它的内存布局完全匹配着色器中的定义，所以我们可以直接使用`memcpy`。
+
+> C++ 中的类型名可以和 GLSL 中不一致，重要的是内存布局一致。
 
 ### 2. 辅助函数
 

@@ -1120,6 +1120,7 @@ private:
         stagingBufferMemory.unmapMemory();
 
         createBuffer(bufferSize, 
+            vk::BufferUsageFlagBits::eStorageBuffer |
             vk::BufferUsageFlagBits::eTransferDst |
             vk::BufferUsageFlagBits::eVertexBuffer, 
             vk::MemoryPropertyFlagBits::eDeviceLocal,
