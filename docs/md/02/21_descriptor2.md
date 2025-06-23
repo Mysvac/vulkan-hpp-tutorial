@@ -107,7 +107,7 @@ std::vector<vk::raii::DescriptorSet> m_descriptorSets;
 m_descriptorSets = m_device.allocateDescriptorSets(allocInfo);
 ```
 
-描述符集现在已经分配，但任然需要配置，现在添加一个循环来填充每个描述符集：
+描述符集现在已经分配，但仍然需要配置，现在添加一个循环来填充每个描述符集：
 
 ```cpp
 for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
@@ -194,7 +194,7 @@ rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
 
 再次运行程序，您现在应该看到以下内容
 
-![rect-rotate](../../images/0221/spinning_quad.png)
+![rect-rotate](../../images/0221/spinning_quad.gif)
 
 矩形已变为正方形，因为投影矩阵现在校正了宽高比。
 `updateUniformBuffer` 负责屏幕大小调整，因此我们不需要在 `recreateSwapChain` 中重新创建描述符集合。

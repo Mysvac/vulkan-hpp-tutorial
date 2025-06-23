@@ -115,7 +115,7 @@ void createImage(
     uint32_t mipLevels,
     vk::SampleCountFlagBits numSamples,
     vk::Format format,
-    vk::ImageTiling tilling,
+    vk::ImageTiling tiling,
     vk::ImageUsageFlags usage,
     vk::MemoryPropertyFlags properties,
     vk::raii::Image& image,

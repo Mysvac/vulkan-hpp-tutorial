@@ -134,10 +134,10 @@ index 46c75ca..b0d2dfe 100644
          uint32_t mipLevels,
 +        vk::SampleCountFlagBits numSamples,
          vk::Format format,
-         vk::ImageTiling tilling,
+         vk::ImageTiling tiling,
          vk::ImageUsageFlags usage,
 @@ -1221,7 +1254,7 @@ private:
-         imageInfo.tiling = tilling;
+         imageInfo.tiling = tiling;
          imageInfo.initialLayout = vk::ImageLayout::eUndefined;
          imageInfo.usage = usage;
 -        imageInfo.samples = vk::SampleCountFlagBits::e1;

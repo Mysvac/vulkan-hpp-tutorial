@@ -79,7 +79,7 @@ m_graphicsPipeline = m_device.createGraphicsPipeline( nullptr, pipelineInfo );
 
 `createGraphicsPipeline` 用于创建单个对象，`createGraphicsPipelines`则可以一次性创建多个。
 
-> 注意到我们多传入了一个 `nullptr`，他等于宏 `VK_NULL_HANDLE`。 
+> 注意到我们多传入了一个 `nullptr`，它等于宏 `VK_NULL_HANDLE`。 
 > 此位置的参数简写是 `optional<PipelineCache>` 管线缓存。  
 > 我们将在“管线缓存”章节中深入探讨这一点。
 

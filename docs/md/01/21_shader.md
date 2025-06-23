@@ -366,7 +366,7 @@ void createGraphicsPipeline() {
 
 ### 1. 读取着色器代码
 
-在可以将代码传递给管线之前，我们必须将其包装在 `vk:ShaderModel` 对象中。让我们创建一个辅助函数 `createShaderModule` 来执行此操作。
+在可以将代码传递给管线之前，我们必须将其包装在 `vk::ShaderModule` 对象中。让我们创建一个辅助函数 `createShaderModule` 来执行此操作。
 
 ```cpp
 vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) {

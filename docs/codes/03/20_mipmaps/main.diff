@@ -30,7 +30,7 @@ index 4ec3b5f..46c75ca 100644
          uint32_t height,
 +        uint32_t mipLevels,
          vk::Format format,
-         vk::ImageTiling tilling,
+         vk::ImageTiling tiling,
          vk::ImageUsageFlags usage,
 @@ -1208,7 +1215,7 @@ private:
          imageInfo.extent.width = width;
@@ -40,7 +40,7 @@ index 4ec3b5f..46c75ca 100644
 +        imageInfo.mipLevels = mipLevels;
          imageInfo.arrayLayers = 1;
          imageInfo.format = format;
-         imageInfo.tiling = tilling;
+         imageInfo.tiling = tiling;
 @@ -1232,7 +1239,8 @@ private:
          vk::raii::Image& image,
          vk::Format format,

@@ -2,18 +2,21 @@
 
 ## **前言**
 
-我们在uniform缓冲的章节介绍了一种描述符，本章我们将看到新的一种：组合图像采样器\(Combined image sampler\)。
+我们在uniform缓冲的章节介绍了一种描述符，本章我们将看到新的一种：**组合图像采样器\(Combined image sampler\)**。
 此描述符允许着色器通过采样器实例访问图像资源。
 
 我们会修改描述符布局/池/集，从而加入一个组合图像采样器。
 然后用我们的`Vertex`结构添加纹理坐标，并修改片段着色器让它使用纹理色彩。
+
+> 顾名思义，此描述符绑定了图像和采样器二者。
+> 事实上还有“分离的图像与采样器”描述符，也就是为图像和采样器提供两个独立的描述符，我们会在后面的章节介绍。
 
 ## **更新描述符**
 
 ### 1. 修改描述符布局
 
 回到 `createDescriptorSetLayout` 函数，添加一个`vk::DescriptorSetLayoutBinding`用于组合图像采样器描述符。
-我们可以简单的将他放在uniform缓冲之后：
+我们可以简单的将它放在 uniform 缓冲之后：
 
 ```cpp
 vk::DescriptorSetLayoutBinding samplerLayoutBinding;
@@ -55,11 +58,11 @@ poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
 尽管驱动程序可能允许超限分配，但开发者仍应遵循描述符池的初始限制。这是为了避免潜在的性能问题或兼容性问题。
 
-> `maxSets` 指定描述符集合的最大数量  
+> `maxSets` 指定可分配的描述符集合的最大数量  
 > `poolSizeCount` 指定描述符集合的类型数  
-> `descriptorCount` 指定单个描述符集合中描述符实例的数量
+> `descriptorCount` 指定可分配的单种类描述符的最大数量
 
-### 3. 绑定描述符与图像和采样器资源
+### 3. 绑定描述符与图像采样器
 
 最后一步是将实际的图像和采样器资源绑定到描述符集中的描述符。转到 `createDescriptorSets` 函数：
 
@@ -79,7 +82,7 @@ for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 }
 ```
 
-组合图像采样器的资源必须在 `vk::DescriptorImageInfo` 结构中指定，就像之前的uniform缓冲资源一样。
+组合图像采样器的资源必须在 `vk::DescriptorImageInfo` 结构中指定，就像之前的 uniform 缓冲资源一样。
 
 必须使用此图像信息更新描述符，这次我们使用 `ImageInfo` 数组而不是 `BufferInfo`。
 
@@ -202,7 +205,7 @@ void main() {
 
 ![texcoord_visualization](../../images/0232/texcoord_visualization.png)
 
-绿色通道代表水平坐标，红色通道代表垂直坐标。
+绿色通道代表垂直坐标，红色通道代表水平坐标。
 黑色和黄色角确认纹理坐标已从 `0, 0` 正确插值到正方形上的 `1, 1`。
 使用颜色可视化数据是着色器编程中相当于 `printf` 调试的方法，因为没有更好的选择！
 

@@ -221,7 +221,7 @@ for (const auto& extension : extensions) {
 
 - `CreateInfo`和 `ApplicationInfo` 是简单结构，不含其他资源，自然析构即可。
 
-- C风格接口必须手动调用相关 `Destory` 函数释放 `VkInstance` 等特殊资源。
+- C风格接口必须手动调用相关 `Destroy` 函数释放 `VkInstance` 等特殊资源。
 
 - 我们使用了 `vk::raii`，不需要在 `cleanup` 中手动清理资源。
 

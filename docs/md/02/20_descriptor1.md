@@ -52,7 +52,7 @@ void main() {
 
 我们使用了三个变换来获得最终的裁剪坐标。
 
-注意`uniform`、`in`和`out`三中变量是声明顺序是任意的。
+注意 `uniform`、`in` 和 `out` 三种变量的声明顺序是任意的。
 `binding`和`location`指令类似，我们将在描述符布局中引用此绑定。
 
 > `UniformBufferObject` 自定义的类型名，可以任意编写。
@@ -215,7 +215,7 @@ void createUniformBuffers() {
 
 我们在创建后立即使用 `mapMemory` 映射缓冲区获取一个指针，稍后可以将数据写入其中。
 缓冲区在应用程序的整个生命周期内都映射到此指针。
-这种技术称为“**持久映射**”，在所有 Vulkan 实现上都有效。
+这种技术称为“**持久映射\(persistent mapping\)**”，在所有 Vulkan 实现上都有效。
 不必每次需要更新时都映射缓冲区，这可以提高性能，因为映射不是免费的。
 
 我们需要在程序结束的时候关闭映射：
@@ -367,5 +367,3 @@ memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 **[shader-vert代码差异](../../codes/02/20_descriptor1/shaders/vert.diff)**
 
 **[shader-frag代码](../../codes/02/20_descriptor1/shaders/shader.frag)**
-
-

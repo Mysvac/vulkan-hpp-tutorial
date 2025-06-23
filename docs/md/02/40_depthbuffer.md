@@ -404,7 +404,7 @@ depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 它绘制完成后不会被使用，所以`storeOp`为 `eDontCare`。
 
 注意我们在此处指定了 `initialLayout` 和 `finalLayout` ，所以渲染管线为我们处理了深度图像布局的转换。
-所以 `createDepthResources` 中的转换代码可以忽略：
+所以 `createDepthResources` 中的显式转换的代码可以忽略：
 
 ```cpp
 // transitionImageLayout(
@@ -468,7 +468,7 @@ framebufferInfo.height = m_swapChainExtent.height;
 framebufferInfo.layers = 1;
 ```
 
-> 注意前后顺序不能反，第一个是颜色附件，第二个彩色深度附件。  
+> 注意前后顺序不能反，第一个是颜色附件，第二个是深度附件。  
 > 你可以用 `auto` 初始化列表，但是需要显式将 `vk::raii::ImageView` 转换成 `vk::ImageView`。
 
 颜色附件对每个交换链都不同，深度图像可以被所有的交换链图像使用，因为我们的信号量保证了同一时间只运行一个子通道。

@@ -1,29 +1,15 @@
-# **纹理**
+# **纹理图像**
 
 ## **前言**
 
-我们将从这一节开始使用纹理映射让图像看起来更加有趣，这也是为后面的3D模型章节打基础。
+我们将从这一节开始使用**纹理映射**让图像看起来更加有趣，这也是为后面的3D模型章节打基础。
 
-添加纹理映射需要这些步骤：
+我们之前已经使用过交换链创建的图像对象 `vk::image` 并将它作为附件绑定到了帧缓冲与渲染通道。
+本章我们将创建自己的图像对象，用于存放纹理。
 
-1. 在内存中创建图像对象
-2. 用图像文件的像素填充它
-3. 创建图像采样器
-4. 添加组合图像采样器描述符，以从纹理获取颜色
+图像对象与设备本地内存类似，需要通过缓冲或暂存图像中转数据，由于暂存缓冲的性能往往不低于暂存图像，我们使用前者。
 
-为了让着色器读取纹理，我们需要一个着色器可读图像\(有ShaderRead标志的VkImage\)。
-我们之前已经使用过交换链创建的图像对象`vk::Image`，现在我们需要创建自己的图像对象。
-
-要让着色器读取，资源位于显存，CPU无法直接写入，我们需要通过缓冲\(VkBuffer\)或暂存图像\(有Src的VkImage\)中转数据。
-
-使用暂存缓冲的性能往往不低于暂时图像，所以本教程使用第一种方式。
-
-我们先创建此缓冲区并用像素值填充，然后创建一个图像将像素复制到其中。这和之前的顶点缓冲过程基本一致。
-
-不过我们还需要注意一些事情，图像可以有不同的布局，这些布局会影响图像在内存中的组织方式。
-由于显卡的工作模式差异，按行存储图像资源未必带来最佳性能表现，我们需要为图像指定合适的布局方式。
-
-实际上我们在创建渲染通道时已经接触过了一些布局：
+图像对象具有不同的布局，回顾渲染通道章节，我们曾将图像布局从 `eUndefined` 转换到 `ePresentSrcKHR` ，以便图像高效地用于呈现。
 
 |    `vk::ImageLayout`  |      含义      |
 |-----------------------|----------------|
@@ -33,20 +19,19 @@
 | `eTransferDstOptimal` | 资源传输时作为目标优化 |
 | `eShaderReadOnlyOptimal` | 优化着色器采样 |
 
-一种常见的修改图像布局的方式是使用管线屏障(pipeline barrier)，我们会在本章节中向你展示。
+而在本章，我们需要使用暂存缓冲中转纹理数据，最后要让片段着色器访问纹理数据，所以图像布局需要是“传输目标优化”，传输完成后转成“着色器只读优化”。
 
-> 另一种常见的方式是交给渲染通道处理，就像我们的颜色附件一样。
+显然渲染通道可以转换图像布局，就像我们为交换链图像做的一样。
+另一种常见的修改图像布局的方式是使用管线屏障(pipeline barrier)，我们会在本章节中向你展示。
 
 ## **图像库**
 
-Vulkan不含内置的图像/模型加载工具，你需要使用第三方库，或者自己写一个程序加载简单的图像数据。
-
-你可以选择自己喜欢的库，我们只用它加载图片，所以它只会出现一次且代码量极少，无需担心跟不上本教程的内容。
+Vulkan 不含内置的图像/模型加载工具，你需要使用第三方库，或者自己写一个程序加载简单的图像数据。
 
 本教程将使用`stb_image`库，它属于 [stb库](https://github.com/nothings/stb) ，单头文件且足够轻量，支持 PNG、JPG、BMP 等常见格式。
 
-你可以直接去它的 [Github仓库](https://github.com/nothings/stb) 下载`stb_image.h` 头文件，然后直接放在项目中使用，记得修改CMake。
-但本教程依然使用VCPkg安装它，使用命令：
+你可以直接去它的 [Github仓库](https://github.com/nothings/stb) 下载，
+本教程使用 vcpkg 安装它，使用命令：
 
 ```shell
 vcpkg install stb
@@ -62,6 +47,8 @@ find_package(Stb REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${Stb_INCLUDE_DIR})
 ```
 
+> 你可以选择自己喜欢的库，我们只用它加载图片，所以它只会出现一次且代码量极少，无需担心跟不上本教程的内容。
+
 ## **加载图像**
 
 现在在程序中添加头文件从而导入库：
@@ -71,7 +58,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${Stb_INCLUDE_DIR})
 #include <stb_image.h>
 ```
 
-它是仅头文件库，但默认只有函数签名，我们需要使用 `STB_IMAGE_IMPLEMENTATION` 宏让他包含函数主体。
+它是仅头文件库，但默认只有函数签名，我们需要使用 `STB_IMAGE_IMPLEMENTATION` 宏让它包含函数主体。
 
 现在添加新函数 `createTextureImage` 用于创建纹理图像对象。
 我们需要创建临时命令缓冲，所以需要把它放在`createCommandPool`之后：
@@ -95,7 +82,7 @@ void createTextureImage() {
 现在在项目根目录创建一个新文件夹 `textures` 用于存放图像资源，文件夹与 `shaders` 平级。
 本教程将使用 [CC0 licensed image](https://pixabay.com/en/statue-sculpture-fig-historically-1275469/)，你可以使用自己喜欢的图像。
 
-原教程已经将此图像修改成了 512*512 像素，并改名为 `texture.jpg`，你可以直接点击下方的图像并保存：
+原教程已经将此图像修改成了 512*512 像素，并改名为 `texture.jpg`，你可以直接点击 [下方的图像](../../res/texture.jpg) 并保存：
 
 ![texture.jpg](../../res/texture.jpg)
 
@@ -154,9 +141,11 @@ stbi_image_free(pixels);
 
 ## **纹理图像**
 
-我们还要让着色器能够访问缓冲中的像素值，最好的方式是使用 Vulkan 的图像对象。
+要让着色器能够访问缓冲中的像素值，最好的方式是使用 Vulkan 的图像对象。
 图像对象允许我们简单且快速地使用2D坐标检索对应位置的颜色。
 图像对象中的像素们被称为纹素(texels)，我们后面会使用此名称。
+
+### 1. 创建图像对象
 
 现在添加两个新的类成员，放在`m_swapChain`的上方：
 
@@ -199,14 +188,14 @@ imageInfo.format = vk::Format::eR8G8B8A8Srgb;
 imageInfo.tiling = vk::ImageTiling::eOptimal;
 ```
 
-`tilling` 字段至少可以有两个选择：
+`tiling` 字段至少可以有两个选择：
 
 | `vk::ImageTiling` | 意义 |
 |---------|------|
 | `eLinear` | 以行优先的顺序排列，就像之前的`pixels`数组一样 |
 | `eOptimal` | 以实现定义的顺序排列，以获取最佳访问性能 |
 
-tilling模式在图像创建后之后不能再更改。
+tiling模式在图像创建后之后不能再更改。
 如果你希望能够直接访问图像内存中的纹数，应该使用 `eLinear` 。
 我们将使用暂存缓冲区而不是暂存图像，所以没这必要，可以使用 `eOptimal` 以便着色器高效访问。
 
@@ -253,6 +242,8 @@ m_textureImage = m_device.createImage(imageInfo);
 需要说明的是小部分显卡不支持`vk::Format::eR8G8B8A8Srgb`，使用不同格式需要烦人的转换，所以我们暂时不处理此问题。
 我们会在深度缓冲章节回到这里。
 
+### 2. 内存分配
+
 现在需要为图像分配内存资源：
 
 ```cpp
@@ -268,6 +259,8 @@ m_textureImage.bindMemory(m_textureImageMemory, 0);
 
 上面的内存分配方式和缓冲区的分配几乎完全一致。
 
+### 3. 优化图像创建
+
 现在函数已经变得很大了，我们应该像前面缓冲区的做法一样，独立出一个辅助函数 `createImage` 以便后续重用代码：
 
 ```cpp
@@ -275,7 +268,7 @@ void createImage(
     uint32_t width,
     uint32_t height,
     vk::Format format,
-    vk::ImageTiling tilling,
+    vk::ImageTiling tiling,
     vk::ImageUsageFlags usage,
     vk::MemoryPropertyFlags properties,
     vk::raii::Image& image,
@@ -289,7 +282,7 @@ void createImage(
     imageInfo.mipLevels = 1;
     imageInfo.arrayLayers = 1;
     imageInfo.format = format;
-    imageInfo.tiling = tilling;
+    imageInfo.tiling = tiling;
     imageInfo.initialLayout = vk::ImageLayout::eUndefined;
     imageInfo.usage = usage;
     imageInfo.samples = vk::SampleCountFlagBits::e1;
@@ -353,7 +346,7 @@ void createTextureImage() {
 }
 ```
 
-## **布局转换**
+### 4. 辅助命令录制
 
 我们现在要编写的函数再次涉及命令缓冲的记录和执行，现在是时候将此逻辑分离成两个独立函数了。
 
@@ -405,6 +398,8 @@ void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::De
 
 我们需要使用 `commandBuffer.copyBufferToImage` 将缓冲区中的数据拷贝到图像，但这需要图像有正确的布局方式。
 
+### 5. 转换布局
+
 现在创建一个新函数用于处理布局转换：
 
 ```cpp
@@ -422,7 +417,7 @@ void transitionImageLayout(
 
 一种最常用的修改图像布局的方式是使用图像内存屏障(image memory barrier)。
 管线屏障常用于同步资源访问，比如先写后读。
-但它也可以在`vk::SharingMode::eExclusive`时用来变化图像布局和转移队列族所有权。
+但它也可以在 `vk::SharingMode::eExclusive` 时用来变化图像布局和转移队列族所有权。
 有一个等效的缓冲区内存屏障可以为缓冲区执行类似此操作。
 
 现在指定图像内存屏障信息：
@@ -487,7 +482,7 @@ commandBuffer.pipelineBarrier(
 
 最后三个参数是三种管线屏障的代理数组，即内存屏障、缓冲内存屏障和图像内存屏障，我们只有图像内存屏障。
 
-## **复制缓冲区内容到图像**
+### 6. 复制缓冲区内容
 
 现在创建一个`copyBufferToImage`辅助函数，用于复制数据：
 
@@ -540,7 +535,7 @@ commandBuffer.copyBufferToImage(
 
 第四个参数接受代理数组，我们现在只需要复制一块区域，但你可以通过多个 `vk::BufferImageCopy` 信息在一次操作中实现多种不同的复制。
 
-## **准备纹理图像**
+### 7. 准备纹理图像
 
 现在我们回到`createTextureImage`函数，先调用刚才编写的布局转换函数，再调用数据复制函数：
 
@@ -574,7 +569,7 @@ transitionImageLayout(
 );
 ```
 
-## **修改屏障掩码**
+### 8. 修改屏障掩码
 
 如果你现在运行程序，会发现验证层提示StageMask的设置不合法。
 我们现在需要设置 `transitionImageLayout` 中没有填写的`StageMask`和`AccessMask`。
@@ -631,7 +626,7 @@ commandBuffer.pipelineBarrier(
 
 ## **延伸**
 
-注意的一件事是，命令缓冲区提交会导致开始时隐式的 `vk::AccessFlagBits::eHostWrite` 同步，用于同步 CPU 和 GPU 之间的内存访问，保证了GPU图像管线转写发生在CPU命令提交之后。
+注意的一件事是，命令缓冲区提交会导致开始时隐式的 `vk::AccessFlagBits::eHostWrite` 同步，用于同步 CPU 和 GPU 之间的内存访问，保证了 GPU 图像管线转写发生在 CPU 命令提交之后。
 
 事实上还存在一个特殊的图像类型 `vk::ImageLayout::eGeneral` 支持所有操作，但不保证性能最优。
 有的时候一张图像既需要写又需要读，则不得不用它。

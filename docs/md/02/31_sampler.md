@@ -102,15 +102,15 @@ void createImageViews() {
 如果你通过周围的四个纹素进行线性插值，就可以得到右边更平滑的图片。
 
 当然，有部分应用更希望得到左边的艺术效果（比如 Minecraft），但大多数图像应用都希望得到右侧更平衡的效果。
-本教程的过滤器将使用线性差值，但会提及如何只选用最近纹素保留原图效果（向Minecraft一样）。
+本教程的过滤器将使用线性差值，但会提及如何只选用最近纹素保留原图效果（像 Minecraft 一样）。
 
 欠采样是相反的问题，将纹理图像映射到一个像素更少的几何体。当以锐角采样高频图案（如棋盘纹理）时，这将导致伪影
 
 ![anisotropic_filter](../../images/0231/anisotropic_filtering.png)
 
-如左图所示，远程纹理变得混乱。解决此问题的方法是 各项异性过滤 ，它也可以有采样器设置。
+如左图所示，远程纹理变得混乱。解决此问题的方法是 各向异性过滤 ，它也可以有采样器设置。
 
-> 超采样与欠采样，mipmap与各项异性过滤，都在闫令琪老师的 [GAMES101](https://www.bilibili.com/video/av90798049) 课程中有过介绍。
+> 超采样与欠采样，mipmap与各向异性过滤，都在闫令琪老师的 [GAMES101](https://www.bilibili.com/video/av90798049) 课程中有过介绍。
 
 除了过滤，采样器还可以指定 寻址模式(AddressMode) 处理一些变换，比如索引超出图像范围时显示什么内容：
 
@@ -136,7 +136,7 @@ void createTextureSampler() {
 }
 ```
 
-然后添加 `CreateInfo` 结构体，指定我们需要的过滤器和变化类型：
+然后添加 `CreateInfo` 结构体，指定我们需要的过滤器和变换类型：
 
 ```cpp
 vk::SamplerCreateInfo samplerInfo;
@@ -145,7 +145,7 @@ samplerInfo.minFilter = vk::Filter::eLinear;
 ```
 
 `magFilter` 和 `minFilter` 指定了如何插值放大或缩小的像素，放大对应过采样，缩小对应欠采样。
-我们指定`eLinear`表示线性差值，你可以使用`eNearest`像Minecraft一样保留最近的单点色彩。
+我们指定 `eLinear` 表示线性差值，你可以使用 `eNearest` 像 Minecraft 一样保留最近的单点色彩。
 
 可以使用 `addressMode` 字段按轴指定寻址模式。 
 
@@ -167,9 +167,9 @@ samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
 | `eClampToBorder` | 超出时返回固定色彩 |
 
 现在不需要关心使用哪种寻址模式，因为本教程不会超出图像范围，这些模式的效果都一样。
-不过需要说明的是，`eRepeat`可能是最常用的模式，因为他在绘制地面/墙体等纹理时很好用。
+不过需要说明的是， `eRepeat` 可能是最常用的模式，因为它在绘制地面/墙体等纹理时很好用。
 
-下面设置是否启用各项异性过滤(anisotropy filter)。
+下面设置是否启用各向异性性过滤(anisotropy filter)。
 除非你对性能要求极高而图像效果要求较低，否则没理由不启用它。
 
 ```cpp
@@ -184,13 +184,13 @@ samplerInfo.maxAnisotropy = ???;
 auto properties = m_physicalDevice.getProperties();
 ```
 
-如果你仔细看过 `vk::PhysicalDeviceProperties` 的文档，你会知道它有个 `limits` 成员，内部有个 `maxSamplerAnisotropy` 成员限制了各项异性过滤的最大值，我们可以直接用它:
+如果你仔细看过 `vk::PhysicalDeviceProperties` 的文档，你会知道它有个 `limits` 成员，内部有个 `maxSamplerAnisotropy` 成员限制了各向异性过滤的最大值，我们可以直接用它:
 
 ```cpp
 samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
 ```
 
-使用 `borderColor` 指定 clamp to border 寻址模式时超出范围返回的色彩。
+使用 `borderColor` 指定 `eClampToBorder` 寻址模式时超出范围返回的色彩。
 虽然我们没用此模式，依然需要填写，且可选内容是有限的：
 
 ```cpp
@@ -202,7 +202,7 @@ samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
 - `true`: `[0, texWidth)` 和 `[0, texHeight)` 范围内的坐标
 - `false`: 同一使用 `[0,1)` 的归一化坐标。
 
-实际应用程序几乎总是使用归一化坐标，这样就可以使用具有完全相同坐标的不同分辨率的纹理。
+实际应用程序几乎总是使用归一化坐标，这样就可以使用具有完全相同坐标但不同分辨率的纹理。
 
 ```cpp
 samplerInfo.unnormalizedCoordinates = false;
@@ -219,13 +219,20 @@ samplerInfo.compareOp = vk::CompareOp::eAlways;
 
 最后设置 mipmapping，这在GAMES101中有过介绍，我们将在后面的章节讨论它。
 
+```cpp
+samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+samplerInfo.mipLodBias = 0.0f;
+samplerInfo.minLod = 0.0f;
+samplerInfo.maxLod = 0.0f;
+```
+
 现在可以添加新的成员变量`m_textureSampler`并创建它了：
 
 ```cpp
 vk::raii::ImageView m_textureImageView{ nullptr };
 vk::raii::Sampler m_textureSampler{ nullptr };
 
-...
+......
 
 m_textureSampler = m_device.createSampler(samplerInfo);
 ```

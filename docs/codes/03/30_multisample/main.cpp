@@ -1237,7 +1237,7 @@ private:
         uint32_t mipLevels,
         vk::SampleCountFlagBits numSamples,
         vk::Format format,
-        vk::ImageTiling tilling,
+        vk::ImageTiling tiling,
         vk::ImageUsageFlags usage,
         vk::MemoryPropertyFlags properties,
         vk::raii::Image& image,
@@ -1251,7 +1251,7 @@ private:
         imageInfo.mipLevels = mipLevels;
         imageInfo.arrayLayers = 1;
         imageInfo.format = format;
-        imageInfo.tiling = tilling;
+        imageInfo.tiling = tiling;
         imageInfo.initialLayout = vk::ImageLayout::eUndefined;
         imageInfo.usage = usage;
         imageInfo.samples = numSamples;
