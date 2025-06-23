@@ -1,0 +1,446 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 8b5871d..ee4e2bc 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -25,6 +25,8 @@
+ #include <memory>
+ #include <optional>
+ #include <stdexcept>
++#include <random>
++#include <chrono>
+ 
+ class HelloComputeShader {
+ public:
+@@ -41,6 +43,8 @@ private:
+     static constexpr uint32_t WIDTH = 800;
+     static constexpr uint32_t HEIGHT = 600;
+ 
++    static constexpr uint32_t PARTICLE_COUNT = 4096;
++
+     inline static const std::vector<const char*> validationLayers {
+         "VK_LAYER_KHRONOS_validation"
+     };
+@@ -68,22 +72,34 @@ private:
+     vk::raii::Device m_device{ nullptr };
+     vk::raii::Queue m_graphicsQueue{ nullptr };
+     vk::raii::Queue m_presentQueue{ nullptr };
+-    vk::raii::DeviceMemory m_particleBufferMemory{ nullptr };
+-    vk::raii::Buffer m_particleBuffer{ nullptr };
++    vk::raii::Queue m_computeQueue{ nullptr };
++    std::vector<vk::raii::DeviceMemory> m_particleBufferMemory;
++    std::vector<vk::raii::Buffer> m_particleBuffers;
++    std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
++    std::vector<vk::raii::Buffer> m_uniformBuffers;
++    std::vector<void*> m_uniformBuffersMapped;
+     vk::raii::SwapchainKHR m_swapChain{ nullptr };
+     std::vector<vk::Image> m_swapChainImages;
+     vk::Format m_swapChainImageFormat;
+     vk::Extent2D m_swapChainExtent;
+     std::vector<vk::raii::ImageView> m_swapChainImageViews;
+     vk::raii::RenderPass m_renderPass{ nullptr };
++    vk::raii::DescriptorSetLayout m_descriptorSetLayout{ nullptr };
++    vk::raii::DescriptorPool m_descriptorPool{ nullptr };
++    std::vector<vk::raii::DescriptorSet> m_descriptorSets;
+     vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
+     vk::raii::Pipeline m_graphicsPipeline{ nullptr };
++    vk::raii::PipelineLayout m_computePipelineLayout{ nullptr };
++    vk::raii::Pipeline m_computePipeline{ nullptr };
+     std::vector<vk::raii::Framebuffer> m_swapChainFramebuffers;
+     vk::raii::CommandPool m_commandPool{ nullptr };
+     std::vector<vk::raii::CommandBuffer> m_commandBuffers;
++    std::vector<vk::raii::CommandBuffer> m_computeCommandBuffers;
+     std::vector<vk::raii::Semaphore> m_imageAvailableSemaphores;
+     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
+     std::vector<vk::raii::Fence> m_inFlightFences;
++    std::vector<vk::raii::Semaphore> m_computeFinishedSemaphores;
++    std::vector<vk::raii::Fence> m_computeInFlightFences;
+     uint32_t m_currentFrame = 0;
+     bool m_framebufferResized = false;
+     /////////////////////////////////////////////////////////////////
+@@ -109,11 +125,17 @@ private:
+         createSwapChain();
+         createImageViews();
+         createRenderPass();
++        createDescriptorSetLayout();
+         createGraphicsPipeline();
++        createComputePipeline();
+         createFramebuffers();
+         createCommandPool();
+-        createParticleBuffer();
++        createParticleBuffers();
++        createUniformBuffers();
++        createDescriptorPool();
++        createDescriptorSets();
+         createCommandBuffers();
++        createComputeCommandBuffers();
+         createSyncObjects();
+     }
+ 
+@@ -127,6 +149,9 @@ private:
+     }
+ 
+     void cleanup() {
++        for (const auto& memory : m_uniformBuffersMemory) {
++           memory.unmapMemory();
++        }
+         glfwDestroyWindow( m_window );
+         glfwTerminate();
+     }
+@@ -285,7 +310,10 @@ private:
+         // std::vector<vk::QueueFamilyProperties>
+         auto queueFamilies = physicalDevice.getQueueFamilyProperties();
+         for (int i = 0; const auto& queueFamily : queueFamilies) {
+-            if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
++            if (
++                (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) &&
++                (queueFamily.queueFlags & vk::QueueFlagBits::eCompute)
++            ) {
+                 indices.graphicsFamily = i;
+             }
+             if(physicalDevice.getSurfaceSupportKHR(i, m_surface)){
+@@ -334,6 +362,7 @@ private:
+         m_device = m_physicalDevice.createDevice( createInfo );
+         m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
+         m_presentQueue = m_device.getQueue( indices.presentFamily.value(), 0 );
++        m_computeQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
+     }
+     /////////////////////////////////////////////////////////////////
+ 
+@@ -699,11 +728,11 @@ private:
+         );
+         commandBuffer.setScissor(0, scissor);
+ 
+-        std::array<vk::Buffer,1> vertexBuffers { m_particleBuffer };
++        std::array<vk::Buffer,1> vertexBuffers { m_particleBuffers[m_currentFrame] };
+         std::array<vk::DeviceSize,1> offsets { 0 };
+         commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
+ 
+-        commandBuffer.draw(static_cast<uint32_t>(particles.size()), 1, 0, 0);
++        commandBuffer.draw(PARTICLE_COUNT, 1, 0, 0);
+ 
+         commandBuffer.endRenderPass();
+         commandBuffer.end();
+@@ -722,14 +751,42 @@ private:
+             m_imageAvailableSemaphores.emplace_back( m_device, semaphoreInfo );
+             m_renderFinishedSemaphores.emplace_back( m_device,  semaphoreInfo );
+             m_inFlightFences.emplace_back( m_device , fenceInfo );
++            m_computeFinishedSemaphores.emplace_back( m_device,  semaphoreInfo );
++            m_computeInFlightFences.emplace_back( m_device, fenceInfo );
+         }
+     }
+     void drawFrame() {
++        // 等待上一次的计算任务完成
++        if( auto res = m_device.waitForFences( *m_computeInFlightFences[m_currentFrame], true, UINT64_MAX );
++            res != vk::Result::eSuccess ){
++            throw std::runtime_error{ "compute in drawFrame was failed" };
++        }
++        m_device.resetFences( *m_computeInFlightFences[m_currentFrame] );
++        
++        // 更新 uniform buffer， 内涵时间间隔
++        updateUniformBuffer(m_currentFrame);
++
++        // 录制计算命令缓冲区
++        m_computeCommandBuffers[m_currentFrame].reset();
++        recordComputeCommandBuffer(m_computeCommandBuffers[m_currentFrame]);
++
++
++        // 设置提交信息，并在任务完成时发送信号量
++        vk::SubmitInfo computeSubmitInfo;
++        computeSubmitInfo.setCommandBuffers( *m_computeCommandBuffers[m_currentFrame] );
++        computeSubmitInfo.setSignalSemaphores( *m_computeFinishedSemaphores[m_currentFrame] );
++
++        // 提交任务并在完成时发信围栏
++        m_computeQueue.submit(computeSubmitInfo, m_computeInFlightFences[m_currentFrame]);
++
++
++        // 等待上一次的渲染任务完成
+         if( auto res = m_device.waitForFences( *m_inFlightFences[m_currentFrame], true, UINT64_MAX );
+             res != vk::Result::eSuccess ){
+             throw std::runtime_error{ "waitForFences in drawFrame was failed" };
+         }
+ 
++        // 获取下一章图像
+         uint32_t imageIndex;
+         try{
+             // std::pair<vk::Result, uint32_t>
+@@ -740,23 +797,30 @@ private:
+                 return;
+         } // Do not catch other exceptions
+ 
+-        // Only reset the fence if we are submitting work
++        // 重置
+         m_device.resetFences( *m_inFlightFences[m_currentFrame] );
+ 
++
+         m_commandBuffers[m_currentFrame].reset();
+         recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
+ 
++
+         vk::SubmitInfo submitInfo;
+ 
+-        submitInfo.setWaitSemaphores( *m_imageAvailableSemaphores[m_currentFrame] );
+-        std::array<vk::PipelineStageFlags,1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
++        // 现在渲染操作要同时等待 图像就绪 和 计算任务完成
++        std::array<vk::Semaphore, 2> waitSemaphores = { *m_computeFinishedSemaphores[m_currentFrame], *m_imageAvailableSemaphores[m_currentFrame] };
++        submitInfo.setWaitSemaphores( waitSemaphores );
++        // 顶点着色器阶段等待计算任务完成 ， 颜色附件输出阶段 会等待 交换链图像可用
++        std::array<vk::PipelineStageFlags,2> waitStages = { vk::PipelineStageFlagBits::eVertexInput, vk::PipelineStageFlagBits::eColorAttachmentOutput };
+         submitInfo.setWaitDstStageMask( waitStages );
+ 
+         submitInfo.setCommandBuffers( *m_commandBuffers[m_currentFrame] );
+         submitInfo.setSignalSemaphores( *m_renderFinishedSemaphores[m_currentFrame] );
+ 
++        // 提交渲染命令
+         m_graphicsQueue.submit(submitInfo, m_inFlightFences[m_currentFrame]);
+ 
++        // 提交呈现命令，呈现命令要等待渲染命令完成
+         vk::PresentInfoKHR presentInfo;
+         presentInfo.setWaitSemaphores( *m_renderFinishedSemaphores[m_currentFrame] );
+         presentInfo.setSwapchains( *m_swapChain );
+@@ -853,11 +917,6 @@ private:
+      * 参考“顶点缓冲”章节，依然是三个点
+      * 但暂时填充了速度参数
+      */
+-    std::vector<Particle> particles = {
+-        {{0.0f, -0.5f}, {1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}},
+-        {{0.5f, 0.5f}, {1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
+-        {{-0.5f, 0.5f}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}}
+-    };
+     /////////////////////////////////////////////////////////////////
+ 
+     /////////////////////////////////////////////////////////////////
+@@ -889,8 +948,21 @@ private:
+         buffer.bindMemory(bufferMemory, 0);
+     }
+     // 函数改名，将顶点缓冲改名为粒子缓冲，其余内容未调整
+-    void createParticleBuffer() {
+-        vk::DeviceSize bufferSize = sizeof(particles[0]) * particles.size();
++    void createParticleBuffers() {
++        std::default_random_engine rndEngine(static_cast<unsigned>(time(nullptr)));
++        std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
++        std::vector<Particle> particles(PARTICLE_COUNT);
++
++        for (auto& particle : particles) {
++            float r = 0.25f * std::sqrt(rndDist(rndEngine));
++            float theta = rndDist(rndEngine) * 2.0f * 3.141592653f;
++            float x = r * std::cos(theta) * HEIGHT / WIDTH;
++            float y = r * std::sin(theta);
++            particle.pos = glm::vec2(x, y);
++            particle.velocity = glm::normalize(glm::vec2(x,y)) * 0.00025f;
++            particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
++        }
++        vk::DeviceSize bufferSize = sizeof(Particle) * PARTICLE_COUNT;
+ 
+         vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
+         vk::raii::Buffer stagingBuffer{ nullptr };
+@@ -906,15 +978,20 @@ private:
+         memcpy(data, particles.data(), static_cast<size_t>(bufferSize));
+         stagingBufferMemory.unmapMemory();
+ 
+-        createBuffer(bufferSize, 
+-            vk::BufferUsageFlagBits::eTransferDst |
+-            vk::BufferUsageFlagBits::eVertexBuffer, 
+-            vk::MemoryPropertyFlagBits::eDeviceLocal,
+-            m_particleBuffer, 
+-            m_particleBufferMemory
+-        );
++        for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
++            m_particleBuffers.emplace_back(nullptr);
++            m_particleBufferMemory.emplace_back(nullptr);
++            createBuffer(bufferSize, 
++                vk::BufferUsageFlagBits::eStorageBuffer |
++                vk::BufferUsageFlagBits::eTransferDst |
++                vk::BufferUsageFlagBits::eVertexBuffer, 
++                vk::MemoryPropertyFlagBits::eDeviceLocal,
++                m_particleBuffers[i], 
++                m_particleBufferMemory[i]
++            );
++            copyBuffer(stagingBuffer, m_particleBuffers[i], bufferSize);
++        }
+ 
+-        copyBuffer(stagingBuffer, m_particleBuffer, bufferSize);
+     }
+     // 未调整
+     void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::DeviceSize size) {
+@@ -961,6 +1038,181 @@ private:
+         return 0; // optional
+     }
+     /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// 存储时差信息的 UBO
++    struct UniformBufferObject {
++        float deltaTime = 1.0f;
++    };
++    void createUniformBuffers() {
++        vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
++
++        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
++            m_uniformBuffers.emplace_back(nullptr);
++            m_uniformBuffersMemory.emplace_back(nullptr);
++            m_uniformBuffersMapped.emplace_back(nullptr);
++            createBuffer(
++                bufferSize,
++                vk::BufferUsageFlagBits::eUniformBuffer,
++                vk::MemoryPropertyFlagBits::eHostVisible | 
++                vk::MemoryPropertyFlagBits::eHostCoherent,
++                m_uniformBuffers[i],
++                m_uniformBuffersMemory[i]
++            );
++            m_uniformBuffersMapped[i] = m_uniformBuffersMemory[i].mapMemory(0, bufferSize);
++        }
++    }
++    void updateUniformBuffer(uint32_t currentImage) {
++        static auto lastTime = std::chrono::steady_clock::now();
++        auto currentTime = std::chrono::steady_clock::now();
++        float deltaTime = std::chrono::duration<float, std::chrono::milliseconds::period>(currentTime - lastTime).count();
++        lastTime = currentTime;
++
++        UniformBufferObject ubo{ deltaTime };
++        memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
++    }
++    /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// 描述符
++    void createDescriptorSetLayout() {
++        std::array<vk::DescriptorSetLayoutBinding, 3> layoutBindings;
++        // 绑定0：Uniform Buffer 传输时间差
++        layoutBindings[0].binding = 0;
++        layoutBindings[0].descriptorCount = 1;
++        layoutBindings[0].descriptorType = vk::DescriptorType::eUniformBuffer;
++        layoutBindings[0].stageFlags = vk::ShaderStageFlagBits::eCompute;
++        // 绑定1：Storage Buffer 粒子数据 ，1号位用于访问上一组粒子数据
++        layoutBindings[1].binding = 1;
++        layoutBindings[1].descriptorCount = 1;
++        layoutBindings[1].descriptorType = vk::DescriptorType::eStorageBuffer;
++        layoutBindings[1].stageFlags = vk::ShaderStageFlagBits::eCompute;
++        // 绑定2：Storage Buffer 粒子数据 ，2号位用于访问当前组粒子数据
++        layoutBindings[2] = layoutBindings[1];
++        layoutBindings[2].binding = 2;
++
++        vk::DescriptorSetLayoutCreateInfo layoutInfo;
++        layoutInfo.setBindings( layoutBindings );
++
++        m_descriptorSetLayout = m_device.createDescriptorSetLayout( layoutInfo );
++    }
++    void createDescriptorPool() {
++        std::array<vk::DescriptorPoolSize, 2> poolSizes;
++        poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
++        poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
++        poolSizes[1].type = vk::DescriptorType::eStorageBuffer;
++        poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 2;
++
++        vk::DescriptorPoolCreateInfo poolInfo;
++        poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
++        poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
++        poolInfo.setPoolSizes( poolSizes );
++
++        m_descriptorPool = m_device.createDescriptorPool( poolInfo );
++    }
++    void createDescriptorSets() {
++        std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, *m_descriptorSetLayout);
++        vk::DescriptorSetAllocateInfo allocInfo;
++        allocInfo.setDescriptorPool( m_descriptorPool );
++        allocInfo.setSetLayouts( layouts );
++
++        m_descriptorSets = m_device.allocateDescriptorSets( allocInfo );
++
++        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
++            vk::DescriptorBufferInfo uniformBufferInfo;
++            uniformBufferInfo.buffer = *m_uniformBuffers[i];
++            uniformBufferInfo.offset = 0;
++            uniformBufferInfo.range = sizeof(UniformBufferObject);
++
++            vk::DescriptorBufferInfo particleBufferInfo1;
++            particleBufferInfo1.buffer = *m_particleBuffers[(i + MAX_FRAMES_IN_FLIGHT - 1) % MAX_FRAMES_IN_FLIGHT];
++            particleBufferInfo1.offset = 0;
++            particleBufferInfo1.range = sizeof(Particle) * PARTICLE_COUNT;
++
++            vk::DescriptorBufferInfo particleBufferInfo2;
++            particleBufferInfo2.buffer = *m_particleBuffers[i];
++            particleBufferInfo2.offset = 0;
++            particleBufferInfo2.range = sizeof(Particle) * PARTICLE_COUNT;
++
++            std::array<vk::WriteDescriptorSet, 3> descriptorWrites;
++            descriptorWrites[0].dstSet = m_descriptorSets[i];
++            descriptorWrites[0].dstBinding = 0;
++            descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
++            descriptorWrites[0].setBufferInfo( uniformBufferInfo );
++
++            descriptorWrites[1].dstSet = m_descriptorSets[i];
++            descriptorWrites[1].dstBinding = 1;
++            descriptorWrites[1].descriptorType = vk::DescriptorType::eStorageBuffer;
++            descriptorWrites[1].setBufferInfo( particleBufferInfo1 );
++
++            descriptorWrites[2].dstSet = m_descriptorSets[i];
++            descriptorWrites[2].dstBinding = 2;
++            descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
++            descriptorWrites[2].setBufferInfo( particleBufferInfo2 );
++
++            m_device.updateDescriptorSets(descriptorWrites, nullptr);
++        }
++    }
++    /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// 计算管线
++    void createComputePipeline() {
++        // 创建管线布局
++        vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
++        pipelineLayoutInfo.setSetLayouts( *m_descriptorSetLayout ); // 添加描述符
++        m_computePipelineLayout = m_device.createPipelineLayout(pipelineLayoutInfo);
++
++        // 读取并创建着色器模块
++        auto computeShaderCode = readFile("shaders/comp.spv");
++        vk::raii::ShaderModule computeShaderModule = createShaderModule(computeShaderCode);
++
++        // 设置计算着色器阶段信息
++        vk::PipelineShaderStageCreateInfo computeShaderStageInfo;
++        computeShaderStageInfo.stage = vk::ShaderStageFlagBits::eCompute;
++        computeShaderStageInfo.module = computeShaderModule;
++        computeShaderStageInfo.pName = "main";
++
++        // 创建计算管线
++        vk::ComputePipelineCreateInfo computePipelineInfo;
++        computePipelineInfo.stage = computeShaderStageInfo;
++        computePipelineInfo.layout = m_computePipelineLayout;
++        m_computePipeline = m_device.createComputePipeline(nullptr, computePipelineInfo);
++    }
++    /////////////////////////////////////////////////////////////////
++
++    /////////////////////////////////////////////////////////////////
++    /// 命令缓冲与命令录制
++    void createComputeCommandBuffers() {
++        vk::CommandBufferAllocateInfo allocInfo;
++        allocInfo.commandPool = m_commandPool;
++        allocInfo.level = vk::CommandBufferLevel::ePrimary;
++        allocInfo.commandBufferCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
++        
++        m_computeCommandBuffers = m_device.allocateCommandBuffers(allocInfo);
++    }
++    void recordComputeCommandBuffer(const vk::raii::CommandBuffer& commandBuffer) {
++        vk::CommandBufferBeginInfo beginInfo;
++        commandBuffer.begin(beginInfo);
++
++        // 绑定计算管线
++        commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
++
++        // 绑定描述符集
++        commandBuffer.bindDescriptorSets(
++            vk::PipelineBindPoint::eCompute,
++            m_computePipelineLayout,
++            0,
++            *m_descriptorSets[m_currentFrame],
++            nullptr
++        );
++
++        // 调用计算着色器
++        commandBuffer.dispatch((PARTICLE_COUNT + 255) / 256, 1, 1);
++
++        commandBuffer.end();
++    }
++    /////////////////////////////////////////////////////////////////
+ };
+ 
+ int main() {

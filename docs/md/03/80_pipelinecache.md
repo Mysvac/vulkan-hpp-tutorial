@@ -118,6 +118,13 @@ void createPipelineCache() {
 
 ---
 
+我们的 `main.cpp` 已经变得非常庞大，不适合再添加内容了。
+
+对于后面的进阶章节，我们会在前言部分给出代码框架。
+请读者先阅读基础代码，然后根据章节内容为框架添加代码。
+
+---
+
 **[C++代码](../../codes/03/80_pipelinecache/main.cpp)**
 
 **[C++代码差异](../../codes/03/80_pipelinecache/main.diff)**

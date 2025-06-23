@@ -3,6 +3,11 @@
 .idea/
 
 build/
-install/
-shaders/*.spv
-site/
+/install/
+/shaders/*.spv
+/site/
+
+/base_code/
+/base_code.zip
+/CMakeUserPresets.json
+/tmp.cpp
