@@ -19,15 +19,12 @@
 `glslc` 的优点是它使用与 GCC 和 Clang 等知名编译器相同的参数格式，并包含一些额外的功能，例如 includes 。
 它们都已包含在 Vulkan SDK 中，因此您无需下载任何额外的程序。
 
-> Vulkan SDK 还提供了直接在 C++ 程序中写 GLSL 代码的工具库，我们会在进阶章节介绍。
-
 ### 2. 编码语言介绍
 
 GLSL 是一种具有 C 风格语法的着色语言。
 
 此语言也提供了提供了 int/float/bool 等基础类型，还有我们熟悉的 if/for/while 以及结构体和（支持重载的）函数。
-
-值得注意的是，它还提供了内置了 vec 向量和 mat 矩阵以及各种数学计算函数。
+重要的是，它还提供了 vec 向量和 mat 矩阵类型以及各种数学计算函数。
 
 它编写的程序包含一个主入口函数\(可以不是`main`\)，该函数会针对每个对象进行调用。
 比如顶点着色器会对每个顶点调用一遍主函数，片段着色器则是对每个片段（像素）调用一遍主函数。
@@ -77,7 +74,7 @@ GLSL 是一种具有 C 风格语法的着色语言。
 然后，这些值将由光栅化器在片段上进行插值，以产生平滑的渐变。
 
 **裁剪坐标** 是来自顶点着色器的四维向量，随后通过将整个向量除以其最后一个分量进行归一化。
-这些归一化设备坐标是 [齐次坐标](https://en.wikipedia.org/wiki/Homogeneous_coordinates)，
+这些归一化设备坐标是 **[齐次坐标](https://en.wikipedia.org/wiki/Homogeneous_coordinates)** ，
 它们将帧缓冲映射到 [-1, 1] \* [-1, 1] 坐标系，如下所示
 
 ![device_coordinates](../../images/0121/normalized_device_coordinates.png)
@@ -108,11 +105,10 @@ void main() {
 }
 ```
 
-`main` 函数为每个顶点调用。
+`main` 函数会为每个顶点调用。
 
 内置的 `gl_VertexIndex` 变量包含当前顶点的索引。
-这通常是顶点缓冲的索引，但在我们的例子中，它将是硬编码顶点数据数组的索引。
-
+这通常是顶点缓冲的索引，但在我们的例子中，它将是硬编码顶点数组的索引。
 每个顶点的位置从着色器中的常量数组访问，并与虚拟的 `z` 和 `w` 分量组合以生成裁剪坐标中的位置。
 
 内置变量 `gl_Position` 用作输出。
@@ -120,8 +116,9 @@ void main() {
 
 ### 2. 片段着色器
 
-由顶点着色器中的位置形成的三角形在屏幕上填充一个区域，其中包含片段。
-片段着色器在这些片段上调用，以生成帧缓冲（或多个帧缓冲）的颜色和深度。
+顶点着色器计算好了每个顶点的位置，它们会组成一个个三角形。
+光栅化阶段会计算出这些三角形投影到图像上的区域，区域包含片段\(像素\)，片段着色器将对每个片段调用以确定色彩信息。
+
 一个简单的片段着色器，为整个三角形输出红色，如下所示：
 
 ```glsl
@@ -139,12 +136,11 @@ void main() {
 GLSL 中的颜色是 4 分量向量，R、G、B 和 alpha 通道，都在 `[0, 1]` 范围内。
 
 与顶点着色器中的 `gl_Position` 不同，没有内置变量来输出当前片段的颜色。
-您必须为每个帧缓冲指定自己的输出变量，其中 `layout(location = 0)` 修饰符指定帧缓冲的索引。
-红色被写入此 `outColor` 变量，该变量链接到索引 `0` 处的第一个（也是唯一的）帧缓冲。
+您必须为每个帧缓冲指定自己的输出变量，其中 `layout(location = 0)` 修饰符指定帧缓冲的索引，它链接到了索引为 `0` 的帧缓冲（将会在后续的“帧缓冲”章节创建）。
 
-> 注意，in和out的变量名是不重要的，重要的是变量类型和location的值。  
-> 只要保证类型和location都一致，就能一个地方out，另一个地方in。  
-> 一个location不能同时放置多个数据。
+> 注意，变量名是不重要的，重要的是变量类型和 location 的值。  
+> 只要保证类型和 location 都一致，就能一个地方 out ，另一个地方 in 。  
+> 一个 location 只能放置一种数据。
 
 ### 3. 逐顶点颜色
 
@@ -186,7 +182,8 @@ void main() {
 }
 ```
 
-`main` 函数已修改为输出颜色以及 `alpha` 值。图形管线将使用三个顶点的数据，自动插值生成内部片段的`fragColor` ，从而产生平滑的渐变。
+`main` 函数已修改为输出颜色以及 `alpha` 值。
+图形管线将使用三个顶点的数据，自动插值生成内部片段的 `fragColor` ，从而产生平滑的渐变。
 
 ### 4. 编译着色器
 
@@ -244,17 +241,18 @@ xxx/VulkanSDK/x.x.x.x/Bin/glslc.exe shader.frag -o frag.spv
 
 如果您的着色器包含语法错误，那么编译器会告诉您行号和问题。
 可以尝试省略分号并再次运行编译脚本。
-
 还可以尝试在没有任何参数的情况下运行编译器，以查看它支持哪些类型的标志。
 
 它还可以将字节码输出为人类可读的格式，以便您可以准确地了解您的着色器正在做什么以及在此阶段已应用的任何优化。
 
 在命令行上编译着色器是最直接的选择之一，也是我们将在本教程中使用的选择，但也可以直接从您自己的代码中编译着色器。
-Vulkan SDK 包含 libshaderc，这是一个从您的程序中将 GLSL 代码编译为 SPIR-V 的库。
+Vulkan SDK 包含 libshaderc，这是一个从您的程序中将 GLSL 代码编译为 SPIR-V 的库，我们会在进阶章节介绍。
 
 ### 5. CMake编译着色器
 
 直接使用命令行显然不够优秀，且写明路径导致无法跨平台，所以我们借助CMake执行命令。
+
+> 注意此部分是可选的，你完全可以在每次修改后手动编译。
 
 现在让我们在 `shaders/` 文件夹中创建新的 `CMakeLists.txt`，内容如下所示：
 
@@ -300,9 +298,11 @@ add_custom_target(CompileShaders ALL
 add_subdirectory(shaders)
 ```
 
-现在配置与构建项目，shaders下应该生成了 `frag.spv` 和 `vert.spv` 两个文件。
+现在配置与构建项目，`shaders/` 下应该生成了 `frag.spv` 和 `vert.spv` 两个文件。
 
 ## **加载着色器**
+
+### 1. 读取文件
 
 现在我们有了一种生成 SPIR-V 着色器的方法，是时候将它们加载到我们的程序中，以便在某个时候将它们插入到图形管线中。
 我们首先编写一个简单的辅助函数，从文件中加载二进制数据。
@@ -333,22 +333,22 @@ size_t fileSize = (size_t) file.tellg();
 std::vector<char> buffer(fileSize);
 ```
 
-之后，可以seek回到文件开头并一次读取所有字节。
+之后，可以 `seekg` 回到文件开头并一次读取所有字节。
 
 ```cpp
 file.seekg(0);
 file.read(buffer.data(), fileSize);
 ```
 
-最后关闭文件并返回字节
+最后关闭文件并返回字节：
 
 ```cpp
-file.close();
+file.close(); // optional
 
 return buffer;
 ```
 
-我们现在将从 `createGraphicsPipeline` 调用此函数，以加载两个着色器的字节码
+在 `createGraphicsPipeline` 函数中使用它，以加载两个着色器的字节码：
 
 ```cpp
 void createGraphicsPipeline() {
@@ -364,11 +364,10 @@ void createGraphicsPipeline() {
 > 注意我们使用了相对路径，这要求你运行可执行程序时，当前路径必须位于项目根目录。  
 > 或者你可以将着色器文件夹复制一份到你的执行目录。
 
-## **创建着色器模块**
+### 2. 创建着色器模块
 
-### 1. 读取着色器代码
-
-在可以将代码传递给管线之前，我们必须将其包装在 `vk::ShaderModule` 对象中。让我们创建一个辅助函数 `createShaderModule` 来执行此操作。
+在将着色器代码传递给管线之前，必须将其包装在 `vk::ShaderModule` 对象中。
+让我们创建一个辅助函数 `createShaderModule` 来执行此操作：
 
 ```cpp
 vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) {
@@ -381,7 +380,7 @@ vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) {
 创建着色器模块很简单，我们只需要指定字节码缓冲区的开始指针和缓冲区长度。
 此信息在 `vk::ShaderModuleCreateInfo` 结构中指定。
 
-需要注意的一点是，字节码的大小以字节为单位指定，但字节码指针是 uint32_t 指针，而不是 char 指针。
+需要注意的一点是，字节码的大小以字节为单位指定，但字节码指针是 `uint32_t` 指针，而不是 `char` 指针。
 因此，我们需要使用 `reinterpret_cast` 强制转换指针，如下所示：
 
 ```cpp
@@ -393,15 +392,13 @@ createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 当您执行这样的强制转换时，还需要确保数据满足 `uint32_t` 的对齐要求。
 幸运的是，数据存储在 `std::vector` 中，其中默认分配器已经确保数据满足最坏情况的对齐要求。
 
-> 你无法使用`setCode()`，它接受`uint32_t`类型的代理数组。
+> 你无法使用 `setCode()` ，它只接受 `uint32_t` 类型的代理数组。
 
 然后我们创建 `vk::raii::ShaderModule` 并返回即可。
 
 ```cpp
 return m_device.createShaderModule(createInfo);
 ```
-
->  `vk::raii` 内的大部分变量不可复制，只可移动。
 
 着色器模块只是我们着色器字节码的薄包装，
 从 SPIR-V 字节码到 GPU 机器码的编译链接过程在图形管线创建才发生，
@@ -418,7 +415,7 @@ void createGraphicsPipeline() {
 }
 ```
 
-### 2. 创建着色器阶段
+### 3. 创建着色器阶段
 
 要实际使用着色器，我们需要通过 `vk::PipelineShaderStageCreateInfo` 结构将它们分配给特定的管线阶段，作为实际管线创建过程的一部分。
 
@@ -460,8 +457,6 @@ std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo
 ## **测试**
 
 这就是描述管线的可编程阶段的全部内容，你可以尝试运行程序，不应报错。
-
----
 
 本章我们学习了两个可编程阶段。在下一章中，我们将研究图形管线的固定功能阶段。
 

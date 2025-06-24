@@ -1,4 +1,4 @@
-# **图形管线-总结**
+# **管线创建**
 
 现在我们可以结合之前章节中的所有结构和对象来创建图形管线了！以下是我们现在拥有的对象类型，作为一个快速回顾
 
@@ -20,7 +20,7 @@ pipelineInfo.setStages( shaderStages );
 
 我们首先填写了 `vk::PipelineShaderStageCreateInfo` 结构体数组。
 
-然后我们引用所有描述固定功能阶段的结构体。
+然后引用所有描述固定功能阶段的结构体：
 
 ```cpp
 pipelineInfo.pVertexInputState = &vertexInputInfo;
@@ -40,7 +40,7 @@ pipelineInfo.layout = m_pipelineLayout;
 ```
 
 最后我们有对渲染通道的引用，以及此图形管线将要使用的子通道的**索引**。
-也可以将此管线与其他的渲染通道一起使用，而不是这个特定的实例，但它们必须保持兼容。
+也可以将此管线与其它的渲染通道一起使用，而不是这个特定的实例，但它们必须保持兼容。
 兼容性的要求在 [这里](https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/chap8.html#renderpass-compatibility) 描述，
 但我们不会在本教程中使用该功能。
 
@@ -71,23 +71,20 @@ pipelineInfo.basePipelineIndex = -1; // Optional
 vk::raii::Pipeline m_graphicsPipeline{ nullptr };
 ```
 
-最后创建图形管线
+最后创建图形管线：
 
 ```cpp
 m_graphicsPipeline = m_device.createGraphicsPipeline( nullptr, pipelineInfo );
 ```
 
-`createGraphicsPipeline` 用于创建单个对象，`createGraphicsPipelines`则可以一次性创建多个。
+注意到我们多传入了一个 `nullptr`，它等于宏 `VK_NULL_HANDLE`。 
+此位置的参数简写是 `optional<PipelineCache>` 管线缓存，我们将在“管线缓存”章节中深入探讨它。
 
-> 注意到我们多传入了一个 `nullptr`，它等于宏 `VK_NULL_HANDLE`。 
-> 此位置的参数简写是 `optional<PipelineCache>` 管线缓存。  
-> 我们将在“管线缓存”章节中深入探讨这一点。
+> `createGraphicsPipeline` 用于创建单个图形管线对象，`createGraphicsPipelines` 则可以一次性创建多个。
 
 ## **测试**
 
 现在运行你的程序，确认我们已经可以成功创建管线！
-
----
 
 我们已经非常接近在屏幕上看到一些东西了。
 在接下来的几章中，我们将从交换链图像中设置实际的帧缓冲，并准备绘制命令。

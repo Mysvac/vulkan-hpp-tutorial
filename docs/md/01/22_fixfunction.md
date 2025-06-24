@@ -1,4 +1,4 @@
-# **图形管线-固定功能**
+# **固定功能阶段**
 
 旧的图形 API 为图形管线的大部分阶段提供了默认状态。
 但在 Vulkan 中，您必须显式地指定大多数管线状态，因为它们将被烘焙到不可变的管线状态对象中。
@@ -73,8 +73,9 @@ vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 
 
 通常，顶点按索引顺序从顶点缓冲中加载，但使用索引缓冲区，您可以自己指定要使用的索引。
-这允许您执行诸如重用顶点之类的优化。如果您将 `primitiveRestartEnable` 成员设置为 `true`，
-则可以通过使用特殊的索引 `0xFFFF` 或 `0xFFFFFFFF` 在 `Strip` 拓扑模式中打断线和三角形。
+这允许您执行诸如重用顶点之类的优化，这将在后续的“索引缓冲”章节介绍。
+
+对于后者，如果您将 `primitiveRestartEnable` 成员设置为 `true`，则可以通过使用特殊的索引 `0xFFFF` 或 `0xFFFFFFFF` 在 `Strip` 拓扑模式中打断线和三角形。
 
 我们打算在本教程中绘制三角形，因此使用以下结构：
 
@@ -88,7 +89,7 @@ inputAssembly.primitiveRestartEnable = false; // default
 
 ### 1. 静态状态时
 
-视口基本上描述了将渲染输出的帧缓冲区域。这几乎总是 `(0, 0)` 到 `(width, height)`，在本教程中也将是这种情况。
+视口基本上描述了将渲染输出的帧缓冲区域。这几乎总是 `(0, 0)` 到 `(width, height)` ，在本教程中也将是这种情况。
 
 ```cpp
 vk::Viewport viewport(
@@ -103,7 +104,7 @@ vk::Viewport viewport(
 交换链图像稍后将用作帧缓冲，因此我们应该坚持使用它们的大小。
 
 `minDepth` 和 `maxDepth` 值指定用于帧缓冲的深度值范围。
-这些值必须在 `[0.0f, 1.0f]` 范围内，但 `minDepth` 可能高于 `maxDepth`。
+这些值必须在 `[0.0f, 1.0f]` 范围内，但 `minDepth` 可能高于 `maxDepth` 。
 如果您没有做任何特殊的事情，那么您应该坚持使用 `0.0f` 和 `1.0f` 的标准值。
 
 虽然视口定义了从图像到帧缓冲的转换，但裁剪矩形定义了实际存储像素的区域。
@@ -111,7 +112,7 @@ vk::Viewport viewport(
 
 ![scissor](../../images/0122/viewports_scissors.png)
 
-请注意，左侧的裁剪矩形只是导致该图像的众多可能性之一，只要它大于视口即可。
+> 左图将图像 Y 轴进行了缩放\(保留内容\)，而右图直接删掉了一半内容。
 
 因此，如果我们想绘制到整个帧缓冲，可以指定一个覆盖它的裁剪矩形：
 
@@ -131,7 +132,7 @@ viewportState.setViewports( 0, viewport );
 viewportState.setScissors( 0, scissor );
 ```
 
-静态状态使得此管线的视口和裁剪矩形不可变，对这些值进行的任何更改都需要创建具有新值的新管线。
+静态状态使得此管线的视口和裁剪矩形不可变，想对这些值进行任何更改都需要创建新管线。
 
 ### 2. 动态状态时
 
@@ -144,7 +145,7 @@ viewportState.viewportCount = 1;
 viewportState.scissorCount = 1;
 ```
 
-当然，即使启用了动态状态，也可以像静态状态那样指定，但它们的内容会被忽略，只有数量有效：
+当然，即使启用了动态状态，也可以像静态状态一样设置，但它们的内容会被忽略，实际只有数量字段有效：
 
 ```cpp
 // 需要创建了scissor和viewport，但结构体内容被忽略
@@ -153,13 +154,12 @@ viewportState.setViewports( 0, viewport );
 viewportState.setScissors( 0, scissor );
 ```
 
-使用动态状态，甚至可以在单个命令缓冲区中指定不同的视口和/或裁剪矩形。
-
-无论您如何设置它们，都可以在某些显卡上使用多个视口和裁剪矩形，通过结构成员引用它们的数组。
+使用动态状态，甚至可以在单个命令缓冲区中指定不同的视口或裁剪矩形。
+无论您如何设置它们，都可以在某些显卡上使用多个视口和裁剪矩形，通过结构体成员引用它们的数组。
 
 ## **光栅化器**
 
-光栅化器获取由顶点着色器中的顶点形成的几何图形，称之为“**图元**”，并将其拆分为片段，以便由片段着色器着色。
+光栅化器获取顶点着色器中的顶点形成的几何图形，称之为“**图元**”，并将其拆分为片段，以便由片段着色器着色。
 它还执行“深度测试、面剔除和裁剪测试”等内容，且可以配置输出的片段是包含整个多边形还是仅边缘线条。
 这些都使用 `vk::PipelineRasterizationStateCreateInfo` 结构进行配置。
 
@@ -171,7 +171,7 @@ rasterizer.depthClampEnable = false;
 ```
 
 如果 `depthClampEnable` 设置为 `true`，则超出近平面和远平面的片段将被视作边界位置的片段(clamp)，而不是丢弃它们。
-这在某些特殊情况下很有用，例如阴影贴图。使用此功能需要启用 GPU 功能。
+这在某些特殊情况下很有用，例如阴影贴图。
 
 ```cpp
 rasterizer.rasterizerDiscardEnable = false;
@@ -183,29 +183,26 @@ rasterizer.rasterizerDiscardEnable = false;
 rasterizer.polygonMode = vk::PolygonMode::eFill;
 ```
 
-`polygonMode` 确定如何为几何图形生成片段，至少有三种常见模式可用
+`polygonMode` 确定如何将几何图元转换为片段，至少有三种常见模式可用：
 
-| 枚举 | 功能 |  
-|---------------------------|--------------------| 
-| `vk::PolygonMode::eFill`  | 用片段填充多边形区域 |  
-| `vk::PolygonMode::eLine`  | 多边形边缘绘制为线条 |  
-| `vk::PolygonMode::ePoint` | 多边形顶点绘制为点   |  
-
-使用 `eFill` 填充以外的任何模式都需要启用 GPU 功能。
+|   `vk::PolygonMode`   |   功能   |    说明   |
+|------------------------|----------------|--------------------| 
+| `eFill`  | 生成覆盖多边形内部区域的片段 |  默认，片段覆盖所有内容 |
+| `eLine`  | 仅多边形的边被渲染为线段 |  线的宽度由 `vk::LineWidth` 字段控制 |
+| `ePoint` | 仅多边形的顶点被渲染为点片段  |  点的大小可由着色器的 `gl_PointSize` 控制 |
 
 ```cpp
 rasterizer.lineWidth = 1.0f;
 ```
 
-`lineWidth` 成员很简单，它以片段数为单位描述线条的粗细。
-支持的最大线宽取决于硬件，任何粗于 `1.0f` 的线条都需要您启用 `wideLines` GPU 功能。
+`lineWidth` 成员很简单，它以片段数为单位描述线条绘制的粗细，默认使用 1.0f ，支持的最大线宽取决于硬件。
 
 ```cpp
 rasterizer.cullMode = vk::CullModeFlagBits::eBack;
 rasterizer.frontFace = vk::FrontFace::eClockwise;
 ```
 
-- `cullMode` 变量确定要使用的面剔除类型。您可以禁用剔除、剔除正面、剔除背面或两者都剔除。
+- `cullMode` 变量确定要使用的面剔除类型，剔除指不显示，您可以禁用剔除、剔除正面、剔除背面或两者都剔除。
 - `frontFace` 变量指定要被视为正面的顶点绘制顺序，可以是顺时针或逆时针。
 
 ```cpp
@@ -219,7 +216,7 @@ rasterizer.depthBiasEnable = false;
 
 使用 `vk::PipelineMultisampleStateCreateInfo` 结构配置多重采样，这是 **抗锯齿/防走样** 的方法之一，需要启用 GPU 功能。
 
-它的工作原理非常简单，将单个像素拆分成多个区域，对每个区域分别采样然后取平均值。
+它的工作原理非常简单，将单个像素拆分成多个区域，判断各小区域是否在图元的有效范围内\(在范围内就正常色彩，不在就无色\)，最后取平均值以保证几何体边缘色彩平滑过渡。
 
 因为它不需要多次运行片段着色器（如果只有一个多边形映射到一个像素），所以它比简单地渲染到更高的分辨率然后缩小分辨率要高效得多。
 
@@ -229,7 +226,7 @@ multisampling.rasterizationSamples =  vk::SampleCountFlagBits::e1;
 multisampling.sampleShadingEnable = false;
 ```
 
-> 我们将在后面的章节中重新讨论多重采样，现在让我们保持最简单的单采样状态。
+> 我们将在后面的“多重采样”章节中重新讨论它，现在先保持最简单的单采样状态。
 
 ## **深度和模板测试**
 
@@ -247,7 +244,7 @@ multisampling.sampleShadingEnable = false;
 
 有两种类型的结构体可以配置颜色混合。第一个 `vk::PipelineColorBlendAttachmentState` 包含每个附加帧缓冲的配置，
 第二个 `vk::PipelineColorBlendStateCreateInfo` 包含全局颜色混合设置。
-在我们的例子中，我们只有一个帧缓冲。
+在我们的例子中，只有一个帧缓冲，且无需混合。
 
 ```cpp
 vk::PipelineColorBlendAttachmentState colorBlendAttachment;
@@ -262,7 +259,7 @@ colorBlendAttachment.colorWriteMask = (
 > `colorWriteMask = vk::FlagTraits<vk::ColorComponentFlagBits>::allFlags;`
 
 
-此逐帧缓冲结构允许您配置第一种颜色混合方式。具体操作最好使用以下伪代码进行演示：
+上述结构允许您配置第一种颜色混合方式，具体效果最好使用以下伪代码进行演示：
 
 ```cpp
 if (blendEnable) {
@@ -276,7 +273,7 @@ finalColor = finalColor & colorWriteMask;
 ```
 
 如果 `blendEnable` 设置为 `false`，则来自片段着色器的新颜色将未经修改地传递。
-否则，将执行两个混合操作以计算新颜色。将结果颜色与 `colorWriteMask` 进行 AND 运算，以确定实际传递哪些通道。
+否则，将执行两个混合操作以计算新颜色。最后将结果颜色与 `colorWriteMask` 进行 AND 运算，以确定实际传递哪些通道。
 
 使用颜色混合最常见的方式是实现 alpha 混合，如果希望根据新颜色的不透明度将其与旧颜色混合。
 然后应按如下方式计算 `finalColor`
@@ -300,7 +297,7 @@ colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
 
 您可以在规范的 `vk::BlendFactor` 和 `vk::BlendOp` 枚举中找到所有可能的操作。
 
-> 注意本教程使用的是第一种简单的方式。
+> 注意本教程使用的是第一种简单的无混合方式。
 
 第二个结构体引用所有帧缓冲的结构体数组，并允许您设置混合常量，您可以在上述计算中将其用作混合因子。
 
@@ -313,15 +310,17 @@ colorBlending.setAttachments( colorBlendAttachment );
 
 如果您想使用第二种混合方法（按位组合），则应将 `logicOpEnable` 设置为 `true`。
 然后可以在 `logicOp` 字段中指定按位运算。
-请注意，这将自动禁用第一种方法，就好像您已为每个附加的帧缓冲将 `blendEnable` 设置为 `false` 一样！
-`colorWriteMask` 也将在此模式下使用，以确定帧缓冲中的哪些通道将实际受到影响。
+请注意，这将自动禁用第一种方法，就好像您已为每个附加的帧缓冲的 `blendEnable` 设置为 `false` 一样！
+`colorWriteMask` 字段在此模式依然生效，以确定帧缓冲中的哪些通道将实际受到影响。
 
-也可以禁用两种模式，就像我们在这里所做的一样，在此情况下，片段颜色将未经修改地写入帧缓冲。
+也可以禁用两种模式，就像这里做的一样。在此情况下，片段颜色将未经修改地写入帧缓冲。
 
 ## **创建管线布局**
 
 您可以在着色器中使用 `uniform` 值，这些值是类似于动态状态变量的全局变量，可以在绘制时更改，以更改着色器的行为，而无需重新创建它们。
 它们通常用于将变换矩阵传递给顶点着色器，或在片段着色器中创建纹理采样器。
+
+> 我们会在后续的“uniform缓冲”章节详细介绍它。
 
 这些 `uniform` 值需要在管线创建期间通过创建 `vk::PipelineLayout` 对象来指定。
 即使我们在未来的章节中才会使用它们，现在仍然需要创建一个空的管线布局。
@@ -339,16 +338,16 @@ vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
 m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 ```
 
-该结构还可以指定推送常量，这是将动态值传递给着色器的另一种方式，我们可能会在以后的章节中介绍。
+该结构还可以指定推送常量，这是给着色器传递动态值的另一种方式，同样会在之后的章节介绍。
 
 
-## **结论**
+## **最后**
 
 这就是所有固定功能状态的全部内容！
 从头开始设置所有这些工作量很大，但优点是我们现在几乎完全了解了图形管线中发生的一切！
 这减少了因某些组件的默认状态不是您期望的那样而遇到意外行为的可能性。
 
-但是在我们最终创建图形管线之前，还需要创建一个对象，那就是 **渲染通道**。
+但是在我们最终创建图形管线之前，还需要创建一个对象，那就是 **渲染通道** 。
 
 ---
 
