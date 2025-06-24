@@ -87,7 +87,7 @@ vcpkg 安装参考 [官方文档](https://learn.microsoft.com/zh-cn/vcpkg/get_st
 
 ### GLFW
 Vulkan 本身是一个平台无关的 API，不包含用于创建窗口以显示渲染结果的工具。
-我们将使用 [GLFW 库](http://www.glfw.org/) 来创建窗口，它支持 Windows、Linux 和 MacOS，且和 Vulkan 有很好的集成。
+我们将使用 [GLFW](http://www.glfw.org/) 库来创建窗口，它支持 Windows、Linux 和 MacOS，且和 Vulkan 有很好的集成。
 
 安装命令：
 ```shell
@@ -95,16 +95,12 @@ vcpkg install glfw3
 ```
 
 ### GLM
-与 DirectX 12 不同，Vulkan 不包含用于线性代数运算的库。我们使用 GLM 线性代数库，它专为图形 API 设计，常用于 OpenGL。
+与 DirectX 12 不同，Vulkan 不包含用于线性代数运算的库。我们使用 [GLM](https://github.com/g-truc/glm) 线性代数库，它专为图形 API 设计，常用于 OpenGL。
 
 安装命令：
 ```shell
 vcpkg install glm
 ```
-
-### 其他
-
-`stb` 和 `tinyobjloader` 等库将在后面的章节（需要的时候）安装。
 
 ## **项目初始化**
 
@@ -221,33 +217,31 @@ cmake --build build
 运行：
 ```shell
 # Windows
-build\Debug\HelloVulkan.exe
+build/Debug/HelloVulkan.exe
+# 或
+build/HelloVulkan.exe
 
 # Linux/MacOS
 build/HelloVulkan
 ```
 
-预期结果：
+**预期结果：**
 
 - 弹出空白窗口
 - 关闭窗口后，控制台输出支持的Vulkan扩展数量
 
 ### 关于CMake预设
 
-**注意：CMake预设不是必须的，我们没有复杂的配置需求，你完全可以通过上面两行简单的CMake指令构建项目！**
+注意：**CMake预设不是必须的**，我们没有复杂的配置需求，你完全可以通过上面两行简单的CMake指令构建项目！
 
 如果你喜欢使用 `CMakePresets.json` （它可以很好地和 CLion、VSCode、Visual Studio 配合），可以参考 **[这个](../../codes/00/01_env/CMakePresets.json)** 预设模板。
 
-此预设模板使用 Ninja 作为生成器，提供了 MSVC/GNU/Clang 工具链的预设配置。但它未经过充分测试，不保证全平台可用。
+此预设模板使用 Ninja 作为生成器，提供了 MSVC/GNU/Clang 工具链的预设配置。
 
 ## **代码编辑器**
 
 建议使用一个足够智能的编辑器。
-当你不确定某些函数的参数和它的含义时，可以右键函数并跳转到它的定义，从而查看函数参数列表。Visual Studio/VSCode/CLion都能提供此功能。
-
----
-
-下面让我们了解一下 `vulkan.h` 与 `vulkan.hpp` 的差异！！
+当你不确定某些函数的参数和它的含义时，可以右键函数并跳转到它的定义并查看实现。Visual Studio / VSCode / CLion都能提供此功能。
 
 --- 
 

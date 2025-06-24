@@ -339,9 +339,7 @@ createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
 - `imageArrayLayers` 指定每个图像由多少层组成。除非您正在开发立体 3D 应用程序，否则这始终为 `1`。
 
-- `imageUsage` 位字段指定交换链中图像的操作类型。
-
-在本教程中，我们将直接渲染它们，这意味着它们用作颜色附件。
+- `imageUsage` 位字段指定交换链中图像的操作类型。在本教程中，我们将直接渲染它们，这意味着它们用作颜色附件。我们会在“渲染通道”章节详细介绍附件。
 
 ### 3. 队列族信息设置
 
@@ -413,7 +411,7 @@ createInfo.oldSwapchain = nullptr;
 
 ### 5. 创建交换链
 
-现在添加一个类成员来存储 `vk::raii::SwapchainKHR` 对象，现在你的成员变量应该类似这样
+现在添加一个类成员来存储 `vk::raii::SwapchainKHR` 对象，你的成员变量应该类似这样：
 
 ```cpp
 GLFWwindow* m_window{ nullptr };
@@ -434,7 +432,7 @@ vk::raii::SwapchainKHR m_swapChain{ nullptr };
 m_swapChain = m_device.createSwapchainKHR( createInfo );
 ```
 
-现在运行应用程序以确保交换链已成功创建。
+现在运行应用程序以确保交换链可成功创建。
 
 ## **检索交换链图像**
 
@@ -450,8 +448,8 @@ std::vector<vk::Image> m_swapChainImages;
 m_swapChainImages = m_swapChain.getImages();
 ```
 
-> 注意，`vk::image` 的资源释放由`swapChain`管理，交换链释放时会自动释放此资源，所以无需RAII。  
-> 情况类似`PhysicalDevice`，但物理设备加了`raii::`，这里却没有，可能是因为 `raii` 封装中物理设备需要特殊的成员函数。
+> `vk::image` 的资源释放由交换链管理，交换链释放时会自动释放此资源，所以无需RAII。  
+> 情况类似`PhysicalDevice`，但物理设备加了`raii::`、这里却没有，可能是因为 `raii` 封装中物理设备需要特殊的成员函数。
 
 ## **存储交换链参数**
 

@@ -41,10 +41,10 @@ int main() {
 
     try {
         app.run();
-    } catch(const vk::SystemError & err ){
+    } catch(const vk::SystemError& err ){
         // use err.code() to check err type
         std::cout << "vk::SystemError: " << err.what() << std::endl;
-    } catch (const std::exception & err ){
+    } catch (const std::exception& err ){
         std::cout << "std::exception: " << err.what() << std::endl;
     }
 
@@ -52,23 +52,13 @@ int main() {
 }
 ```
 
-### 关键点说明：
-1. **头文件包含**：
-    - `vulkan.hpp`：基础C++封装
-    - `vulkan_raii.hpp`：资源自动管理封装
-    - 其他标准库用于异常处理、内存管理和简化代码
+首先包含了 vulkan 的头文件，前者是基础 C++ 封装，后者是高层的 RAII 封装，它们已经包含 C 风格头文件。
 
-2. **错误处理**：
-    - `vk::SystemError`专门处理Vulkan相关错误
-    - 可通过`err.code()`获取具体错误枚举值
-
-3. **程序封装**:
-    - 将程序包装在一个类中。
-    - 将初始化、资源清理、主循环分离，结构清晰。
-
+我们将整个应用封装在一个类中，分离了初始化、主循环、资源清理任务，并在主函数中运行和捕获异常。
+`vk::SystemError` 可以捕获大部分 Vulkan 异常，你可以使用 `.code()` 成员函数判断异常类型。
 
 ## **集成 GLFW**
-离屏渲染无需窗口也能完美运行，但我们希望显示一些东西！
+离屏渲染无需窗口也能完美运行，但我们希望实时地显示一些东西。
 
 ### 1. 添加GLFW支持
 ```cpp
@@ -76,7 +66,7 @@ int main() {
 ```
 这样会导入 GLFW 库，用于创建窗口。
 
-> 注意：本语句最好放在 `#include <vulkan/vulkan.hpp>` 下方！
+> 注意：本语句建议放在 `#include <vulkan/vulkan.hpp>` 下方！
 
 ### 2. 定义窗口常量
 
@@ -120,14 +110,13 @@ private:
 };
 ```
 
-`glfwCreateWindow` 前三个参数指定窗口的宽度、高度和标题。
-第四个参数可以指定显示器以及是否全屏，最后一个参数仅与 OpenGL 相关。
+`glfwCreateWindow` 前三个参数指定窗口的宽度、高度和标题，第四个参数是用于指定目标显示器与全屏，最后一个参数仅与 OpenGL 相关。
 
-> 本教程使用 `m_` 前缀用于标识非静态成员变量。
+> 本教程使用 `m_` 前缀标识非静态成员变量。
 
 ### 4. 添加主循环
 
-为了使应用程序保持运行直到发生错误或窗口关闭，我们需要向 `mainLoop` 函数添加一个事件循环
+为了使应用程序保持运行直到发生错误或窗口关闭，我们需要向 `mainLoop` 函数添加一个循环：
 ```cpp
 void mainLoop() {
     while (!glfwWindowShouldClose( m_window )) {

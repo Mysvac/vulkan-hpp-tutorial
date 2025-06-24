@@ -4,7 +4,7 @@
 
 ### Vulkan 是什么
 
-Vulkan 是 [Khronos Group](https://www.khronos.org/) 推出的**现代图形与计算 API**。与传统 API （如[OpenGL](https://en.wikipedia.org/wiki/OpenGL)和[Direct3D](https://en.wikipedia.org/wiki/Direct3D)）相比，它为显卡提供了更好的抽象，使你可以更好的描述应用程序的行为，从而减少意外的驱动程序行为并带来更好的性能。
+**[Vulkan](https://www.vulkan.org/)** 是 [Khronos Group](https://www.khronos.org/) 推出的**现代图形与计算 API**。与传统 API （如[OpenGL](https://en.wikipedia.org/wiki/OpenGL)和[Direct3D](https://en.wikipedia.org/wiki/Direct3D)）相比，它为显卡提供了更好的抽象，使你可以更好的描述应用程序的行为，从而减少意外的驱动程序行为并带来更好的性能。
 
 ### 与传统 API 的关键差异
 
@@ -15,7 +15,7 @@ Vulkan 是 [Khronos Group](https://www.khronos.org/) 推出的**现代图形与�
 | 着色器编译      | 运行时GLSL编译        | 预编译SPIR-V字节码    |
 | 内存管理        | 驱动自动分配          | 开发者控制内存类型    |
 
-这些优势的代价是开发者必须显式管理更多细节，从零开始配置所有内容，因此需要编写更多代码以确保行为正确。
+这些优势的代价是开发者必须显式管理更多细节，**需要编写更多代码**以确保行为正确。
 
 ## **什么人适合 Vulkan**
 
@@ -23,7 +23,7 @@ Vulkan 是 [Khronos Group](https://www.khronos.org/) 推出的**现代图形与�
 
 如果您主要对游戏开发感兴趣，那么 OpenGL 或 Direct3D 可能更适合您，因为它们的上手难度相对较低，且在多数场景下仍然能够满足需求。
 
-另一种选择是使用 [Unreal Engine](https://en.wikipedia.org/wiki/Unreal_Engine#Unreal_Engine_4) 或 [Unity](https://en.wikipedia.org/wiki/Unity_(game_engine)) 这样的游戏引擎。这些引擎可以利用 Vulkan 的高性能特性，同时为开发者提供更易用的高级 API，从而在不牺牲太多性能的前提下显著降低开发难度。
+另一种选择是使用 [Unreal Engine](https://www.unrealengine.com/zh-CN) 或 [Unity](https://unity.com/cn) 这样的游戏引擎。这些引擎可以利用 Vulkan 的高性能特性，同时为开发者提供更易用的高级 API，从而在不牺牲太多性能的前提下显著降低开发难度。
 
 ## **学习前提**
 
@@ -76,17 +76,17 @@ Vulkan 是 [Khronos Group](https://www.khronos.org/) 推出的**现代图形与�
 
 10. 不同的纸可能有不同的材质和大小，所以我们需要给每个纸写一个标签。这个标签就是图像视图 `VkImageView` ，描述图像的基本信息。
 
-11. 现在机器人终于可以画画了，我们要为他准备一个画桌，用于放置画纸等工具。这个画桌就是帧缓冲 `VkFrameBuffer` ，一帧代指一副图像。
+11. 现在机器人终于可以画画了，我们要为他准备一个画桌，用于放置画纸等工具。这个画桌就是帧缓冲 `VkFrameBuffer` ，一帧代指一幅图像。
 
 12. 我们还要为机器人设计一个房子，这个房子代指渲染通道 `VkRenderPass`，而画笔等工具对应其中的附件 `Attachments`。
 
 13. 虽然这些附件放置\(绑定\)在画桌\(帧缓冲\)上，但我们需要为房子贴上告示牌，写明房子内有哪些附件，即附件描述 `AttachmentDesctiption` 。 
 
-13. 当画作变得更加复杂，我们可以在一个房子里放多个小房间，每个房间干不同的事情，这些小房间就是子通道 `VkSubpass` 。
+13. 机器人很笨，只能看着流程图画画，所以你需要在房间中放置一些流程图，可以是一张，也可以是多张。这个流程图就代指图形管线 `VkGraphicsPipeline` 。
 
-14. 机器人很笨，只能看着流程图画画，所以你需要在房间中放置一些流程图，可以是一张，也可以是多张。这个流程图就是图形管线 `VkPipeline` 。
+14. 一个大房子分成多个小房间（可以只有一个），可以用不同的房间干不同的事，这些小房间就是子通道 `VkSubpass` ，通常一个子通道绑定一个图形管线。
 
-15. 我们有一份流程图的模版，只需要修改它的部分内容就可以变成新的流程图。其中某几个部分是可编程的，这里就用到了我们熟悉的着色器模块 `Shader Module` 。
+15. 我们有一份流程图的模版，只需要修改它的部分内容就可以变成新的流程图。其中某几个部分是可编程的，这里就用到了着色器模块 `Shader Module` 。
 
 16. 这些机器人很呆，需要你写信告诉他该画画了，在哪个房子的哪些房间根据哪些流程图画画。这个信就是命令缓冲 `VkCommandBuffer` 。
 

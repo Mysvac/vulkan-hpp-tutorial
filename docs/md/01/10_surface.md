@@ -53,7 +53,7 @@ void createSurface() {
 虽然 `vk::raii::SurfaceKHR` 对象及其用法与平台无关，但其创建并非如此，因为它取决于窗口系统的详细信息。
 好消息是，所需的平台特定扩展已在 `glfwGetRequiredInstanceExtensions` 返回的列表中，无需手动添加。
 
-我们将直接使用 GLFW 的 `glfwCreateWindowSurface` 函数，它自动为我们处理平台的差异。但下面的代码还不能运行！！
+我们将直接使用 GLFW 的 `glfwCreateWindowSurface` 函数，它自动为我们处理平台的差异，但下面的代码还不能运行：
 
 ```cpp
 if (glfwCreateWindowSurface( m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS) {
@@ -74,9 +74,9 @@ void createSurface() {
 }
 ```
 
-这里 `*m_instance` 的 `*` 是运算符重载，返回内部 `VkInstance` 的引用。  
+这里 `*m_instance` 返回内部 `vk::Instance` 的引用，然后可以隐式转换为 `VkInstance` 。  
 
-我们使用原始 C 风格的 `VkSurfaceKHR` 类型接受句柄，并将句柄交给 `raii` 封装类进行管理。
+我们使用 C 接口的 `VkSurfaceKHR` 类型接受句柄，并将句柄交给 `raii` 封装类进行管理。
 
 ## **呈现队列**
 
@@ -109,19 +109,19 @@ if(physicalDevice.getSurfaceSupportKHR(i, m_surface)){
 }
 ```
 
-注意，它们最终很可能是同一个队列族，但在整个程序中，我们可以将它们视为独立的队列使用。  
+注意，它们最终很可能是同一个队列族，但在整个程序中，我们可以将它们视为独立的个体使用。  
 
 尽管如此，您可以添加额外的逻辑，偏好那些具有同时支持绘制和呈现功能的队列族的物理设备，从而提高性能。
 
 ### 2. 创建呈现队列
 
-剩下的最后一件事是修改逻辑设备创建过程，从而创建呈现队列。在 `m_graphicsQueue` 下方添加一个成员变量
+剩下的最后一件事是修改逻辑设备创建过程，从而创建呈现队列。在 `m_graphicsQueue` 下方添加一个成员变量：
 
 ```cpp
 vk::raii::Queue m_presentQueue{ nullptr };
 ```
 
-接下来，我们需要有多个 `CreateInfo` 结构体，以便从两个队列族创建队列。
+接下来，我们需要多个 `CreateInfo` 结构体，以便从两个队列族创建队列。
 一种优雅的方法是创建一个所需队列族的集合。让我们修改 `createLogicalDevice` 函数
 
 ```cpp

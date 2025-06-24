@@ -14,7 +14,7 @@ Vulkan 提供了两种编程接口风格：
 
 ## **接口风格对比**
 
-Vulkan-hpp封装与底层C风格接口略有不同，下面将为你粗略展示二者的差异。
+Vulkan-hpp 封装与底层 C 风格接口略有不同，下面将为你粗略展示二者的差异。
 
 **你目前无需记住这些内容**，因为在后续的代码编写过程中，你很快就会熟悉它们。
 
@@ -50,9 +50,6 @@ Vulkan-hpp封装与底层C风格接口略有不同，下面将为你粗略展示
     vkDestroyInstance(instance, nullptr);
     ```
 
-> **为何如此复杂？**  
-> 因为底层接口使用C编写，没有命名空间，没有类，没有错误处理和RAII。
-
 ### C++风格接口特点
 
 1. **命名空间**：
@@ -62,7 +59,7 @@ Vulkan-hpp封装与底层C风格接口略有不同，下面将为你粗略展示
 2. **改进特性**：
     - 使用 `Flags` 、`Bit` 、`e` 区分特殊的枚举类型
     - 构造函数和资源创建函数直接返回对象
-    - 提供RAII支持，无需手动清理资源
+    - 提供 RAII 支持，无需手动清理资源
     - 使用异常机制处理错误
     - 更加现代的语法（成员函数，命名空间，默认参数...）
 
@@ -85,13 +82,13 @@ Vulkan-hpp封装与底层C风格接口略有不同，下面将为你粗略展示
 
 ## **vk::raii基本原理**
 
-`vk::raii` 是 Vulkan-HPP 中提供的 RAII 包装器，用于自动化资源管理。
+`vk::raii` 是 Vulkan-hpp 中提供的 RAII 包装器，用于自动化资源管理。
 
 ### 核心设计理念
 
 1. **资源封装**：
     - 每个 `vk::raii::` 类型（如 `vk::raii::Semaphore`）内部存储对应的 Vulkan 原始类型（如 `vk::Semaphore`）的指针
-    - 在析构时自动调用相应的 `destroy` 或释放函数
+    - 在析构时自动调用相应的 `destroy` 等释放函数
 
 2. **构造控制**：
     - 默认构造函数通常被禁用（防止无效资源）
@@ -102,23 +99,24 @@ Vulkan-hpp封装与底层C风格接口略有不同，下面将为你粗略展示
 
 ### 隐式转换
 
-```cpp
-vk::raii::Semaphore semaphore = ...;  // RAII 对象
-vk::Semaphore rawSemaphore = semaphore;  // 隐式转换为原始类型
-```
+raii 类型可以隐式转换为非 raii 的仅句柄类型，此时资源依然由 raii 类型管理。
 
-> 注意 `vk::Semaphore`只是句柄，没有资源。资源将在 `vk::raii::Semaphore` 被析构时释放。
+```cpp
+vk::raii::Semaphore raii_semaphore = ...;  // RAII 对象
+vk::Semaphore raw_semaphore = raii_semaphore;  // 隐式转换为原始类型
+// 资源将在 raii_semaphore 销毁时释放
+```
 
 ### 显式转换
 
-当需要多次转换时，可以使用`*`运算符进行显式转换，这实际是重载了成员运算符。
+使用 `*` 运算符可以将 raii 类型转换为 vulkan-hpp 的仅句柄类型，再用一次 `*` 则转换成 C 接口的仅句柄类型。
+这实际是重载了成员运算符，在某些必须显式转换的场合很有用。
 
 ```cpp
-vk::raii::Semaphore semaphore = ...;
-someFunction(*semaphore);  // 使用 * 运算符获取内部原始引用
-// *semaphore 返回 vk::raii::Semaphore&
+vk::raii::Semaphore raii_semaphore = ...;
+need_raw_semaphore(*raii_semaphore);  // *raii_semaphore 返回 vk::Semaphore&
+VkSemaphore ctype_semaphore = **raii_semaphore;
 ```
-
 
 ## **核心差异总结**
 
@@ -129,7 +127,7 @@ someFunction(*semaphore);  // 使用 * 运算符获取内部原始引用
 | 资源创建        | 分离Create/Destroy函数        | 构造函数/RAII自动管理        |
 | 错误处理        | 返回值检查                    | 异常机制                     |
 | 扩展名          | 保持宏定义不变                | 保持宏定义不变               |
-| 结构体初始化    | 需手动设置sType               | 构造函数自动处理             |
+| 结构体初始化    | 需手动设置大部分内容            | 构造函数提供成员初始化        |
 
 > 提示：本教程主要使用C++ RAII封装，既保持现代C++风格，又能简化资源管理。
 

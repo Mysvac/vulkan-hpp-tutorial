@@ -6,16 +6,7 @@
 
 教程将使用 C++ 编写代码，借助 Vulkan-Hpp 封装，充分利用 RAII 等现代 C++ 特性，减少手动资源管理。
 
-> 注：Vulkan-Hpp 是 Vulkan SDK 的官方组成部分，非第三方库
-
-**教程主要内容如下：**
-
-1. 介绍基础概念
-2. 配置开发环境
-3. 绘制第一个三角形
-4. 扩展基础功能
-5. 介绍进阶功能
-
+> 注：Vulkan-Hpp 是 Vulkan SDK 的官方组成部分，非第三方库。  
 > 如果你发现了文档的错误，请点击右上角前往Github仓库，提交 Issue 或 PR 。
 
 ## **代码说明**
@@ -27,14 +18,8 @@
 - [GLFW](http://www.glfw.org/) 窗口库
 - [CMake](https://cmake.org/) 构建系统
 - [vcpkg](https://vcpkg.io/) 依赖管理
-- [stb_image](https://github.com/nothings/stb) 读取纹理图像（可选）
-- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) 加载OBJ模型文件（可选）
 
-正如教程名，我们会使用 Vulkan SDK 为C++提供的 `vulkan-hpp` 和 `raii` 封装，它提供了更现代的C++接口。
-
-虽然 `vulkan-hpp` 支持 C++20 模块，但 `glfw3` 等库的模块化较为复杂，本教程暂不启用模块功能。
-
-> 在最后的扩展或进阶章节中可能会尝试启用模块
+虽然 `vulkan-hpp` 支持 C++20 模块，但 `glfw3` 等库的模块化较为复杂，本教程在基础部分不启用模块功能。
 
 `CMake` 用于项目构建，实现跨平台的项目配置，要求读者了解 CMake 的基础使用。
 

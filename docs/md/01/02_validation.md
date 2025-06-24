@@ -4,19 +4,18 @@
 
 Vulkan API 的设计理念: **尽量减少驱动程序开销**
 
-这导致 **默认情况下 API 中的错误检查非常有限**。
+这导致 **默认情况下 API 的错误检查非常有限**。
 即使像 "错误的枚举值" 或 "错误的空指针" 这样简单的错误，通常也不会被显式处理，只会导致崩溃或未定义的行为。
 
 Vulkan 引入了一个优雅的系统来实现程序检查，称为 **验证层\(Validation Layer\)**。
 
-它是Vulkan的核心调试工具，通过拦截API调用来实现：
+它是 Vulkan 的核心调试工具，通过拦截API调用来实现：
 
 - **参数验证**：检查参数合法性和规范符合性
 - **资源追踪**：监控资源生命周期和泄漏
 - **线程安全**：验证多线程调用合规性
 - **性能分析**：记录调用耗时和频率
 - **调试输出**：提供详细的运行时信息
-
 
 以下是诊断验证层中函数实现的一个简化示例
 
@@ -58,7 +57,7 @@ VkResult vkCreateInstance_WithValidation(
 
 ### 1. 标准验证层配置
 
-与扩展一样，验证层需要显式指定名称并启用，该层称为 `VK_LAYER_KHRONOS_validation` 。
+与扩展一样，验证层需要显式指定名称并启用，该层称为 `"VK_LAYER_KHRONOS_validation"` 。
 
 让我们在类中添加代码：
 
@@ -89,7 +88,7 @@ inline static const std::vector<const char*> validationLayers {
 
 ### 2. 验证层可用性检查
 
-添加一个成员函数 `checkValidationLayerSupport`，用于检查所有请求的层是否可用。
+添加一个成员函数 `checkValidationLayerSupport`，用于检查所有需要的层是否可用。
 
 可以使用 `m_context.enumerateInstanceLayerProperties` 函数列出所有可用的层，然后使用任意方式判断需要的层是否都被包含，此处借助 `std::set` ：
 
@@ -223,7 +222,7 @@ if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
 | `ePerformance` | Vulkan 的潜在非最佳使用 |  
 
 
-第三个参数 `pCallbackData` 是一个结构体的指针，此结构体包含消息本身的详细信息，最重要的成员如下
+第三个参数 `pCallbackData` 是一个结构体的指针，此结构体包含消息本身的详细信息，最重要的成员如下：
 
 | 成员 | 含义 |  
 |---------------------|--------------------|
@@ -282,7 +281,7 @@ vk::DebugUtilsMessengerCreateInfoEXT createInfo(
 
 - `messageType` 字段允许你过滤消息类型，在此处简单地启用了所有类型。
 
-- `pfnUserCallback` 字段指定指向回调函数的指针。
+- `pfnUserCallback` 字段指定回调函数的函数指针。
 
 - `pUserData` 字段未设置，构造函数会将其设为 `nullptr` ，你可以传递任何需要的东西。 
 
@@ -296,7 +295,7 @@ m_debugMessenger = m_instance.createDebugUtilsMessengerEXT( createInfo );
 
 显然调试信使的创建晚于 Vulkan 实例，又要求销毁早于 Vulkan 实例，这使你无法看到 Vulkan 实例创建和销毁时遇到的任何问题。
 
-为了解决此问题，你只需在 `vk::InstanceCreateInfo` 的 `pNext` 扩展字段中传递指向 `vk::DebugUtilsMessengerCreateInfoEXT` 结构体的指针。
+想要解决此问题，你只需在 `vk::InstanceCreateInfo` 的 `pNext` 扩展字段中传递指向 `vk::DebugUtilsMessengerCreateInfoEXT` 结构体的指针。
 
 首先创建一个单独的函数用于填充信使的创建信息：
 

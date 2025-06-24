@@ -8,7 +8,7 @@
 > 而 `vk::raii::Context` 隐藏了这些加载操作，让我们可以直接调用相关类的成员函数。
 
 - 我们必须初始化它，且只初始化一次
-- 保证它的生命周期覆盖其他Vulkan组件
+- 保证它的生命周期覆盖其他 Vulkan 组件
 - 可以无参构造，不可 `nullptr` 构造（特殊）
 
 根据上面的要求，我们可以将它作为成员变量，在类实例化时自动创建并加载上下文：
@@ -20,7 +20,7 @@ private:
     vk::raii::Context m_context;
 ```
 
-现在直接构建与运行程序，请保证程序不报错。
+现在直接构建与运行程序，请保证程序不出错。
 
 > RAII机制参考“接口介绍”章节。
 
@@ -31,7 +31,7 @@ private:
 
 ### 1. 创建成员变量和辅助函数
 
-我们需要一个`vk::raii::Instance`对象管理Vulkan实例，并通过辅助函数创建它
+我们需要一个 `vk::raii::Instance` 对象管理 Vulkan 实例，通过辅助函数创建它：
 
 ```cpp
 /// class member
@@ -73,8 +73,8 @@ void createInstance(){
 
 ```cpp
 vk::ApplicationInfo applicationInfo;
-applicationInfo.pApplicationName = "xxxx";  // class member is public
-applicationInfo.setApplicationVersion(1);   // or use setter()
+applicationInfo.pApplicationName = "xxxx";  // 可以直接修改成员变量
+applicationInfo.setApplicationVersion(1);   // 也可以使用 setter 函数
 ```
 
 > 后续教程为方便讲解，将同时使用这两种方式！
@@ -90,7 +90,7 @@ vk::InstanceCreateInfo createInfo(
 );
 ```
 
-**说明**：
+说明：
 
 - `flags` 参数是标志位，用于控制特殊行为，默认认初始化为空，大多时候无需修改。
 - 还有其他参数，但都提供了默认初始化，无需手动设置。
@@ -150,11 +150,7 @@ createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 由于数组类型传参时会隐式退化成指针，底层C风格接口都使用“开始指针+元素数量”的方式引用数组。
 vulkan-hpp 需要调用底层C接口，所以这些配置信息采用相同的方式记录。
 
-但 vulkan-hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::ArrayProxyNoTemporaries` 模板参数简化了数组参数的设置。
-
-> 这些函数的命名大致是： `set......s` ，末尾`s`表示多个。  
-> 假如是 `setTs`，那么应该有类似 `pT` 和 `tCount` 的成员变量，分别表示开始指针和数量。
-
+但 vulkan-hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::ArrayProxyNoTemporaries` 模板参数简化了数组参数的设置，
 这些函数能够自动处理数组参数：
 
    - 接收任意连续容器（`std::vector`、`std::array`、原生数组）或初始化列表。
@@ -195,9 +191,9 @@ createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
 ## **检查扩展支持**
 
-有扩展不支持时创建实例会抛出异常，异常代码为 `vk::Result::eErrorExtensionNotPresent` 。
+创建实例时有扩展不支持会抛出异常，异常代码为 `vk::Result::eErrorExtensionNotPresent` 。
 
-我们可以主动检查哪些扩展是支持的，使用 `enumerateInstanceExtensionProperties` 函数，会返回一个 `std::vector` ，表示支持的扩展类型。
+我们可以主动检查哪些扩展是支持的，使用 `enumerateInstanceExtensionProperties` 函数，会返回一个 `std::vector` ，表示支持的扩展类型列表。
 
 每个 `vk::ExtensionProperties` 结构体包含扩展的名称和版本。我们可以用一个简单的 for 循环列出它们：
 ```cpp
