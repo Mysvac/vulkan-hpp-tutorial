@@ -1,9 +1,9 @@
 <div align="center">
 
-<h1>Vulkan-raii-hpp-tutorial</h1>
+<h1>Vulkan-hpp-tutorial</h1>
 
 <p>
-    <a href="#中文"><img src="https://img.shields.io/badge/中文-red?style=for-the-badge" alt="中文" /></a>
+    <!-- <a href="#中文"><img src="https://img.shields.io/badge/中文-red?style=for-the-badge" alt="中文" /></a> -->
     <!-- &nbsp;&nbsp;
     <a href="#ENGLISH"><img src="https://img.shields.io/badge/English-blue?style=for-the-badge" alt="English" /></a> -->
 </p>
@@ -33,7 +33,7 @@
 
 备用站点：<https://vulkan.mysvac.com>
 
-> 如有错误，请提交Issue或PR。
+> 如有错误，请提交 Issue 或 PR 。
 
 ### 内容简介
 
