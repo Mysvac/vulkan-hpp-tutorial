@@ -7,12 +7,12 @@
 对于显卡而言，最佳内存类型应该有`vk::MemoryPropertyFlagBits::eDeviceLocal`标志。
 也就是设备本地的内存，实际是指显卡上的内存（显存），通常无法被CPU直接访问。
 
-容易理解，CPU访问内存更快、而GPU访问显存更快，交叉访问却比较麻烦，所以我们最好需要两个缓冲区：
+容易理解， CPU 访问主存更快、而 GPU 访问显存更快，交叉访问却比较麻烦，所以我们最好需要两个缓冲区：
 
-1. 位于内存，像上一节一样，我们称其为暂存缓冲\(Staging Buffer\)。
+1. 位于主存，像上一节一样，我们称其为暂存缓冲\(Staging Buffer\)。
 2. 位于显存，是我们最终需要的顶点缓冲，类型是设备本地缓冲\(Device Local\)。
 
-我们的CPU向暂存缓冲写数据，然后通过某种方式将数据从暂存缓冲复制到最终缓冲，然后GPU从最终缓冲中读取（使用最终缓冲绑定顶点输入）。
+我们的 CPU 向暂存缓冲写数据，然后通过某种方式将数据从暂存缓冲复制到最终缓冲，然后 GPU 从最终缓冲中读取（使用最终缓冲绑定顶点输入）。
 
 ## **转移队列**
 
@@ -139,7 +139,7 @@ void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::De
 ```
 
 内存传输操作需要使用命令缓冲，我们必须分配一个临时的命令缓冲用于命令的录制和提交。
-同时最好为这些临时命令缓冲创建一个独立的命令池，程序可以更好进行资源分配的优化，此时需要使用`vk::CommandBufferLevel::ePrimary`标记。
+同时最好为这些临时命令缓冲创建一个独立的命令池，程序可以更好进行资源分配的优化，此时需要使用 `vk::CommandBufferLevel::ePrimary` 标记。
 
 ```cpp
 void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::DeviceSize size) {
@@ -182,7 +182,7 @@ commandBuffer.end();
 ```
 
 与绘制命令不同，我们只希望它立刻执行内存传输命令。
-我们至少有两种方式等待内存传输完成，使用围栏`Fence`进行同步或直接`waitIdle`，这里使用后者：
+我们至少有两种方式等待内存传输完成，使用围栏 `Fence` 进行同步或直接 `waitIdle` ，这里使用后者：
 
 ```cpp
 vk::SubmitInfo submitInfo;
@@ -204,15 +204,18 @@ copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
 
 现在尝试运行程序，保证程序可以正常执行。
 
-### **注意**
+---
 
-在实际应用中，你不应该给每个缓冲都调用一次`allocateMemory`。
+## **注意**
+
+在实际应用中，你不应该给每个缓冲都调用一次 `allocateMemory` 。
 同时为大量对象分配内存的正确方法是创建一个自定义分配器，该分配器通过使用我们在许多函数中看到的 `offset` 参数将单个资源拆分到许多不同的对象中。
 
 你可以自己实现这样的分配器，也可以使用 [VulkanMemoryAllocator-Hpp](https://github.com/YaaZ/VulkanMemoryAllocator-Hpp) 这样的第三方库。
 
-但是对于本教程，为每个资源使用单独的分配是可以的。因为我们的数据量很小，不会触发相关限制。
+但是对于本教程，为每个资源使用单独的分配是可以的，因为我们的数据量很小。
 
+> 我们将在进阶章节详细讨论内存分配器内容。
 
 ---
 

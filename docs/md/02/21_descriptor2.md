@@ -25,7 +25,7 @@ void createDescriptorPool() {
 }
 ```
 
-首先，我们需要使用`vk::DescriptorPoolSize`结构体描述我们需要的描述符类型以及数量。
+首先，我们需要使用 `vk::DescriptorPoolSize` 结构体描述我们需要的描述符类型以及数量。
 
 ```cpp
 vk::DescriptorPoolSize poolSize;
@@ -33,7 +33,7 @@ poolSize.type = vk::DescriptorType::eUniformBuffer;
 poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 ```
 
-我们会为每个帧分配一个描述符。上面的`poolSize`结构体会被`CreateInfo`引用：
+我们会为每个帧分配一个描述符。上面的 `poolSize` 结构体会被 `CreateInfo` 引用：
 
 ```cpp
 vk::DescriptorPoolCreateInfo poolInfo;
@@ -41,7 +41,7 @@ poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 poolInfo.setPoolSizes( poolSize );
 ```
 
-我们使用了RAII封装，必须指定`eFreeDescriptorSet`标志位，从而在描述符集合释放时将控制权交还给描述符池。
+我们使用了RAII封装，必须指定 `eFreeDescriptorSet` 标志位，从而在描述符集合释放时将控制权交还给描述符池。
 
 除了可用的单种描述符的最大数量外，我们还需要指定可能分配的描述符集合的最大数量：
 
@@ -52,7 +52,7 @@ poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 > 假如 `descriptorCount` 是 4 ，而 `maxSets` 是 2 。
 > 那么你可以分配 2 个描述符集，每个集包含 2 个描述符；或只分配 1 个描述符集，它包含 1~4 个描述符。（描述符总数不超过4。）
 
-在`m_descriptorSetLayout`下方添加一个新的类成员来存储描述符池的句柄，并调用 `createDescriptorPool` 来创建它。
+在 `m_descriptorSetLayout` 下方添加一个新的类成员来存储描述符池的句柄，并调用 `createDescriptorPool` 来创建它。
 
 ```cpp
 vk::raii::DescriptorSetLayout m_descriptorSetLayout{ nullptr };
@@ -331,7 +331,9 @@ struct alignas(16) UniformBufferObject {
 然后，着色器可以像这样引用特定的描述符集合：
 
 ```glsl
-layout(set = 0, binding = 0) uniform UniformBufferObject { ... }
+// 通过 set 指定描述符集的索引，通过 binding 指定描述符绑定位
+layout(set = 0, binding = 0) uniform UniformBufferObject { ... };  // 帧数据
+layout(set = 1, binding = 0) uniform sampler2D tex;               // 材质数据
 ```
 
 您可以使用此功能将每个对象变化的描述符和共享的描述符放入单独的描述符集合中。

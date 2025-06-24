@@ -268,7 +268,7 @@ void updateUniformBuffer(uint32_t currentImage) {
 
 > 注意这里是 `milliseconds` ，如果写成 `seconds` ，物体会动的非常慢。
 
-### 6. 描述符布局
+### 6. 描述符
 
 着色器需要通过描述符才能访问内存资源，现在创建描述符布局：（变量可以声明在关系布局上方）
 

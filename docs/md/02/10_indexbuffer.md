@@ -36,7 +36,7 @@ inline static const std::vector<uint16_t> indices = {
 };
 ```
 
-你可以使用`uint16_t`或`uint32_t`，我们这里使用前者，因为我们需要的索引数很少（不超过65535）。
+你可以使用 `uint16_t` 或 `uint32_t` ，我们这里使用前者，因为我们需要的索引数很少（不超过65535）。
 
 和顶点缓冲一样，我们也需要索引缓冲和缓冲内存。现在添加两个成员变量：
 
@@ -47,7 +47,7 @@ vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
 vk::raii::Buffer m_indexBuffer{ nullptr };
 ```
 
-然后创建一个`createIndexBuffer`函数，内容参考`createVertexBuffer`：
+然后创建一个 `createIndexBuffer` 函数，内容参考 `createVertexBuffer` ：
 
 ```cpp
 void initVulkan() {
@@ -87,7 +87,7 @@ void createIndexBuffer() {
 ```
 
 这个顶点缓冲的创建代码基本一致，我们将顶点缓冲的变量换成了索引缓冲的。
-唯一需要注意的是，创建索引缓冲时修改了`vk::BufferUsageFlagBits`，使用`eIndexBuffer`而不是`eVertexBuffer`。
+唯一需要注意的是，创建索引缓冲时修改了 `vk::BufferUsageFlagBits` ，使用 `eIndexBuffer` 而不是 `eVertexBuffer` 。
 
 ## **使用索引缓冲**
 
@@ -104,7 +104,7 @@ commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint16 );
 我们略微调整了顶点缓冲的绑定代码，因为我们只有一个顶点缓冲。
 索引缓冲的第二个参数是偏移量，第三个参数是索引使用的类型。
 
-仅仅绑定是不够的，我们需要使用`drawIndexed`代替`draw`。
+仅仅绑定是不够的，我们需要使用 `drawIndexed` 代替 `draw` 。
 
 ```cpp
 // commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
@@ -121,15 +121,14 @@ commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 ![矩形](../../images/0210/indexed_rectangle.png)
 
-你现在已经知道了如何使用索引缓冲节省内存，这非常重要，因为我们后面会导入复杂的3D模型。
-
-> 你大概还发现了一点，顶点缓冲需要在管线创建时添加描述信息，但索引缓冲不需要。
-> 因为索引数据的内容足够简单，格式由 drawIndexed 调用时指定，你完全可以修改索引而不影响管线。
+你现在已经知道了如何使用索引缓冲节省内存，这非常重要，因为我们后面会导入复杂的 3D 模型。
 
 ---
 
+## **注意**
+
 前一章的末尾提到了你应该使用内存分配器，从单个内存分配多个资源。
-但实际上你还应该更进一步，[驱动程序开发者建议](https://developer.nvidia.com/vulkan-memory-management)你将多个缓冲区合并到一个`vk::Buffer`中，并在使用时通过偏移量区分不同的缓冲区。
+但实际上你还应该更进一步，[驱动程序开发者建议](https://developer.nvidia.com/vulkan-memory-management)你将多个缓冲区合并到一个 `vk::Buffer` 中，并在使用时通过偏移量区分不同的缓冲区。
 这样做对于缓存更加友好，因为数据更加紧凑。
 
 如果多个资源在同一渲染操作期间未使用，甚至可以重用相同的内存块，当然前提是它们的数据已刷新。
