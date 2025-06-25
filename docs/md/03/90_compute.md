@@ -1,3 +1,7 @@
+---
+title: 计算着色器与SSBO
+comments: true
+---
 # **计算着色器与SSBO**
 
 ## **前言**
@@ -828,3 +832,4 @@ void drawFrame() {
 
 **[shader-comp代码](../../codes/03/90_compute/shaders/shader.comp)**
 
+---

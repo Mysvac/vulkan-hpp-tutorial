@@ -1,3 +1,7 @@
+---
+title: 实例化渲染
+comments: true
+---
 # **实例化渲染**
 
 ## **前言**
@@ -498,3 +502,5 @@ layout(binding = 0) uniform UniformBufferObject {
 **[shader-frag代码](../../codes/03/40_instancedrendering/shaders/shader.frag)**
 
 **[shader-frag代码差异](../../codes/03/40_instancedrendering/shaders/frag.diff)**
+
+---

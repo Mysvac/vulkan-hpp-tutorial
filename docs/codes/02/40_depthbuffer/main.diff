@@ -73,7 +73,7 @@ index e0b70f0..560b25e 100644
          renderPassInfo.setSubpasses( subpass );
  
          vk::SubpassDependency dependency;
-         dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+         dependency.srcSubpass = vk::SubpassExternal;
          dependency.dstSubpass = 0;
 -        dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 +        dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
@@ -197,8 +197,8 @@ index e0b70f0..560b25e 100644
      /////////////////////////////////////////////////////////////////
  
 @@ -1180,12 +1227,21 @@ private:
-         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+         barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+         barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
          barrier.image = image;
 -        barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 +        // barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;

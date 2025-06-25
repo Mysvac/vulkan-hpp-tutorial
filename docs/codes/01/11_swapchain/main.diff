@@ -16,7 +16,7 @@ index e592d98..88b5efb 100644
          "VK_LAYER_KHRONOS_validation"
      };
 +    inline static const std::vector<const char*> deviceExtensions {
-+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
++        vk::KHRSwapchainExtensionName
 +    };
  
      #ifdef NDEBUG

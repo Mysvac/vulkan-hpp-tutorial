@@ -1,3 +1,7 @@
+---
+title: 图像视图
+comments: true
+---
 # **图像视图**
 
 ## **前言**
@@ -102,3 +106,5 @@ m_swapChainImageViews.emplace_back( m_device.createImageView(createInfo) );
 **[C++代码差异](../../codes/01/12_imageview/main.diff)**
 
 **[CMake代码](../../codes/01/00_base/CMakeLists.txt)**
+
+---

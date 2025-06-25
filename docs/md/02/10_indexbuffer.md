@@ -1,3 +1,7 @@
+---
+title: 索引缓冲区
+comments: true
+---
 # **索引缓冲**
 
 ## **前言**
@@ -147,3 +151,5 @@ commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 **[shader-vert代码](../../codes/02/00_vertexinput/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/02/00_vertexinput/shaders/shader.frag)**
+
+---

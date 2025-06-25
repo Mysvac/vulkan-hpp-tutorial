@@ -1,3 +1,7 @@
+---
+title: 创建图形管线
+comments: true
+---
 # **管线创建**
 
 现在我们可以结合之前章节中的所有结构和对象来创建图形管线了！以下是我们现在拥有的对象类型，作为一个快速回顾
@@ -102,3 +106,5 @@ m_graphicsPipeline = m_device.createGraphicsPipeline( nullptr, pipelineInfo );
 **[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+
+---

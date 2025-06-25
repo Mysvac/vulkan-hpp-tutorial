@@ -1,3 +1,7 @@
+---
+title: 管线缓存
+comments: true
+---
 # **管线缓存**
 
 ## **前言**
@@ -138,3 +142,5 @@ void createPipelineCache() {
 **[shader-vert代码](../../codes/03/60_dynamicuniform/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/03/70_separatesampler/shaders/shader.frag)**
+
+---

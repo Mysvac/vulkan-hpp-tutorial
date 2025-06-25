@@ -1,3 +1,7 @@
+---
+title: 顶点输入描述
+comments: true
+---
 # **顶点输入描述**
 
 ## **前言**
@@ -228,3 +232,5 @@ vertexInputInfo.setVertexAttributeDescriptions(attributeDescriptions);
 **[shader-vert代码差异](../../codes/02/00_vertexinput/shaders/vert.diff)**
 
 **[shader-frag代码](../../codes/02/00_vertexinput/shaders/shader.frag)**
+
+---

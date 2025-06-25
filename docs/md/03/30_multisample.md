@@ -1,4 +1,8 @@
-# **多重采样**\(Multisampling\)
+---
+title: 多重采样
+comments: true
+---
+# **多重采样**\(Multi-sampling\)
 
 ## **前言**
 
@@ -402,4 +406,4 @@ void createGraphicsPipeline() {
 
 **[shader-frag代码](../../codes/02/40_depthbuffer/shaders/shader.frag)**
 
-
+---

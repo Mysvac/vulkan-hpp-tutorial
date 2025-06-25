@@ -1,3 +1,7 @@
+---
+title: 首页
+comments: true
+---
 # **首页**
 
 ## **教程简介**
@@ -19,7 +23,7 @@
 - [CMake](https://cmake.org/) 构建系统
 - [vcpkg](https://vcpkg.io/) 依赖管理
 
-虽然 `vulkan-hpp` 支持 C++20 模块，但 `glfw3` 等库的模块化较为复杂，本教程在基础部分不启用模块功能。
+虽然 `vulkan-hpp` 提供了模块接口文件，但模块的编译并不轻松，且 `glfw3` 等库的模块化较为复杂，因此我们只在“进阶”章节使用 C++20 模块功能。
 
 `CMake` 用于项目构建，实现跨平台的项目配置，要求读者了解 CMake 的基础使用。
 
@@ -45,3 +49,4 @@ Vulkan SDK 本身由 C 编写，因此具有更好的跨语言兼容性，可通
 
 - [EasyVulkan](https://easyvulkan.github.io/index.html) 
 
+---

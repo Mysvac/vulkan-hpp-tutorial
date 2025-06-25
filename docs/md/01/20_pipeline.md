@@ -1,3 +1,7 @@
+---
+title: 图形管线介绍
+comments: true
+---
 # **图形管线**
 
 > 如果你忘记了什么是图形管线，可以回顾 [GAMES202课程第二节](https://www.bilibili.com/video/BV1YK4y1T7yY) 。
@@ -85,3 +89,5 @@ void createGraphicsPipeline() {
 **[C++代码差异](../../codes/01/20_pipeline/main.diff)**
 
 **[CMake代码](../../codes/01/00_base/CMakeLists.txt)**
+
+---

@@ -1,3 +1,7 @@
+---
+title: 命令缓冲区
+comments: true
+---
 # **命令缓冲与命令池**
 
 在 Vulkan 中，像绘制操作和内存传输这样的命令不是直接使用函数调用来执行的。你必须在你想要执行的命令缓冲区对象中记录所有操作。
@@ -286,3 +290,5 @@ commandBuffer.end();
 **[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+
+---

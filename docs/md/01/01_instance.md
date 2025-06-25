@@ -1,3 +1,7 @@
+---
+title: 上下文与实例
+comments: true
+---
 # **Vulkan实例**
 
 ## **RAII上下文初始化**
@@ -61,12 +65,12 @@ void createInstance(){
         1,                  // applicationVersion
         "No Engine",        // pEngineName
         1,                  // engineVersion
-        VK_API_VERSION_1_4  // apiVersion
+        vk::makeApiVersion(0, 1, 4, 0)  // apiVersion
     );
 }
 ```
 
-> `VK_API_VERSION_X_X` 用于指定 API 版本，请依据需要自行选择。
+> 版本号也可直接用宏 `VK_API_VERSION_X_X` ，API 版本可以低于 Vulkan 版本，但不能高于。
 
 注意到，它并不是RAII的，因为它只是个配置信息，不含特殊资源。
 所以我们可以无参构造，然后直接修改成员变量，像这样：
@@ -90,10 +94,8 @@ vk::InstanceCreateInfo createInfo(
 );
 ```
 
-说明：
-
-- `flags` 参数是标志位，用于控制特殊行为，默认认初始化为空，大多时候无需修改。
-- 还有其他参数，但都提供了默认初始化，无需手动设置。
+`flags` 参数是标志位，用于控制特殊行为，默认认初始化为空，大多时候无需修改。
+还有其他参数，但都提供了默认初始化，无需手动设置。
 
 注意到，`&applicationInfo`传入指针，需要注意生命周期！
 
@@ -173,14 +175,14 @@ vulkan-hpp 需要调用底层C接口，所以这些配置信息采用相同的�
 **解决方案：**
 
 1. 修改 `CreateInfo` 
-2. 添加 `VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME` 扩展
+2. 添加 `vk::KHRPortabilityEnumerationExtensionName` 扩展
 3. 添加 `vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR` 标志位
 
 
 通常代码可能如下所示
 ```cpp
 std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
-requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+requiredExtensions.emplace_back(vk::KHRPortabilityEnumerationExtensionName);
 
 createInfo.setPEnabledExtensionNames( requiredExtensions );
 createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
@@ -244,3 +246,5 @@ for (const auto& extension : extensions) {
 **[C++代码差异](../../codes/01/01_instance/main.diff)**
 
 **[CMake代码](../../codes/01/00_base/CMakeLists.txt)**
+
+---

@@ -32,7 +32,7 @@ private:
         "VK_LAYER_KHRONOS_validation"
     };
     inline static const std::vector<const char*> deviceExtensions {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        vk::KHRSwapchainExtensionName
     };
 
     #ifdef NDEBUG
@@ -105,9 +105,9 @@ private:
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
         if (enableValidationLayers) {
-            extensions.emplace_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+            extensions.emplace_back( vk::EXTDebugUtilsExtensionName );
         }
-        extensions.emplace_back( VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME );
+        extensions.emplace_back( vk::KHRPortabilityEnumerationExtensionName );
 
         return extensions;
     }
@@ -121,7 +121,7 @@ private:
             1,                  // applicationVersion
             "No Engine",        // pEngineName
             1,                  // engineVersion
-            VK_API_VERSION_1_4  // apiVersion
+            vk::makeApiVersion(0, 1, 4, 0)  // apiVersion
         );
         
         vk::InstanceCreateInfo createInfo( 

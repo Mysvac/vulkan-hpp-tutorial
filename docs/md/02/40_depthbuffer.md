@@ -1,3 +1,7 @@
+---
+title: 深度缓冲区
+comments: true
+---
 # **深度缓冲**
 
 ## **前言**
@@ -67,7 +71,7 @@ const std::vector<Vertex> vertices = {
 现在可以添加一个额外的几何体让场景更有趣些，它会为我们展示本场景我们需要解决的问题。
 我们希望在现有矩形的下方再放置一个矩形，就像这样：
 
-![extra_square](../../images/0240/extra_square.svg)
+![extra_square](../../images/0240/extra_square.png)
 
 现在往顶点数据中添加内容，新顶点的Z坐标使用 `-0.5f` ，不要忘了顶点索引：
 
@@ -104,10 +108,10 @@ inline static const std::vector<uint16_t> indices = {
 - 使用深度缓冲，近的覆盖远的
 
 第一种方法通常用于绘制透明对象，因为与顺序无关的透明对象绘制并不容易。
-而深度片段排序问题更常见的解决方案就是深度缓冲\(depth buffer\)。
+而深度片段排序问题更常见的解决方案就是**深度缓冲\(depth buffer\)**。
 
 深度缓冲是额外的附件，它存储每个片段对应的深度，每次在光栅化器生成片段时都会判断是否比前一个片段更近。
-如果更近则替换，更远则抛弃，这被称为深度测试\(depth testing\)，用于处理物体的远近关系。
+如果更近则替换，更远则抛弃，这被称为**深度测试\(depth testing\)**，用于处理物体的远近关系。
 可以在片段着色器中操作此值，就像操作颜色的输出一样。
 
 ### 4. GLM配置
@@ -319,7 +323,7 @@ m_depthImageView = createImageView(m_depthImage, depthFormat, vk::ImageAspectFla
 
 ## **显式转换深度图像**
 
-不需要显式地将图像的布局转换为深度附件，因为我们将在渲染通道中处理它。
+**不需要**显式地将图像的布局转换为深度附件，因为我们将在渲染通道中处理它。
 但为了完整起见，仍然在本节描述此过程。如果你愿意，完全可以跳过这部分内容。
 
 在 `createDepthResources` 函数的末尾调用 `transitionImageLayout`，如下所示
@@ -605,3 +609,4 @@ void recreateSwapChain() {
 
 **[shader-frag代码差异](../../codes/02/40_depthbuffer/shaders/frag.diff)**
 
+---

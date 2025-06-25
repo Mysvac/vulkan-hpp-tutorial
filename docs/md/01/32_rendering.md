@@ -1,3 +1,7 @@
+---
+title: 同步与渲染呈现
+comments: true
+---
 # **渲染和呈现**
 
 ## **基础结构**
@@ -322,7 +326,7 @@ m_graphicsQueue.submit(submitInfo, m_inFlightFence);
 
 我们曾在“渲染通道”章节粗略介绍过子通道与子通道依赖。
 
-除了我们自己定义的子通道，渲染通道还提供了特殊的索引 `VK_SUBPASS_EXTERNAL`\(外部子通道\) 代指渲染通道开始之前和结束之后的操作，从而可以使用子通道依赖同步外部操作。
+除了我们自己定义的子通道，渲染通道还提供了特殊的索引 `vk::SubpassExternal`\(外部子通道\) 代指渲染通道开始之前和结束之后的操作，从而可以使用子通道依赖同步外部操作。
 
 若未显式声明依赖，Vulkan 将自动插入隐式同步，即后一个子通道的开始需要等到前一个子通道的结束，用于确保附件（如颜色/深度缓冲）的读写顺序正确，避免数据竞争。
 
@@ -351,14 +355,14 @@ m_graphicsQueue.submit(submitInfo, m_inFlightFence);
 
 ```cpp
 vk::SubpassDependency dependency;
-dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+dependency.srcSubpass = vk::SubpassExternal;
 dependency.dstSubpass = 0;
 ```
 
 这里填写的是子通道索引，`0`是我们唯一的子通道。 
-`VK_SUBPASS_EXTERNAL`是特殊值，在`srcSubpass`时表示渲染通道之前的外部子通道，在`dstSubpass`表示之后的。
+`vk::SubpassExternal`是特殊值，在`srcSubpass`时表示渲染通道之前的外部子通道，在`dstSubpass`表示之后的。
 
-`dstSubpass` 必须始终高于 `srcSubpass`，以防止依赖关系图中出现循环（除非其中一个是`VK_SUBPASS_EXTERNAL`）。
+`dstSubpass` 必须始终高于 `srcSubpass`，以防止依赖关系图中出现循环（除非其中一个是`vk::SubpassExternal`）。
 
 下面需指定源阶段（需要等待完成的阶段）和目标阶段（等待后可开始的阶段），图像布局转换将发生在目标阶段的开始。
 
@@ -485,3 +489,5 @@ void mainLoop() {
 **[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+
+---

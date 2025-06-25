@@ -1,3 +1,7 @@
+---
+title: 描述符与UBO
+comments: true
+---
 # **描述符布局与缓冲**
 
 ## **前言**
@@ -365,3 +369,5 @@ memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 **[shader-vert代码差异](../../codes/02/20_descriptor1/shaders/vert.diff)**
 
 **[shader-frag代码](../../codes/02/20_descriptor1/shaders/shader.frag)**
+
+---

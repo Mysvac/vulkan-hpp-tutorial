@@ -215,8 +215,8 @@ index 4ec3b5f..46c75ca 100644
 +
 +        vk::ImageMemoryBarrier barrier;
 +        barrier.image = image;
-+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
++        barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
++        barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
 +        barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 +        barrier.subresourceRange.baseArrayLayer = 0;
 +        barrier.subresourceRange.layerCount = 1;

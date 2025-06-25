@@ -1,0 +1,127 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "ninja-base",
+      "hidden": true,
+      "description": "config-base, use Ninja, set binaryDir and installDir",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/",
+      "installDir": "${sourceDir}/install/",
+      "condition": {
+        "type": "not",
+        "condition": {
+          "type": "equals",
+          "lhs": "${hostSystemName}",
+          "rhs": "Windows"
+        }
+      }
+    },
+    {
+      "name": "win-x64",
+      "description": "Windows x64 config presets(MSVC + Ninja Multi-Config)",
+      "inherits": "ninja-base",
+      "generator": "Ninja Multi-Config",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_C_COMPILER": "cl.exe"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }            ,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "unix-gnu-debug",
+      "description": "Linux/macOS GNU Debug config presets(GNU + Ninja)",
+      "inherits": "ninja-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_C_COMPILER": "gcc"
+      }
+    },
+    {
+      "name": "unix-gnu-release",
+      "description": "Linux/macOS GNU Release config presets(GNU + Ninja)",
+      "inherits": "ninja-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_C_COMPILER": "gcc"
+      }
+    },
+    {
+      "name": "unix-clang-debug",
+      "description": "Linux/macOS Clang Debug config presets(Clang + Ninja)",
+      "inherits": "ninja-base",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER": "clang"
+      }
+    },
+    {
+      "name": "unix-clang-release",
+      "description": "Linux/macOS Clang Release config presets(Clang + Ninja)",
+      "inherits": "ninja-base",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER": "clang"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win-x64-build-debug",
+      "displayName": "win-x64 Build Debug",
+      "description": "win-x64 build Debug preset",
+      "configurePreset": "win-x64",
+      "configuration": "Debug"
+    },
+    {
+      "name": "win-x64-build-release",
+      "displayName": "win-x64 Build Release",
+      "description": "win-x64 build Release preset",
+      "configurePreset": "win-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "unix-gnu-build-debug",
+      "displayName": "unix-gnu Build Debug",
+      "description": "unix-gnu build Debug preset",
+      "configurePreset": "unix-gnu-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "unix-gnu-build-release",
+      "displayName": "unix-gnu Build Release",
+      "description": "unix-gnu build Release preset",
+      "configurePreset": "unix-gnu-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "unix-clang-build-debug",
+      "displayName": "unix-clang Build Debug",
+      "description": "unix-clang build Debug preset",
+      "configurePreset": "unix-clang-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "unix-clang-build-release",
+      "displayName": "unix-clang Build Release",
+      "description": "unix-clang build Release preset",
+      "configurePreset": "unix-clang-release",
+      "configuration": "Release"
+    }
+  ]
+}

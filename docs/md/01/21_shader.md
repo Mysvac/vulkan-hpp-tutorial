@@ -1,3 +1,7 @@
+---
+title: 着色器模块
+comments: true
+---
 #  **着色器**
 
 ## **着色器模块**
@@ -257,7 +261,7 @@ Vulkan SDK 包含 libshaderc，这是一个从您的程序中将 GLSL 代码编�
 现在让我们在 `shaders/` 文件夹中创建新的 `CMakeLists.txt`，内容如下所示：
 
 ```cmake
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 4.0.0)
 
 find_package(Vulkan REQUIRED)
 
@@ -475,3 +479,5 @@ std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo
 **[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+
+---

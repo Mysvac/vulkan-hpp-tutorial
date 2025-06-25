@@ -34,7 +34,7 @@ index 74af236..2b0dcd3 100644
          renderPassInfo.setSubpasses( subpass );
  
 +        vk::SubpassDependency dependency;
-+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
++        dependency.srcSubpass = vk::SubpassExternal;
 +        dependency.dstSubpass = 0;
 +        dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 +        dependency.srcAccessMask = {};

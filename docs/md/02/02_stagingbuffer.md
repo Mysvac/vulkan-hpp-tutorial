@@ -1,3 +1,7 @@
+---
+title: 暂存缓冲区
+comments: true
+---
 # **暂存缓冲**
 
 ## **前言**
@@ -230,3 +234,5 @@ copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
 **[shader-vert代码](../../codes/02/00_vertexinput/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/02/00_vertexinput/shaders/shader.frag)**
+
+---

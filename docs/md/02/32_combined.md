@@ -1,3 +1,7 @@
+---
+title: 组合图像采样器
+comments: true
+---
 # **组合图像采样器**
 
 ## **前言**
@@ -283,3 +287,5 @@ void main() {
 **[shader-frag代码](../../codes/02/32_combined/shaders/shader.frag)**
 
 **[shader-frag代码差异](../../codes/02/32_combined/shaders/frag.diff)**
+
+---

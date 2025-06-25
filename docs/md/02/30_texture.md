@@ -1,3 +1,7 @@
+---
+title: 纹理图像
+comments: true
+---
 # **纹理图像**
 
 ## **前言**
@@ -426,12 +430,12 @@ void transitionImageLayout(
 vk::ImageMemoryBarrier barrier;
 barrier.oldLayout = oldLayout;
 barrier.newLayout = newLayout;
-barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
 ```
 
 我们首先设置了新旧图像布局，然后设置了忽视队列族所有权的传输。
-注意后两个字段不是默认值，你必须显式设置`VK_QUEUE_FAMILY_IGNORED`。
+注意后两个字段不是默认值，你必须显式设置`vk::QueueFamilyIgnored`。
 
 然后设置受影响的图像和特定区域：
 
@@ -654,3 +658,5 @@ commandBuffer.pipelineBarrier(
 **[shader-vert代码](../../codes/02/20_descriptor1/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/02/20_descriptor1/shaders/shader.frag)**
+
+---

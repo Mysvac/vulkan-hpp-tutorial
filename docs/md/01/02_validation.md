@@ -1,3 +1,7 @@
+---
+title: 验证层
+comments: true
+---
 # **验证层**
 
 ## **什么是验证层**
@@ -58,6 +62,8 @@ VkResult vkCreateInstance_WithValidation(
 ### 1. 标准验证层配置
 
 与扩展一样，验证层需要显式指定名称并启用，该层称为 `"VK_LAYER_KHRONOS_validation"` 。
+
+> 此层由 Khronos 提供而非核心部分，因此它没有专用的常量或者宏定义，需手动输入字符串。
 
 让我们在类中添加代码：
 
@@ -151,15 +157,15 @@ std::vector<const char*> getRequiredExtensions() {
     std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
     if (enableValidationLayers) {
-        extensions.emplace_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+        extensions.emplace_back( vk::EXTDebugUtilsExtensionName );
     }
-    extensions.emplace_back( VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME );
+    extensions.emplace_back( vk::KHRPortabilityEnumerationExtensionName );
 
     return extensions;
 }
 ```
 
-> 此处的 `VK_EXT_DEBUG_UTILS_EXTENSION_NAME` 宏等于字符串 `"VK_EXT_debug_utils"` 。
+> 此处的 `vk::EXTDebugUtilsExtensionName` 常量等于字符串 `"VK_EXT_debug_utils"` 。
 
 现在可以在 `createInstance` 中使用此函数简化代码：
 
@@ -362,3 +368,5 @@ if (enableValidationLayers) {
 **[C++代码差异](../../codes/01/02_validation/main.diff)**
 
 **[CMake代码](../../codes/01/00_base/CMakeLists.txt)**
+
+---

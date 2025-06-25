@@ -1,3 +1,7 @@
+---
+title: 渲染通道
+comments: true
+---
 # **渲染通道**
 
 ## **渲染通道概念**
@@ -233,3 +237,5 @@ m_renderPass = m_device.createRenderPass(renderPassInfo);
 **[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+
+---

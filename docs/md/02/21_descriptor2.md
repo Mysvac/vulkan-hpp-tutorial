@@ -1,3 +1,7 @@
+---
+title: 描述符池与集合
+comments: true
+---
 # **描述符池与集合**
 
 ## **前言**
@@ -353,3 +357,4 @@ layout(set = 1, binding = 0) uniform sampler2D tex;               // 材质数�
 
 **[shader-frag代码](../../codes/02/20_descriptor1/shaders/shader.frag)**
 
+---

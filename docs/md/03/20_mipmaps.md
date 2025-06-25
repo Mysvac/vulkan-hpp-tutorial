@@ -1,4 +1,8 @@
-# **生成 Mipmaps**
+---
+title: Mipmap
+comments: true
+---
+# **Mipmap**
 
 ## **前言**
 
@@ -254,8 +258,8 @@ void generateMipmaps(
 
     vk::ImageMemoryBarrier barrier;
     barrier.image = image;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+    barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
     barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = 1;
@@ -569,3 +573,4 @@ samplerInfo.minLod = static_cast<float>(m_mipLevels / 2);
 
 **[shader-frag代码](../../codes/02/40_depthbuffer/shaders/shader.frag)**
 
+---

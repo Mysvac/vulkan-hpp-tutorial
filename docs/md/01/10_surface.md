@@ -1,3 +1,7 @@
+---
+title: 窗口表面
+comments: true
+---
 # **窗口表面**
 
 ## **前言**
@@ -165,3 +169,5 @@ m_presentQueue = m_device.getQueue( indices.presentFamily.value(), 0 );
 **[C++代码差异](../../codes/01/10_surface/main.diff)**
 
 **[CMake代码](../../codes/01/00_base/CMakeLists.txt)**
+
+---

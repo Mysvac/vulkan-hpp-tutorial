@@ -1,3 +1,7 @@
+---
+title: 分离图像与采样器
+comments: true
+---
 # **分离图像与采样器**
 
 ## **前言**
@@ -502,3 +506,5 @@ void main() {
 **[shader-frag代码](../../codes/03/70_separatesampler/shaders/shader.frag)**
 
 **[shader-frag代码差异](../../codes/03/70_separatesampler/shaders/frag.diff)**
+
+---

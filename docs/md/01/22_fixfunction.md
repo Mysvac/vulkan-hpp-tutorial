@@ -1,3 +1,7 @@
+---
+title: 固定功能阶段配置
+comments: true
+---
 # **固定功能阶段**
 
 旧的图形 API 为图形管线的大部分阶段提供了默认状态。
@@ -363,3 +367,4 @@ m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 
 **[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
 
+---

@@ -1,3 +1,7 @@
+---
+title: 飞行中的帧
+comments: true
+---
 # **飞行中的帧**
 
 飞行中的帧"Frames in flight"，指 **同时处于渲染流水线不同阶段的多个帧**。
@@ -159,3 +163,5 @@ void drawFrame() {
 **[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+
+---

@@ -1,3 +1,7 @@
+---
+title: 帧缓冲区
+comments: true
+---
 # **帧缓冲**
 
 ## **概念**
@@ -93,3 +97,5 @@ for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
 **[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+
+---

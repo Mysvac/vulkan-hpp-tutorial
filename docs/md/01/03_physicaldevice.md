@@ -1,3 +1,7 @@
+---
+title: 物理设备与队列族
+comments: true
+---
 # **物理设备与队列族**
 
 在创建实例之后，我们需要查找并选择系统中合适的物理设备\(通常指 GPU \)。
@@ -294,3 +298,5 @@ for (int i = 0; const auto& queueFamily : queueFamilies) {
 **[C++代码差异](../../codes/01/03_physicaldevice/main.diff)**
 
 **[CMake代码](../../codes/01/00_base/CMakeLists.txt)**
+
+---

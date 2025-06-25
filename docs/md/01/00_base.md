@@ -1,3 +1,7 @@
+---
+title: 基础代码与窗口
+comments: true
+---
 # **基础代码**
 
 ## **总体结构**
@@ -66,7 +70,7 @@ int main() {
 ```
 这样会导入 GLFW 库，用于创建窗口。
 
-> 注意：本语句建议放在 `#include <vulkan/vulkan.hpp>` 下方！
+> 此语句需要放在 `#include <vulkan/vulkan.hpp>` 下方，从而导入 GLFW 的 VK 相关函数。
 
 ### 2. 定义窗口常量
 
@@ -152,3 +156,4 @@ void cleanup() {
 
 **[CMake代码](../../codes/01/00_base/CMakeLists.txt)**
 
+---

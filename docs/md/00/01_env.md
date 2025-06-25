@@ -1,3 +1,7 @@
+---
+title: 开发环境
+comments: true
+---
 # **开发环境**
 
 ## **概述**
@@ -128,7 +132,7 @@ vcpkg install glm
 
 ```cmake
 # CMakeLists.txt
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 4.0.0)
 
 # 需要设置环境变量VCPKG_ROOT
 file(TO_CMAKE_PATH "$ENV{VCPKG_ROOT}" VCPKG_CMAKE_PATH)
@@ -248,3 +252,7 @@ build/HelloVulkan
 **[CMake代码](../../codes/00/01_env/CMakeLists.txt)**
 
 **[C++代码](../../codes/00/01_env/main.cpp)**
+
+**[CMake预设模板](../../codes/00/01_env/CMakePresets.json)**
+
+---

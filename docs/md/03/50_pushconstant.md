@@ -1,3 +1,7 @@
+---
+title: 推送常量
+comments: true
+---
 # **推送常量**
 
 ## **前言**
@@ -206,3 +210,4 @@ void initInstanceDatas() {
 
 **[shader-frag代码差异](../../codes/03/50_pushconstant/shaders/frag.diff)**
 
+---

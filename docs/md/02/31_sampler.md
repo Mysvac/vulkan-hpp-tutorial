@@ -1,3 +1,7 @@
+---
+title: 图像采样器
+comments: true
+---
 # **图像视图与采样器**
 
 本节我们将创建两个着色器对图像进行采样所需的资源。
@@ -294,3 +298,5 @@ samplerInfo.maxAnisotropy = 1.0f;
 **[shader-vert代码](../../codes/02/20_descriptor1/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/02/20_descriptor1/shaders/shader.frag)**
+
+---

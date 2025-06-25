@@ -1,3 +1,7 @@
+---
+title: 逻辑设备与队列
+comments: true
+---
 # **逻辑设备与队列**
 
 ## **创建逻辑设备**
@@ -129,3 +133,5 @@ m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
 **[C++代码差异](../../codes/01/04_device/main.diff)**
 
 **[CMake代码](../../codes/01/00_base/CMakeLists.txt)**
+
+---

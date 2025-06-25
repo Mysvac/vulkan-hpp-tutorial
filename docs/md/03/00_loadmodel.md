@@ -1,4 +1,8 @@
-# **加载模型**
+---
+title: 加载3D模型
+comments: true
+---
+# **加载3D模型**
 
 ## **前言**
 
@@ -344,3 +348,4 @@ std::unordered_map<
 
 **[shader-frag代码](../../codes/02/40_depthbuffer/shaders/shader.frag)**
 
+---

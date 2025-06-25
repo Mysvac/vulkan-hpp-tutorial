@@ -1,3 +1,7 @@
+---
+title: 移动摄像机
+comments: true
+---
 # **移动摄像机**
 
 ## **前言**
@@ -123,7 +127,7 @@ ubo.model *= glm::rotate(
 
 现在你应该看到和之前类似的图像（实际视角与下图会有偏差）：
 
-![drawing_model](../../images/0300/drawing_model.png)
+![drawing_model](../../images/0310/right_room.png)
 
 ## **处理键盘输入**
 
@@ -246,3 +250,5 @@ float m_cameraRotateSpeed = 25.0f;
 **[shader-vert代码](../../codes/02/40_depthbuffer/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/02/40_depthbuffer/shaders/shader.frag)**
+
+---

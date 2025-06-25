@@ -1,3 +1,7 @@
+---
+title: 交换链
+comments: true
+---
 # **交换链**
 
 ## **前言**
@@ -26,11 +30,11 @@
 
 ```cpp
 inline static const std::vector<const char*> deviceExtensions {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    vk::KHRSwapchainExtensionName
 };
 ```
 
-> 宏 `VK_KHR_SWAPCHAIN_EXTENSION_NAME` 等于 `"VK_KHR_swapchain"`，使用宏防止拼写错误。
+> 常量 `vk::KHRSwapchainExtensionName` 等于 `"VK_KHR_swapchain"`，使用它防止拼写错误。
 
 ### 2. 扩展物理设备检查
 
@@ -485,3 +489,5 @@ m_swapChainExtent = extent;
 **[C++代码差异](../../codes/01/11_swapchain/main.diff)**
 
 **[CMake代码](../../codes/01/00_base/CMakeLists.txt)**
+
+---

@@ -1,3 +1,7 @@
+---
+title: 顶点缓冲区
+comments: true
+---
 # **创建顶点缓冲**
 
 ## **前言**
@@ -285,3 +289,5 @@ inline static const std::vector<Vertex> vertices = {
 **[shader-vert代码](../../codes/02/00_vertexinput/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/02/00_vertexinput/shaders/shader.frag)**
+
+---

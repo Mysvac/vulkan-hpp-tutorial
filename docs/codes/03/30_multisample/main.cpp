@@ -52,7 +52,7 @@ private:
         "VK_LAYER_KHRONOS_validation"
     };
     inline static const std::vector<const char*> deviceExtensions {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        vk::KHRSwapchainExtensionName
     };
 
     #ifdef NDEBUG
@@ -192,9 +192,9 @@ private:
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
         if (enableValidationLayers) {
-            extensions.emplace_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+            extensions.emplace_back( vk::EXTDebugUtilsExtensionName );
         }
-        extensions.emplace_back( VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME );
+        extensions.emplace_back( vk::KHRPortabilityEnumerationExtensionName );
 
         return extensions;
     }
@@ -208,7 +208,7 @@ private:
             1,                  // applicationVersion
             "No Engine",        // pEngineName
             1,                  // engineVersion
-            VK_API_VERSION_1_4  // apiVersion
+            vk::makeApiVersion(0, 1, 4, 0)  // apiVersion
         );
         
         vk::InstanceCreateInfo createInfo( 
@@ -575,7 +575,7 @@ private:
         renderPassInfo.setSubpasses( subpass );
 
         vk::SubpassDependency dependency;
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.srcSubpass = vk::SubpassExternal;
         dependency.dstSubpass = 0;
         dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
         dependency.srcAccessMask = {};
@@ -1280,8 +1280,8 @@ private:
         vk::ImageMemoryBarrier barrier;
         barrier.oldLayout = oldLayout;
         barrier.newLayout = newLayout;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+        barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
         barrier.image = image;
         // barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         barrier.subresourceRange.baseMipLevel = 0;
@@ -1691,8 +1691,8 @@ private:
 
         vk::ImageMemoryBarrier barrier;
         barrier.image = image;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+        barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
         barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount = 1;

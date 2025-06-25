@@ -1,3 +1,7 @@
+---
+title: 重建交换链
+comments: true
+---
 # **重建交换链**
 
 ## **前言**
@@ -257,3 +261,5 @@ void recreateSwapChain() {
 **[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
 
 **[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+
+---

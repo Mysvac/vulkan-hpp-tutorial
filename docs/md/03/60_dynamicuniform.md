@@ -1,3 +1,7 @@
+---
+title: 动态UBO
+comments: true
+---
 # **动态Uniform缓冲**
 
 ## **前言**
@@ -313,3 +317,5 @@ void main() {
 **[shader-vert代码差异](../../codes/03/60_dynamicuniform/shaders/vert.diff)**
 
 **[shader-frag代码](../../codes/03/60_dynamicuniform/shaders/shader.frag)**
+
+---

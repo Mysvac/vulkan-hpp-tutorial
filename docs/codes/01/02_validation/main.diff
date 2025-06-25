@@ -58,9 +58,9 @@ index 334c6ed..a61fb67 100644
 +        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 +
 +        if (enableValidationLayers) {
-+            extensions.emplace_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
++            extensions.emplace_back( vk::EXTDebugUtilsExtensionName );
 +        }
-+        extensions.emplace_back( VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME );
++        extensions.emplace_back( vk::KHRPortabilityEnumerationExtensionName );
 +
 +        return extensions;
 +    }
@@ -81,7 +81,7 @@ index 334c6ed..a61fb67 100644
 -        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 -        std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
 -
--        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+-        requiredExtensions.emplace_back(vk::KHRPortabilityEnumerationExtensionName);
 -
 +        std::vector<const char*> requiredExtensions = getRequiredExtensions();
 +        // special setter

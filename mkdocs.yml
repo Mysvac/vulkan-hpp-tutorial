@@ -8,6 +8,7 @@ site_description: >
 
 theme:
   name: material
+  custom_dir: docs/custom
   language: zh
   palette:
     - scheme: default
@@ -29,7 +30,7 @@ markdown_extensions:
       use_pygments: true
 
 extra_css:
-  - css/style.css
+  - custom/css/style.css
 
 nav:
   - 首页: index.md
@@ -87,31 +88,32 @@ nav:
   - 进阶功能:
     - C++模块化: md/04/00_cxxmodule.md
     - 查询池: md/04/10_querypool.md
-    - 多线程渲染:
-      - 并行命令录制: md/04/20_multithreading.md
-      - 资源加载系统: md/04/21_resourceloading.md
-    - 着色器进阶:
-      - 几何着色器: md/04/30_geometry.md
-      - 细分着色器: md/04/31_tessellation.md
-      - 任务与网格着色器: md/04/32_taskmesh.md
     - 多管线渲染:
-      - 多子通道: md/04/40_multipipeline.md
-      - 延迟渲染: md/04/41_deferred.md
+        - 多子通道: md/04/20_multisubpass.md
+        - 模板测试: md/04/21_stenciltest.md
+        - TODO: todo.md # 延迟渲染
+    - 多线程渲染:
+      - TODO: todo.md # 资源加载系统
+      - TODO: todo.md # 并行命令录制
     - 离屏渲染:
-      - 离屏渲染: md/04/50_offscreen.md
-      - 帧缓冲分离: md/04/51_separateframebuffer.md
+      - TODO: todo.md # 离屏渲染
+      - TODO: todo.md # 帧缓冲分离
+      - TODO: todo.md # 虚拟纹理
+    - 着色器进阶:
+      - TODO: todo.md  # 几何着色器
+      - TODO: todo.md  # 细分着色器
+      - TODO: todo.md # 任务与网格着色器
     - 光线追踪:
-      - 加速结构: md/04/60_acceleration.md
-      - 光追管线: md/04/61_raytracing.md
-      - 光追着色器: md/04/62_raytracingshader.md
-      - 实例化处理: md/04/63_raytracinginstance.md
+      - TODO: todo.md # 加速结构
+      - TODO: todo.md # 光追管线
+      - TODO: todo.md # 实例化处理
     - 性能优化:
-      - 内存管理: md/04/70_memorymgmt.md
-      - 管线屏障: md/04/71_barriers.md
-      - 队列并发: md/04/72_multiqueue.md
+      - TODO: todo.md # 管线屏障
+      - TODO: todo.md # 队列并发
+      - TODO: todo.md # 内存管理
     - 高级计算:
-      - 共享内存与工作组: md/04/80_sharedmemory.md
-      - 异步计算: md/04/81_asynccompute.md
-      - 原子操作: md/04/82_atomics.md
-      - 子组操作: md/04/83_subgroups.md
+      - TODO: todo.md # 共享内存
+      - TODO: todo.md # 原子操作
+      - TODO: todo.md # 异步计算
+      - TODO: todo.md # 子组操作
   - 隐私政策: policy.md

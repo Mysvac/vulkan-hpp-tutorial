@@ -65,7 +65,7 @@ private:
             1,                  // applicationVersion
             "No Engine",        // pEngineName
             1,                  // engineVersion
-            VK_API_VERSION_1_4  // apiVersion
+            vk::makeApiVersion(0, 1, 4, 0)  // apiVersion
         );
         
         vk::InstanceCreateInfo createInfo( 
@@ -78,7 +78,7 @@ private:
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
 
-        requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+        requiredExtensions.emplace_back(vk::KHRPortabilityEnumerationExtensionName);
 
         createInfo.setPEnabledExtensionNames( requiredExtensions );
         createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
