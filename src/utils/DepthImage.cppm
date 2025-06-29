@@ -1,7 +1,6 @@
 module;
 
 #include <memory>
-#include <stdexcept>
 
 export module DepthImage;
 
@@ -33,7 +32,7 @@ export namespace vht {
         vk::raii::DeviceMemory m_memory{ nullptr };
         vk::raii::Image m_image{ nullptr };
         vk::raii::ImageView m_image_view{ nullptr };
-        vk::Format m_format{};
+        vk::Format m_format{ vk::Format::eD32Sfloat }; // 默认格式为 D32Sfloat
     public:
         explicit DepthImage(std::shared_ptr<vht::Device> device, std::shared_ptr<vht::Swapchain> swapchain)
         :   m_device(std::move(device)),
@@ -56,21 +55,9 @@ export namespace vht {
         }
     private:
         void init() {
-            find_depth_format();
             create_depth_resources();
         }
-        // 查找支持的深度格式
-        void find_depth_format() {
-            for(const vk::Format format : { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint }) {
-                if(const auto props = m_device->physical_device().getFormatProperties(format);
-                    props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment
-                ) {
-                    m_format = format;
-                    return;
-                }
-            }
-            throw std::runtime_error("failed to find supported format!");
-        }
+
         // 创建深度图像和视图
         void create_depth_resources() {
             create_image(

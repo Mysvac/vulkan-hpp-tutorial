@@ -15,7 +15,7 @@ import Device;
 import CommandPool;
 
 // 纹理路径
-const std::string TEXTURE_PATH = "textures/viking_room.png";
+const std::string TEXTURE_PATH = "textures/MC003_Kozakura_Mari.png";
 
 export namespace vht {
 

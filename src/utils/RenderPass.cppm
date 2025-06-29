@@ -4,8 +4,6 @@ module;
 #include <vector>
 #include <memory>
 
-#include <vulkan/vulkan_core.h>
-// #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 
 export module RenderPass;
@@ -51,7 +49,7 @@ export namespace vht {
         ):  m_window(std::move(window)),
             m_device(std::move(device)),
             m_swapchain(std::move(swapchain)),
-            m_depth_image(std::move(depth_image)) {
+            m_depth_image(std::move(depth_image)){
             init();
         }
 

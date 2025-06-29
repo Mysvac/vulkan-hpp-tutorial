@@ -973,7 +973,7 @@ private:
 
     /////////////////////////////////////////////////////////////////
     /// descriptor layout and buffer
-    struct alignas(16) UniformBufferObject {
+    struct UniformBufferObject {
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 proj;

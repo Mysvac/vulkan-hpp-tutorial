@@ -319,10 +319,10 @@ struct UniformBufferObject {
 这些陷阱是始终明确对齐方式的一个很好的理由。这样，您就不会被对齐错误造成的奇怪症状所迷惑。
 
 ```cpp
-struct alignas(16) UniformBufferObject {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
+struct UniformBufferObject {
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
 };
 ```
 

@@ -25,7 +25,7 @@ import Swapchain;
 
 export namespace vht {
 
-    struct alignas(16) UBO {
+    struct UBO {
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 proj;
@@ -53,12 +53,12 @@ export namespace vht {
         std::vector<vk::raii::DeviceMemory> m_memories;
         std::vector<vk::raii::Buffer> m_buffers;
         std::vector<void*> m_mapped;
-        glm::vec3 m_cameraPos{ 2.0f, 2.0f, 2.0f };
-        glm::vec3 m_cameraUp{ 0.0f, 1.0f, 0.0f };
+        glm::vec3 m_camera_pos{ 2.0f, 2.0f, 2.0f };
+        glm::vec3 m_camera_up{ 0.0f, 1.0f, 0.0f };
         float m_pitch = -35.0f;
         float m_yaw = -135.0f;
-        float m_cameraMoveSpeed = 1.0f;
-        float m_cameraRotateSpeed = 25.0f;
+        float m_camera_move_speed = 1.0f;
+        float m_camera_rotate_speed = 25.0f;
     public:
         explicit UniformBuffer(
             std::shared_ptr<vht::Window> window,
@@ -80,9 +80,9 @@ export namespace vht {
         [[nodiscard]]
         const std::vector<vk::raii::Buffer>& buffers() const { return m_buffers; }
         [[nodiscard]]
-        const std::vector<void*>& mapped() const { return m_mapped; }
+        const glm::vec3& view_pos() const { return m_camera_pos; }
         // 更新 Uniform Buffer
-        void update_uniform_buffer(const int current_frame ) {
+        void update(const int current_frame ) {
             update_camera();
 
             glm::vec3 front;
@@ -91,26 +91,17 @@ export namespace vht {
             front.z = std::sin(glm::radians(m_yaw)) * std::cos(glm::radians(m_pitch));
             front = glm::normalize(front);
             UBO ubo{};
-            ubo.model = glm::rotate(
-                    glm::mat4(1.0f),
-                    glm::radians(-90.0f),
-                    glm::vec3(1.0f, 0.0f, 0.0f)
-            );
-            ubo.model *= glm::rotate(
-                    glm::mat4(1.0f),
-                    glm::radians(-90.0f),
-                    glm::vec3(0.0f, 0.0f, 1.0f)
-            );
+            ubo.model = glm::mat4(1.0f);
             ubo.view = glm::lookAt(
-                    m_cameraPos,
-                    m_cameraPos + front,
-                    m_cameraUp
+                    m_camera_pos,
+                    m_camera_pos + front,
+                    m_camera_up
             );
             ubo.proj = glm::perspective(
                     glm::radians(45.0f),
                     static_cast<float>(m_swapchain->extent().width) / static_cast<float>(m_swapchain->extent().height),
                     0.1f,
-                    10.0f
+                    50.0f
             );
             ubo.proj[1][1] *= -1;
             memcpy(m_mapped[current_frame], &ubo, sizeof(UBO));
@@ -156,26 +147,26 @@ export namespace vht {
             front = glm::normalize(front);
 
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_W) == GLFW_PRESS)
-                m_cameraPos += front * m_cameraMoveSpeed * time;
+                m_camera_pos += front * m_camera_move_speed * time;
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_S) == GLFW_PRESS)
-                m_cameraPos -= front * m_cameraMoveSpeed * time;
+                m_camera_pos -= front * m_camera_move_speed * time;
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_A) == GLFW_PRESS)
-                m_cameraPos -= glm::normalize(glm::cross(front, m_cameraUp)) * m_cameraMoveSpeed * time;
+                m_camera_pos -= glm::normalize(glm::cross(front, m_camera_up)) * m_camera_move_speed * time;
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_D) == GLFW_PRESS)
-                m_cameraPos += glm::normalize(glm::cross(front, m_cameraUp)) * m_cameraMoveSpeed * time;
+                m_camera_pos += glm::normalize(glm::cross(front, m_camera_up)) * m_camera_move_speed * time;
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_SPACE) == GLFW_PRESS)
-                m_cameraPos += m_cameraUp * m_cameraMoveSpeed * time;
+                m_camera_pos += m_camera_up * m_camera_move_speed * time;
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-                m_cameraPos -= m_cameraUp *m_cameraMoveSpeed * time;
+                m_camera_pos -= m_camera_up *m_camera_move_speed * time;
 
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_UP) == GLFW_PRESS)
-                m_pitch += m_cameraRotateSpeed * time;
+                m_pitch += m_camera_rotate_speed * time;
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_DOWN) == GLFW_PRESS)
-                m_pitch -= m_cameraRotateSpeed * time;
+                m_pitch -= m_camera_rotate_speed * time;
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_LEFT) == GLFW_PRESS)
-                m_yaw   -= m_cameraRotateSpeed * time;
+                m_yaw   -= m_camera_rotate_speed * time;
             if (glfwGetKey(m_window->ptr(), GLFW_KEY_RIGHT) == GLFW_PRESS)
-                m_yaw   += m_cameraRotateSpeed * time;
+                m_yaw   += m_camera_rotate_speed * time;
 
             m_yaw = std::fmodf(m_yaw + 180.0f, 360.0f);
             if (m_yaw < 0.0f) m_yaw += 360.0f;

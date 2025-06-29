@@ -52,15 +52,6 @@ index 42439f0..2e9de97 100644
          commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
  
          commandBuffer.endRenderPass();
-@@ -975,7 +988,7 @@ private:
- 
-     /////////////////////////////////////////////////////////////////
-     /// descriptor layout and buffer
--    struct UniformBufferObject {
-+    struct alignas(16) UniformBufferObject {
-         glm::mat4 model;
-         glm::mat4 view;
-         glm::mat4 proj;
 @@ -1043,6 +1056,45 @@ private:
          memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
      }

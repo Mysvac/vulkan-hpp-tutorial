@@ -7,5 +7,6 @@
 /shaders export-ignore
 /textures export-ignore
 /src export-ignore
+/cmake export-ignore
 /CMakeLists.txt export-ignore
 /CMakePresets.json export-ignore

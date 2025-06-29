@@ -141,7 +141,7 @@ index 65aaf43..7b5d695 100644
 @@ -1069,7 +1112,6 @@ private:
      /////////////////////////////////////////////////////////////////
      /// descriptor layout and buffer
-     struct alignas(16) UniformBufferObject {
+     struct UniformBufferObject {
 -        glm::mat4 model;
          glm::mat4 view;
          glm::mat4 proj;

@@ -452,7 +452,7 @@ if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
 修改 `UniformBufferObject` 结构体，删除 `model` 字段：
 
 ```cpp
-struct alignas(16) UniformBufferObject {
+struct UniformBufferObject {
     glm::mat4 view;
     glm::mat4 proj;
 };
