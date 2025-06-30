@@ -61,11 +61,8 @@ float queuePriority = 1.0f;
 queueCreateInfo.setQueuePriorities( queuePriority );
 ```
 
-此函数实际上填写了两个字段：`queueCount` 和 `pQueuePriorities` ，分别是需要创建的队列数和优先级数组的开始指针。
-我们使用 1 个 float ，它自动包装成了单元素数组，将 `queueCount` 设为了1  并设置了自身的指针。
+注意函数内部使用了浮点数的指针，所以不能传入浮点字面量。
 
-> 注意内部使用了浮点数的指针，所以不能传入浮点字面量。
-> 
 > 当前只允许您为每个队列族创建少量队列，但其实一个就够了。因为您可以在多个线程上创建命令缓冲区，然后使用主线程一次性提交它们。
 
 ### 3. 指定设备特性
@@ -75,6 +72,8 @@ queueCreateInfo.setQueuePriorities( queuePriority );
 ```c++
 vk::PhysicalDeviceFeatures deviceFeatures;
 ```
+
+后续章节提到的“需要启用 GPU 特性”指得就是这里。
 
 ### 4. 创建信息
 
@@ -86,15 +85,16 @@ createInfo.setQueueCreateInfos( queueCreateInfo );
 createInfo.pEnabledFeatures = &deviceFeatures;
 ```
 
-> 之前提过，特殊的`setter`甚至可以输入单元素，自动封装成数组。
+其余信息与 `vk::InstanceCreateInfo` 结构相似，并要求您指定扩展。不同之处在于这次这些是设备特定的。
 
-其余信息与 `vk::InstanceCreateInfo` 结构相似，并要求您指定扩展和验证层。不同之处在于这次这些是设备特定的。
+> 注意，虽然设备特定的“层”已废弃，但我们仍然需要指定设备特定的扩展。
 
 ### 5. 验证层
 
-之前提到，现在验证层已不再区分实例和特定。如果你需要和旧 API 兼容，可以像下面这样设置，此字段在新 API 中将被忽略：
+设备特定的层很早就被废弃，你无需也不应该使用它们，以下代码将被 Vulkan 忽略。
 
 ```cpp
+// 无效代码
 if (enableValidationLayers) {
     createInfo.setPEnabledLayerNames( validationLayers );
 }

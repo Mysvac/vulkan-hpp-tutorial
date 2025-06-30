@@ -26,6 +26,7 @@ comments: true
 | 访问速度         | 最快（直接嵌入命令缓冲）     | 中等                         | 快                         |
 | 资源管理         | 无需显式分配               | 需管理缓冲区与描述符           | 需管理缓冲区                |
 
+> 关于推送常量：[Vulkan-Guide \[push constants\]](https://docs.vulkan.org/guide/latest/push_constants.html)
 
 ## **使用推送常量**
 

@@ -4,8 +4,10 @@ comments: true
 ---
 # **物理设备与队列族**
 
-在创建实例之后，我们需要查找并选择系统中合适的物理设备\(通常指 GPU \)。
+在创建实例之后，我们需要查找并选择系统中合适的物理设备\(常指显卡\)。
 实际上，我们可以选择任意数量的显卡并同时使用它们，但在本教程中，我们只使用第一张满足我们需求的显卡。
+
+> 相关概念：[Vulkan-Guide \[Querying Properties, Extensions, Features ...\]](https://docs.vulkan.org/guide/latest/querying_extensions_features.html)
 
 ## **选择物理设备**
 
@@ -143,12 +145,15 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 
 Vulkan 中的几乎每个操作，从绘制到上传纹理，都需要将命令提交到队列。
 
-### 1. 队列查找函数
 
 队列有不同的类型，这些类型源自不同的队列族，并且每个队列族仅允许一些特定的命令。
 例如，可能有一个队列族仅允许处理计算命令，或者一个队列族仅允许与内存传输相关的命令。
 
-为此，我们将添加一个新函数 `findQueueFamilies` ，用于查找我们需要的所有队列族。
+> 更详细的概念：[Vulkan-Guide \[Queues\]](https://docs.vulkan.org/guide/latest/queues.html)
+
+### 1. 队列查找函数
+
+我们需要添加一个新函数 `findQueueFamilies` ，用于查找我们需要的所有队列族。
 
 现在我们只打算查找支持图形命令的队列族，因此该函数可能如下所示：
 

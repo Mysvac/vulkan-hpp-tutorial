@@ -6,16 +6,17 @@ comments: true
 
 ## **教程简介**
 
-本文档是 Vulkan 的入门教程，将系统讲解 Vulkan 图形与计算 API 的基础知识与实际应用。
+本文档是 Vulkan 的入门教程，将介绍 Vulkan 图形与计算 API 的基础知识与实际应用。
 
-教程将使用 C++ 编写代码，借助 Vulkan-Hpp 封装，充分利用 RAII 等现代 C++ 特性，减少手动资源管理。
+文档以代码演示为主，你可以在 **[Vulkan Guide](https://docs.vulkan.org/guide/latest/index.html)** 等网站找到更详细的 Vulkan 规范和概念介绍。
 
-> 注：Vulkan-Hpp 是 Vulkan SDK 的官方组成部分，非第三方库。  
+教程将使用 C++ 编写代码， C++20 标准，使用 Vulkan-SDK 内含的 Vulkan-Hpp 封装，充分利用 RAII 等现代 C++ 特性。
+
 > 如果你发现了文档的错误，请点击右上角前往Github仓库，提交 Issue 或 PR 。
 
 ## **代码说明**
 
-教程将采用 C++20 标准，主要使用以下工具链：
+教程不限操作系统、代码编辑器与 C++ 编译器，主要使用以下工具链：
 
 - [Vulkan SDK](https://lunarg.com/vulkan-sdk/)
 - [GLM](http://glm.g-truc.net/) 线性代数库
@@ -29,24 +30,34 @@ comments: true
 
 `Vcpkg` 用于管理第三方库，主要用于安装 `glfw3` 和 `glm` 等依赖，这非常简单。
 
+> 教程预期在 C++23 标准完全支持后，使用 23 标准重构内容。
+
 ## **其他说明**
 
 Vulkan SDK 本身由 C 编写，因此具有更好的跨语言兼容性，可通过 C 接口供其他语言调用。
 
 如果你更喜欢 C 风格的底层接口，或希望使用 Rust：
 
-- 基于底层C接口的C++教程：[Vulkan-tutorial](https://vulkan-tutorial.com/)
+- 基于底层C接口的C++教程： [Vulkan-tutorial](https://vulkan-tutorial.com/)
 
-- 基于Vulkano封装的Rust教程 [Vulkan-tutorial-rs](https://github.com/bwasty/vulkan-tutorial-rs)
+- 基于Vulkano封装的Rust教程： [Vulkan-tutorial-rs](https://github.com/bwasty/vulkan-tutorial-rs)
 
 ## **致谢**
 
-项目文档与知识点参考以下内容：
+本文档内容参考了许多公开的资料以及课程，在此感谢：
 
-- [vulkan-hpp](https://github.com/KhronosGroup/Vulkan-Hpp) 
+- [Vulkan-Hpp](https://github.com/KhronosGroup/Vulkan-Hpp) 
+
+- [Vulkan-Guide](https://docs.vulkan.org/guide/latest/index.html)
 
 - [Vulkan-Tutorial](https://github.com/Overv/VulkanTutorial) 
 
 - [EasyVulkan](https://easyvulkan.github.io/index.html) 
+
+- [GAMES101-现代计算机图形学入门\(闫令琪\)](https://www.bilibili.com/video/BV1X7411F744)
+
+- [GAMES202-高质量实时渲染\(闫令琪\)](https://www.bilibili.com/video/BV1YK4y1T7yY)
+
+- [GAMES104-现代游戏引擎：从入门到实践\(王希\)](https://games104.boomingtech.com/sc/)
 
 ---

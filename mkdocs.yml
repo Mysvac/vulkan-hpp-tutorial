@@ -87,10 +87,14 @@ nav:
     - 计算着色器与SSBO: md/03/90_compute.md
   - 进阶功能:
     - C++模块化: md/04/00_cxxmodule.md
-    - 查询池: md/04/10_querypool.md
+    - 杂项:
+        - 查询池: md/04/10_querypool.md
+        - 特化常量: md/04/11_specialization.md
+        - TODO: todo.md # pNext 与 sType
+        - TODO: todo.md # 新版同步
     - 多管线渲染:
         - 阴影映射: md/04/20_shadowmap.md
-        - TODO: todo.md
+        - TODO: todo.md # 模板测试
         - TODO: todo.md # 延迟渲染
     - 多线程渲染:
       - TODO: todo.md # 资源加载系统
@@ -110,7 +114,8 @@ nav:
     - 性能优化:
       - TODO: todo.md # 管线屏障
       - TODO: todo.md # 队列并发
-      - TODO: todo.md # 内存管理
+      - TODO: todo.md # 稀疏资源
+      - TODO: todo.md # 内存分配
     - 高级计算:
       - TODO: todo.md # 共享内存
       - TODO: todo.md # 原子操作

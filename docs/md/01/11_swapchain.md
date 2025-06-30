@@ -18,6 +18,7 @@ comments: true
 
 - Vulkan 没有默认的帧缓冲区，需要显式创建交换链
 
+> 关于交换链：[Vulkan-Guide \[WSI\]](https://docs.vulkan.org/guide/latest/wsi.html)
 
 ## **检查交换链支持**
 

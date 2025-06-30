@@ -32,7 +32,7 @@ comments: true
 ## **学习前提**
 
 ### 硬件要求
-- 支持 Vulkan 的显卡（NVIDIA/AMD/Intel/Apple Silicon）
+- 支持 Vulkan 的设备（大部分现代显卡都支持）
 - 较新的显卡驱动
 
 ### 软件技能

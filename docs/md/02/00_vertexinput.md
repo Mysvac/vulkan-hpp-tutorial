@@ -14,6 +14,8 @@ comments: true
 我们将从最简单的方式开始，创建主机\(CPU\)可见缓冲区然后直接用 `memcpy` 将顶点数据复制进去。
 之后我们将了解如何使用暂存缓冲区\(staging buffers\)将顶点数据复制进高性能显存中。
 
+> 关于顶点输入：[Vulkan-Guide \[Vertex Input\]](https://docs.vulkan.org/guide/latest/vertex_input_data_processing.html)
+
 ## **顶点着色器**
 
 首先我们需要改变顶点着色器的代码，不再包含硬编码的顶点数据。

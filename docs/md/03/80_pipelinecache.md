@@ -8,9 +8,11 @@ comments: true
 
 管线缓存（Pipeline Cache）是一种用于加速管线对象创建的机制。由于 Vulkan 的管线对象创建过程非常复杂且耗时，尤其是在首次创建时。管线缓存可以将创建过程中产生的中间数据缓存下来，避免每次启动程序或重新创建管线时都从头开始编译和优化。
 
-我们目前只有一个管线，为其添加管线缓存的方式非常简单。
+> 关于管线缓存：[Vulkan-Guide \[pipeline cache\]](https://docs.vulkan.net.cn/guide/latest/pipeline_cache.html)
 
 ## **创建管线缓存**
+
+我们目前只有一个管线，为其添加管线缓存的方式非常简单。
 
 ### 1. 添加成员
 

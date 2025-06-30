@@ -45,6 +45,8 @@ dynamicState.setDynamicStates( dynamicStates );
 
 这将导致管线创建时暂时忽略这些值的配置，并使您能够（需要）在绘制时指定数据，这样的设置更加灵活且常见。
 
+> 关于管道动态状态：[Vulkan-Guide \[dynamic_state\]](https://docs.vulkan.org/guide/latest/dynamic_state.html)
+
 ## **顶点输入**
 
 顶点输入创建信息描述了传递给顶点着色器的顶点数据的格式。它大致通过两种方式描述这一点

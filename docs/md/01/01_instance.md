@@ -26,8 +26,7 @@ private:
 
 现在直接构建与运行程序，请保证程序不出错。
 
-> RAII机制参考“接口介绍”章节。
-
+> 更加详细的 Loader 介绍可以参考 [Vulkan-Guide \[Loader\]](https://docs.vulkan.org/guide/latest/loader.html) 文档。
 
 ## **创建实例**
 
@@ -150,9 +149,9 @@ createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 ### 2. 特殊setter函数说明
 
 由于数组类型传参时会隐式退化成指针，底层C风格接口都使用“开始指针+元素数量”的方式引用数组。
-vulkan-hpp 需要调用底层C接口，所以这些配置信息采用相同的方式记录。
+Vulkan-Hpp 需要调用底层C接口，所以这些配置信息采用相同的方式记录。
 
-但 vulkan-hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::ArrayProxyNoTemporaries` 模板参数简化了数组参数的设置，
+但 Vulkan-Hpp 提供了一些特殊的 `setter` 成员函数，它们通过 `vk::ArrayProxyNoTemporaries` 模板参数简化了数组参数的设置，
 这些函数能够自动处理数组参数：
 
    - 接收任意连续容器（`std::vector`、`std::array`、原生数组）或初始化列表。
