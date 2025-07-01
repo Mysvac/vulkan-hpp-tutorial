@@ -94,6 +94,7 @@ nav:
         - TODO: todo.md # 新版同步
     - 多管线渲染:
         - 阴影映射: md/04/20_shadowmap.md
+        - 延迟渲染: md/04/21_deferred.md
         - TODO: todo.md # 模板测试
         - TODO: todo.md # 延迟渲染
     - 多线程渲染:

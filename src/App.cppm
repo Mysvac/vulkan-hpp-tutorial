@@ -16,9 +16,7 @@ import Window;
 import Device;
 import Swapchain;
 import DepthImage;
-import ShadowDepthImage;
-import ShadowRenderPass;
-import ShadowPipeline;
+import GBuffer;
 import RenderPass;
 import GraphicsPipeline;
 import CommandPool;
@@ -37,9 +35,7 @@ export namespace vht {
         std::shared_ptr<vht::Device> m_device{ nullptr };
         std::shared_ptr<vht::Swapchain> m_swapchain{ nullptr };
         std::shared_ptr<vht::DepthImage> m_depth_image{ nullptr };
-        std::shared_ptr<vht::ShadowDepthImage> m_shadow_depth_image{ nullptr };
-        std::shared_ptr<vht::ShadowRenderPass> m_shadow_render_pass{ nullptr };
-        std::shared_ptr<vht::ShadowPipeline> m_shadow_pipeline{ nullptr };
+        std::shared_ptr<vht::GBuffer> m_g_buffer{ nullptr };
         std::shared_ptr<vht::RenderPass> m_render_pass{ nullptr };
         std::shared_ptr<vht::GraphicsPipeline> m_graphics_pipeline{ nullptr };
         std::shared_ptr<vht::CommandPool> m_command_pool{ nullptr };
@@ -73,12 +69,8 @@ export namespace vht {
             std::cout << "swapchain created" << std::endl;
             init_depth_image();
             std::cout << "depth image created" << std::endl;
-            init_shadow_depth_image();
-            std::cout << "shadow depth image created" << std::endl;
-            init_shadow_render_pass();
-            std::cout << "shadow render pass created" << std::endl;
-            init_shadow_pipeline();
-            std::cout << "shadow pipeline created" << std::endl;
+            init_g_buffer();
+            std::cout << "g buffer created" << std::endl;
             init_render_pass();
             std::cout << "render pass created" << std::endl;
             init_graphics_pipeline();
@@ -104,10 +96,8 @@ export namespace vht {
         void init_device() { m_device = std::make_shared<vht::Device>( m_context, m_window ); }
         void init_swapchain() { m_swapchain = std::make_shared<vht::Swapchain>( m_window, m_device ); }
         void init_depth_image() { m_depth_image = std::make_shared<vht::DepthImage>( m_device, m_swapchain ); }
-        void init_shadow_depth_image() { m_shadow_depth_image = std::make_shared<vht::ShadowDepthImage>( m_device ); }
-        void init_shadow_render_pass() { m_shadow_render_pass = std::make_shared<vht::ShadowRenderPass>( m_device, m_shadow_depth_image ); }
-        void init_shadow_pipeline() { m_shadow_pipeline = std::make_shared<vht::ShadowPipeline>(m_device, m_shadow_render_pass); }
-        void init_render_pass() { m_render_pass = std::make_shared<vht::RenderPass>( m_window, m_device, m_swapchain, m_depth_image ); }
+        void init_g_buffer() { m_g_buffer = std::make_shared<vht::GBuffer>( m_device, m_swapchain ); }
+        void init_render_pass() { m_render_pass = std::make_shared<vht::RenderPass>( m_window, m_device, m_swapchain, m_depth_image, m_g_buffer ); }
         void init_graphics_pipeline() { m_graphics_pipeline = std::make_shared<vht::GraphicsPipeline>( m_device, m_render_pass ); }
         void init_command_pool() { m_command_pool = std::make_shared<vht::CommandPool>( m_device ); }
         void init_input_assembly() { m_input_assembly = std::make_shared<vht::InputAssembly>( m_data_loader, m_device, m_command_pool ); }
@@ -117,8 +107,7 @@ export namespace vht {
         void init_descriptor() {
             m_descriptor = std::make_shared<vht::Descriptor>(
                 m_device,
-                m_shadow_depth_image,
-                m_shadow_pipeline,
+                m_g_buffer,
                 m_graphics_pipeline,
                 m_uniform_buffer,
                 m_texture_sampler,
@@ -131,8 +120,6 @@ export namespace vht {
                 m_window,
                 m_device,
                 m_swapchain,
-                m_shadow_render_pass,
-                m_shadow_pipeline,
                 m_render_pass,
                 m_graphics_pipeline,
                 m_command_pool,

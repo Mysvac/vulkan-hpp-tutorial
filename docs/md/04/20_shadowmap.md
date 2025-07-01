@@ -803,7 +803,7 @@ vec3 objectColor = pc.enableTexture == 1 ? texture(texSampler, fragTexCoord).rgb
 
 ---
 
-**[基础代码](../../codes/04/20_shadowmap/0420_base_code.zip)**
+**[初始代码集](../../codes/04/20_shadowmap/0420_base_code.zip)**
 
 **[shadow.vert（新增）](../../codes/04/20_shadowmap/shaders/shadow.vert)**
 

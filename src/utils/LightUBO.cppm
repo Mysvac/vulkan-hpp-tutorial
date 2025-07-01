@@ -20,9 +20,6 @@ import Device;
 export namespace vht {
 
     struct LightUBO {
-        glm::mat4 model{ glm::mat4(1.0f) }; // 光源模型矩阵
-        glm::mat4 view{};  // 视图矩阵
-        glm::mat4 proj{};  // 投影矩阵
         alignas(16) glm::vec3 light_pos{ 2.0f, 4.2f, 3.2f }; // 光源位置
         alignas(16) glm::vec3 light_color{ 1.0f, 1.0f, 1.0f }; // 光源颜色
         alignas(16) glm::vec3 view_pos{}; // 摄像机位置
@@ -56,15 +53,8 @@ export namespace vht {
 
         // 更新摄像机位置，在 Drawer 类的 draw 函数中调用，计算机位置来自 UniformBuffer 类
         void update(const int current_frame, const glm::vec3 view_pos) const {
-            LightUBO light_ubp;
-            light_ubp.view_pos = view_pos;
-            light_ubp.view = glm::lookAt(
-                light_ubp.light_pos,
-                glm::vec3(0.0f, 0.0f, 0.0f),
-                glm::vec3(0.0f, 1.0f, 0.0f)
-            );
-            light_ubp.proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 60.0f);
-            light_ubp.proj[1][1] *= -1;
+            constexpr LightUBO light_ubp;
+            // 如果需要更新光源，可自行修改此处代码
             memcpy(m_mapped[current_frame], &light_ubp, sizeof(LightUBO));
         }
     private:
