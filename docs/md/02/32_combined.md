@@ -19,28 +19,69 @@ comments: true
 
 ### 1. 修改描述符布局
 
-回到 `createDescriptorSetLayout` 函数，添加一个`vk::DescriptorSetLayoutBinding`用于组合图像采样器描述符。
-我们可以简单的将它放在 uniform 缓冲之后：
+虽然我们有多个飞行中的帧，但它们可以共用一个组合图像采样器描述符。
+我们之前的描述符集会被创建多份（用于多个飞行中的帧），这有些浪费资源，所以更推荐使用一个新的描述符集专门存放组合图像采样器描述符。
+
+首先修改 `m_descriptorSetLayout` 变量，改为数组类型。
+
+```cpp
+// 这里还修改了变量名，末尾多了个 s
+std::vector<vk::raii::DescriptorSetLayout> m_descriptorSetLayouts;
+```
+
+然后调整 `createDescriptorSetLayout` 函数：
+
+```cpp
+void createDescriptorSetLayout() {
+    vk::DescriptorSetLayoutBinding uboLayoutBinding;
+    ...
+
+    vk::DescriptorSetLayoutCreateInfo uboLayoutInfo;
+    uboLayoutInfo.setBindings( uboLayoutBinding );
+    m_descriptorSetLayouts.emplace_back( m_device.createDescriptorSetLayout( uboLayoutInfo ) );
+}
+```
+
+现在可以添加组合图像采样器描述符的布局绑定。
 
 ```cpp
 vk::DescriptorSetLayoutBinding samplerLayoutBinding;
-samplerLayoutBinding.binding = 1;
+samplerLayoutBinding.binding = 0; // 新描述符集，因此依然从 0 开始
 samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
 samplerLayoutBinding.descriptorCount = 1;
 samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+vk::DescriptorSetLayoutCreateInfo samplerLayoutInfo;
 
-std::array<vk::DescriptorSetLayoutBinding, 2> bindings{ uboLayoutBinding, samplerLayoutBinding };
-vk::DescriptorSetLayoutCreateInfo layoutInfo;
-layoutInfo.setBindings( bindings );
+samplerLayoutInfo.setBindings( samplerLayoutBinding );
+m_descriptorSetLayouts.emplace_back( m_device.createDescriptorSetLayout( samplerLayoutInfo ) );
 ```
 
 确保使用 `stageFlags` 指定了我们希望在片段着色器使用组合图像采样器描述符，因为我们将在此阶段决定片段的颜色。
 不过在顶点着色器阶段使用纹理采样也是有可能的，比如通过 [高度图](https://en.wikipedia.org/wiki/Heightmap) 动态变形顶点网格。
 
-### 2. 修改描述符池
+### 2. 更新管线布局
 
-我们还必须创建一个更大的描述符池，为组合图像采样器的分配腾出空间。
-方式是为 `vk::DescriptorPoolCreateInfo` 添加 `vk::DescriptorType::eCombinedImageSampler`类型的PoolSize。
+我们增加了一个描述符集布局并调整了变量名，所以需要更新管线布局：
+
+```cpp
+void createGraphicsPipeline() {
+    ......
+
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+    // 获取内部句柄的数组
+    const std::vector<vk::DescriptorSetLayout> descriptorSetLayouts(m_descriptorSetLayouts.begin(), m_descriptorSetLayouts.end());
+    pipelineLayoutInfo.setSetLayouts(descriptorSetLayouts);
+    m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
+
+    ......
+}
+```
+
+### 3. 修改描述符池
+
+还需要调整描述符池，为组合图像采样器的分配腾出空间。
+只需 `vk::DescriptorPoolCreateInfo` 添加 `vk::DescriptorType::eCombinedImageSampler`类型的 PoolSize 即可。
+
 现在回到 `createDescriptorPool` 函数并修改代码：
 
 ```cpp
@@ -48,12 +89,14 @@ std::array<vk::DescriptorPoolSize, 2> poolSizes;
 poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
 poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
-poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+poolSizes[1].descriptorCount = 1;
 
 vk::DescriptorPoolCreateInfo poolInfo;
 poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 poolInfo.setPoolSizes( poolSizes );
-poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) + 1;
+
+m_descriptorPool = m_device.createDescriptorPool(poolInfo);
 ```
 
 调用 `allocateDescriptorSets` 时，如果描述符池的大小不足，可能会抛出 `vk::OutOfPoolMemoryError` 异常。
@@ -63,50 +106,72 @@ poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 尽管驱动程序可能允许超限分配，但开发者仍应遵循描述符池的初始限制。这是为了避免潜在的性能问题或兼容性问题。
 
 > `maxSets` 指定可分配的描述符集合的最大数量  
-> `poolSizeCount` 指定描述符集合的类型数  
+> `poolSizeCount` 指定描述符的类型数  
 > `descriptorCount` 指定可分配的单种类描述符的最大数量
 
-### 3. 绑定描述符与图像采样器
+### 4. 创建描述符集
 
-最后一步是将实际的图像和采样器资源绑定到描述符集中的描述符。转到 `createDescriptorSets` 函数：
+创建一个新的描述符集成员变量，用于存储组合图像采样器的描述符集。
 
 ```cpp
-for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-    vk::DescriptorBufferInfo bufferInfo;
-    bufferInfo.buffer = m_uniformBuffers[i];
-    bufferInfo.offset = 0;
-    bufferInfo.range = sizeof(UniformBufferObject);
+vk::raii::DescriptorSet m_combinedDescriptorSet{ nullptr };
+```
+
+然后调整 `createDescriptorSets` 函数，分配新的描述符集，还需要略微调整之前的布局代码。
+
+```cpp
+void createDescriptorSets() {
+    // 修改 UBO 的描述符布局，使用 m_descriptorSetLayouts[0]
+    std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_descriptorSetLayouts[0]);
+    
+    ......
+
+    // 分配组合图像采样器描述符集
+    allocInfo.setSetLayouts( *m_descriptorSetLayouts[1] ); // 需要一次 * 显式转换
+    std::vector<vk::raii::DescriptorSet> sets = m_device.allocateDescriptorSets(allocInfo);
+    m_combinedDescriptorSet =  std::move(sets.at(0));
 
     vk::DescriptorImageInfo imageInfo;
     imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
     imageInfo.imageView = m_textureImageView;
     imageInfo.sampler = m_textureSampler;
 
-    ...
+    vk::WriteDescriptorSet combinedDescriptorWrite;
+    combinedDescriptorWrite.dstSet = m_combinedDescriptorSet;
+    combinedDescriptorWrite.dstBinding = 0;
+    combinedDescriptorWrite.dstArrayElement = 0;
+    combinedDescriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    combinedDescriptorWrite.setImageInfo(imageInfo);
+    
+    m_device.updateDescriptorSets(combinedDescriptorWrite, nullptr);
 }
 ```
 
-组合图像采样器的资源必须在 `vk::DescriptorImageInfo` 结构中指定，就像之前的 uniform 缓冲资源一样。
+组合图像采样器的资源必须在 `vk::DescriptorImageInfo` 结构中指定。
 
-必须使用此图像信息更新描述符，这次我们使用 `ImageInfo` 数组而不是 `BufferInfo`。
+### 5. 修改命令录制
+
+现在需要调整命令缓冲的录制，加上我们新建的描述符集。
 
 ```cpp
-std::array<vk::WriteDescriptorSet, 2> descriptorWrites;
-descriptorWrites[0].dstSet = m_descriptorSets[i];
-descriptorWrites[0].dstBinding = 0;
-descriptorWrites[0].dstArrayElement = 0;
-descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-descriptorWrites[0].setBufferInfo(bufferInfo);
-descriptorWrites[1].dstSet = m_descriptorSets[i];
-descriptorWrites[1].dstBinding = 1;
-descriptorWrites[1].dstArrayElement = 0;
-descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-descriptorWrites[1].setImageInfo(imageInfo);
+void recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, uint32_t imageIndex) const {
+    ......
 
-m_device.updateDescriptorSets(descriptorWrites, nullptr);
+    const std::array<vk::DescriptorSet,2> descriptorSets{ 
+        m_descriptorSets[m_currentFrame], 
+        m_combinedDescriptorSet 
+    };
+    commandBuffer.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics,
+        m_pipelineLayout,
+        0,
+        descriptorSets,
+        nullptr
+    );
+
+    ......
+}
 ```
-
-描述符现在已准备好供着色器使用！
 
 ## **纹理坐标**
 
@@ -156,7 +221,7 @@ struct Vertex {
 然后修改我们的 `vertices` 变量，加入纹理坐标：
 
 ```cpp
-inline static const std::vector<Vertex> vertices = {
+const std::vector<Vertex> vertices = {
     {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
     {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
     {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
@@ -164,7 +229,7 @@ inline static const std::vector<Vertex> vertices = {
 };
 ```
 
-在本教程中，我将通过使用从左上角的 `0, 0` 到右下角的 `1, 1` 的坐标来简单地用纹理填充正方形。然后尝试使用低于 0 或高于 1 的坐标来查看寻址模式的实际效果。你可以随意尝试不同的坐标！
+在本教程中，我将通过使用从左上角的 `0, 0` 到右下角的 `1, 1` 的坐标来简单地用纹理填充正方形。然后尝试使用低于 0 或高于 1 的坐标来查看寻址模式的实际效果。
 
 ## **着色器**
 
@@ -174,6 +239,8 @@ inline static const std::vector<Vertex> vertices = {
 我们首先需要修改顶点着色器以将纹理坐标传递到片段着色器
 
 ```glsl
+......
+
 layout(location = 0) in vec2 inPosition;
 layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
@@ -218,7 +285,7 @@ void main() {
 组合图像采样器描述符在 GLSL 中由采样器 uniform 表示。在片段着色器中添加对其的引用
 
 ```glsl
-layout(binding = 1) uniform sampler2D texSampler;
+layout(set = 1, binding = 0) uniform sampler2D texSampler;
 ```
 
 对于其他类型的图像，有等效的 `sampler1D` 和 `sampler3D` 类型。确保在此处使用正确的绑定。
@@ -237,7 +304,7 @@ void main() {
 
 ![texture_on_square](../../images/0232/texture_on_square.png)
 
-### 3. 其他测试
+## **其他测试**
 
 尝试通过将纹理坐标缩放到高于 `1` 的值来试验寻址模式。
 例如，当寻址模式使用 `eRepeat` 时，片段着色器会产生下图中的结果
@@ -263,8 +330,6 @@ void main() {
 
 ![texture_on_square_colorized](../../images/0232/texture_on_square_colorized.png)
 
----
-
 您现在知道如何在着色器中访问图像了！
 
 当它与那些写入帧缓冲区的图像结合使用时具有非常强大的功能。
@@ -280,12 +345,12 @@ void main() {
 
 **[shader-CMake代码](../../codes/02/32_combined/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/32_combined/shaders/shader.vert)**
+**[shader-vert代码](../../codes/02/32_combined/shaders/graphics.vert.glsl)**
 
-**[shader-vert代码差异](../../codes/02/32_combined/shaders/vert.diff)**
+**[shader-vert代码差异](../../codes/02/32_combined/shaders/graphics.vert.diff)**
 
-**[shader-frag代码](../../codes/02/32_combined/shaders/shader.frag)**
+**[shader-frag代码](../../codes/02/32_combined/shaders/graphics.frag.glsl)**
 
-**[shader-frag代码差异](../../codes/02/32_combined/shaders/frag.diff)**
+**[shader-frag代码差异](../../codes/02/32_combined/shaders/graphics.frag.diff)**
 
 ---

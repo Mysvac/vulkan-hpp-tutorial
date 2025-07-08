@@ -69,9 +69,11 @@ void createInstance(){
 }
 ```
 
-> 版本号也可直接用宏 `VK_API_VERSION_X_X` ，API 版本可以低于 Vulkan 版本，但不能高于。
+前四个参数可以任意填写，最后一个参数是 API 版本号。具体值请参考你的 Vulkan SDK 版本，可以写的比 SDK 版本低、但不能更高。
 
-注意到，它并不是RAII的，因为它只是个配置信息，不含特殊资源。
+> 版本号也可直接用宏 `VK_API_VERSION_X_X` 指定。
+
+注意到它并不是 RAII 的，因为它只是个配置信息、不含特殊资源。
 所以我们可以无参构造，然后直接修改成员变量，像这样：
 
 ```cpp
@@ -80,11 +82,9 @@ applicationInfo.pApplicationName = "xxxx";  // 可以直接修改成员变量
 applicationInfo.setApplicationVersion(1);   // 也可以使用 setter 函数
 ```
 
-> 后续教程为方便讲解，将同时使用这两种方式！
-
 ### 2. 配置基础创建信息
 
-Vulkan中资源的创建都依赖对应的 `CreateInfo` 结构体，我们必须先填写它。
+Vulkan 中资源的创建都依赖对应的 `CreateInfo` 结构体，我们必须先填写它。
 
 ```cpp
 vk::InstanceCreateInfo createInfo( 
@@ -96,7 +96,7 @@ vk::InstanceCreateInfo createInfo(
 `flags` 参数是标志位，用于控制特殊行为，默认认初始化为空，大多时候无需修改。
 还有其他参数，但都提供了默认初始化，无需手动设置。
 
-注意到，`&applicationInfo`传入指针，需要注意生命周期！
+注意到， `&applicationInfo` 传入指针，需要注意生命周期！
 
 1. `CreateInfo`仅用于提供配置信息。
 2. `CreateInfo`在创建对应资源后就无用了。
@@ -117,7 +117,7 @@ m_instance = m_context.createInstance( createInfo );
 m_instance = vk::raii::Instance( m_context, createInfo );
 ```
 
-> 本文档统一使用成员函数创建子对象。
+本文档统一使用成员函数创建子对象。
 
 ## **添加扩展以支持GLFW**
 
@@ -129,8 +129,7 @@ GLFW 有一个方便的内置函数，可以返回它需要的扩展，我们可
 
 ```cpp
 uint32_t glfwExtensionCount = 0;
-const char** glfwExtensions;
-glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 // 将参数包装成数组
 std::vector<const char*> requiredExtensions( glfwExtensions, glfwExtensions + glfwExtensionCount );
 // 使用特殊的setter，可以直接传入数组
@@ -199,28 +198,24 @@ createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 每个 `vk::ExtensionProperties` 结构体包含扩展的名称和版本。我们可以用一个简单的 for 循环列出它们：
 ```cpp
 // std::vector<vk::ExtensionProperties>
-auto extensions = m_context.enumerateInstanceExtensionProperties();
+const auto extensions = m_context.enumerateInstanceExtensionProperties();
 std::cout << "available extensions:\n";
-
 for (const auto& extension : extensions) {
-    std::cout << '\t' << extension.extensionName << std::endl;
+    std::println("\t{}", std::string_view(extension.extensionName));
 }
 ```
 
-> `m_context.enumerate...()`和`vk::enumerate...()`的效果是一样的。
+> `vulkan.hpp` 已经附带了许多标准库头文件，比如 `<string>` 。
+> 本文档很可能省略这些头文件，但你仍然可以更安全的显式导入。
 
-
-您可以将此代码添加到 `createInstance` 函数中，以查看支持的扩展列表。
-
-> 挑战：尝试创建一个函数，检查 GLFW 需要的所有扩展是否都在支持的扩展列表中。
+您可以将此代码添加到 `createInstance` 函数中，以查看支持的扩展列表，还可以尝试检查 GLFW 所需的扩展是否都在此列表中。
 
 ## **清理资源**
 
-- `CreateInfo`和 `ApplicationInfo` 是简单结构，不含其他资源，自然析构即可。
+`CreateInfo`和 `ApplicationInfo` 是简单结构，不含其他资源，自然析构即可。
 
-- C风格接口必须手动调用相关 `Destroy` 函数释放 `VkInstance` 等特殊资源。
-
-- 我们使用了 `vk::raii`，不需要在 `cleanup` 中手动清理资源。
+C风格接口必须手动调用相关 `Destroy` 函数释放 `VkInstance` 等特殊资源。
+而我们使用了 `vk::raii`，不需要在 `cleanup` 中手动清理资源。
 
 **注意：**
 

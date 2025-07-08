@@ -1,14 +1,35 @@
+#include <iostream>
+#include <print>
+#include <set>
+#include <stdexcept>
+#include <optional>
+
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #include <GLFW/glfw3.h>
 
-#include <iostream>
-#include <vector>
-#include <array>
-#include <set>
-#include <memory>
-#include <optional>
-#include <stdexcept>
+
+
+constexpr uint32_t WIDTH = 800;
+constexpr uint32_t HEIGHT = 600;
+
+constexpr std::array<const char*,1> REQUIRED_LAYERS {
+    "VK_LAYER_KHRONOS_validation"
+};
+
+#ifdef NDEBUG
+constexpr bool ENABLE_VALIDATION_LAYER = false;
+#else
+constexpr bool ENABLE_VALIDATION_LAYER = true;
+#endif
+
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+
+    bool isComplete() const {
+        return graphicsFamily.has_value();
+    }
+};
 
 class HelloTriangleApplication {
 public:
@@ -20,23 +41,7 @@ public:
     }
 
 private:
-    /////////////////////////////////////////////////////////////////
-    /// static values
-    static constexpr uint32_t WIDTH = 800;
-    static constexpr uint32_t HEIGHT = 600;
-
-    inline static const std::vector<const char*> validationLayers {
-        "VK_LAYER_KHRONOS_validation"
-    };
-
-    #ifdef NDEBUG
-        static constexpr bool enableValidationLayers = false;
-    #else
-        static constexpr bool enableValidationLayers = true;
-    #endif
-    /////////////////////////////////////////////////////////////////
-
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////
     /// class member
     GLFWwindow* m_window{ nullptr };
     vk::raii::Context m_context;
@@ -45,10 +50,10 @@ private:
     vk::raii::PhysicalDevice m_physicalDevice{ nullptr };
     vk::raii::Device m_device{ nullptr };
     vk::raii::Queue m_graphicsQueue{ nullptr };
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////
 
-    /////////////////////////////////////////////////////////////////
-    /// run()
+    /////////////////////////////////////////////////////////////
+    /// run functions
     void initWindow() {
         glfwInit();
 
@@ -61,7 +66,7 @@ private:
     void initVulkan() {
         createInstance();
         setupDebugMessenger();
-        pickPhysicalDevice();
+        selectPhysicalDevice();
         createLogicalDevice();
     }
 
@@ -75,127 +80,123 @@ private:
         glfwDestroyWindow( m_window );
         glfwTerminate();
     }
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////
 
-    /////////////////////////////////////////////////////////////////
-    /// instance creation
-    std::vector<const char*> getRequiredExtensions() {
+    /////////////////////////////////////////////////////////////
+    /// create instance and validation layers
+    static VKAPI_ATTR uint32_t VKAPI_CALL debugMessageFunc(
+        vk::DebugUtilsMessageSeverityFlagBitsEXT       messageSeverity,
+        vk::DebugUtilsMessageTypeFlagsEXT              messageTypes,
+        vk::DebugUtilsMessengerCallbackDataEXT const * pCallbackData,
+        void * pUserData
+    ) {
+        std::println(std::cerr, "validation layer: {}",  pCallbackData->pMessage);
+        return false;
+    }
+    static constexpr vk::DebugUtilsMessengerCreateInfoEXT populateDebugMessengerCreateInfo() {
+        constexpr vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
+        );
+        constexpr vk::DebugUtilsMessageTypeFlagsEXT    messageTypeFlags(
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
+        );
+        return { {}, severityFlags, messageTypeFlags, &debugMessageFunc };
+    }
+    void setupDebugMessenger() {
+        if constexpr (!ENABLE_VALIDATION_LAYER) return;
+        constexpr auto createInfo = populateDebugMessengerCreateInfo();
+        m_debugMessenger = m_instance.createDebugUtilsMessengerEXT( createInfo );
+    }
+    static std::vector<const char *> getRequiredExtensions() {
         uint32_t glfwExtensionCount = 0;
-        const char** glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-        if (enableValidationLayers) {
+        const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        std::vector<const char *> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+        extensions.emplace_back(vk::KHRPortabilityEnumerationExtensionName);
+        if constexpr (ENABLE_VALIDATION_LAYER) {
             extensions.emplace_back( vk::EXTDebugUtilsExtensionName );
         }
-        extensions.emplace_back( vk::KHRPortabilityEnumerationExtensionName );
-
         return extensions;
     }
-    void createInstance(){
-        if (enableValidationLayers && !checkValidationLayerSupport()) {
-            throw std::runtime_error("validation layers requested, but not available!");
+    bool checkValidationLayerSupport() const {
+        const auto layers = m_context.enumerateInstanceLayerProperties();
+        std::set<std::string> requiredLayers(REQUIRED_LAYERS.begin(), REQUIRED_LAYERS.end());
+        for (const auto &layer: layers) {
+            requiredLayers.erase(layer.layerName);
+        }
+        return requiredLayers.empty();
+    }
+
+    void createInstance() {
+        if constexpr (ENABLE_VALIDATION_LAYER) {
+            if (!checkValidationLayerSupport()) throw std::runtime_error(
+                "validation layers requested, but not available!");
         }
 
-        vk::ApplicationInfo applicationInfo( 
-            "Hello Triangle",   // pApplicationName
+        constexpr vk::ApplicationInfo applicationInfo(
+            "Hello Vulkan",     // pApplicationName
             1,                  // applicationVersion
             "No Engine",        // pEngineName
             1,                  // engineVersion
             vk::makeApiVersion(0, 1, 4, 0)  // apiVersion
         );
-        
-        vk::InstanceCreateInfo createInfo( 
+        vk::InstanceCreateInfo createInfo(
             {},                 // vk::InstanceCreateFlags
             &applicationInfo    // vk::ApplicationInfo*
         );
 
         std::vector<const char*> requiredExtensions = getRequiredExtensions();
-        // special setter
         createInfo.setPEnabledExtensionNames( requiredExtensions );
         createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 
-        // vk::DebugUtilsMessengerCreateInfoEXT
-        auto debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
-        if (enableValidationLayers) {
-            createInfo.setPEnabledLayerNames( validationLayers );
-            createInfo.pNext = &debugMessengerCreateInfo;
+        // std::vector<vk::ExtensionProperties>
+        const auto extensions = m_context.enumerateInstanceExtensionProperties();
+        std::cout << "available extensions:\n";
+        for (const auto& extension : extensions) {
+            std::println("\t{}", std::string_view(extension.extensionName));
         }
 
-        auto extensions = m_context.enumerateInstanceExtensionProperties();
-        std::cout << "available extensions:\n";
-
-        for (const auto& extension : extensions) {
-            std::cout << '\t' << extension.extensionName << std::endl;
+        constexpr auto debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
+        if constexpr (ENABLE_VALIDATION_LAYER) {
+            createInfo.setPEnabledLayerNames( REQUIRED_LAYERS );
+            createInfo.pNext = &debugMessengerCreateInfo ;
         }
 
         m_instance = m_context.createInstance( createInfo );
     }
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////
 
-    /////////////////////////////////////////////////////////////////
-    /// validation layer
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc( 
-        vk::DebugUtilsMessageSeverityFlagBitsEXT       messageSeverity,
-        vk::DebugUtilsMessageTypeFlagsEXT              messageTypes,
-        vk::DebugUtilsMessengerCallbackDataEXT const * pCallbackData,
-        void * pUserData ) {
 
-        std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+    /////////////////////////////////////////////////////////////
+    /// device and queue
+    QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) const {
+        QueueFamilyIndices indices;
+        // std::vector<vk::QueueFamilyProperties>
+        const auto queueFamilies = physicalDevice.getQueueFamilyProperties();
+        for (int i = 0; const auto& queueFamily : queueFamilies) {
+            if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
+                indices.graphicsFamily = i;
+            }
+            if (indices.isComplete())  break;
 
-        return false;
-    }
-    bool checkValidationLayerSupport() {
-        auto layers = m_context.enumerateInstanceLayerProperties();
-        std::set<std::string> t_requiredLayers( validationLayers.begin(), validationLayers.end() );
-        for (const auto& layer : layers) {
-            t_requiredLayers.erase( layer.layerName );
+            ++i;
         }
-        return t_requiredLayers.empty();
+        return indices;
     }
-    vk::DebugUtilsMessengerCreateInfoEXT populateDebugMessengerCreateInfo() {
-        vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( 
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError 
-        );
-        vk::DebugUtilsMessageTypeFlagsEXT    messageTypeFlags( 
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |         
-            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation 
-        );
-        return vk::DebugUtilsMessengerCreateInfoEXT ( {}, severityFlags, messageTypeFlags, &debugMessageFunc );
-    }
-    void setupDebugMessenger(){
-        if (!enableValidationLayers) return;
-
-        auto createInfo = populateDebugMessengerCreateInfo();
-        m_debugMessenger = m_instance.createDebugUtilsMessengerEXT( createInfo );
-    }
-    /////////////////////////////////////////////////////////////////
-
-    /////////////////////////////////////////////////////////////////
-    /// physical device
-    struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily;
-
-        bool isComplete() {
-            return graphicsFamily.has_value();
-        }
-    };
-    bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
-        QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const {
+        const auto indices = findQueueFamilies(physicalDevice);
 
         return indices.isComplete();
     }
-    void pickPhysicalDevice() {
+    void selectPhysicalDevice() {
         // std::vector<vk::raii::PhysicalDevice>
-        auto physicalDevices = m_instance.enumeratePhysicalDevices();
+        const auto physicalDevices = m_instance.enumeratePhysicalDevices();
         if(physicalDevices.empty()){
             throw std::runtime_error("failed to find GPUs with Vulkan support!");
         }
-
         for (const auto& it : physicalDevices) {
             if (isDeviceSuitable(it)) {
                 m_physicalDevice = it;
@@ -206,64 +207,31 @@ private:
             throw std::runtime_error("failed to find a suitable GPU!");
         }
     }
-    QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
-        QueueFamilyIndices indices;
-
-        // std::vector<vk::QueueFamilyProperties>
-        auto queueFamilies = physicalDevice.getQueueFamilyProperties();
-        for (int i = 0; const auto& queueFamily : queueFamilies) {
-            if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
-                indices.graphicsFamily = i;
-            }
-            if (indices.isComplete()) {
-                break;
-            }
-
-            ++i;
-        }
-
-        return indices;
-    }
-    /////////////////////////////////////////////////////////////////
-
-    /////////////////////////////////////////////////////////////////
-    /// logical device
     void createLogicalDevice() {
-        QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
-
         vk::DeviceQueueCreateInfo queueCreateInfo;
+        const auto indices = findQueueFamilies( m_physicalDevice );
         queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
-
-        float queuePriority = 1.0f;
+        constexpr float queuePriority = 1.0f;
         queueCreateInfo.setQueuePriorities( queuePriority );
-
         vk::PhysicalDeviceFeatures deviceFeatures;
-
         vk::DeviceCreateInfo createInfo;
         createInfo.setQueueCreateInfos( queueCreateInfo );
         createInfo.pEnabledFeatures = &deviceFeatures;
-
-        if (enableValidationLayers) {
-            createInfo.setPEnabledLayerNames( validationLayers );
-        }
-
         m_device = m_physicalDevice.createDevice( createInfo );
         m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
     }
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////
 };
 
 int main() {
-    HelloTriangleApplication app;
-
     try {
+        HelloTriangleApplication app;
         app.run();
-    } catch(const vk::SystemError & err ){
+    } catch(const vk::SystemError& err ) {
         // use err.code() to check err type
-        std::cout << "vk::SystemError: " << err.what() << std::endl;
-    } catch (const std::exception & err ){
-        std::cout << "std::exception: " << err.what() << std::endl;
+        std::println( std::cerr, "vk::SystemError - code: {} ",err.code().message());
+        std::println( std::cerr, "vk::SystemError - what: {}",err.what());
+    } catch (const std::exception& err ) {
+        std::println( std::cerr, "std::exception: {}", err.what());
     }
-
-    return 0;
 }

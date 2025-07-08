@@ -6,7 +6,7 @@ comments: true
 
 ## **前言**
 
-Vulkan作为平台无关的API，需要通过WSI（窗口系统集成）扩展与窗口系统交互。
+Vulkan 作为平台无关的 API ，需要通过 WSI （窗口系统集成）扩展与窗口系统交互。
 
 在本章中，我们讨论的第一个扩展是 `VK_KHR_surface` 。
 它提供了一个 `vk::SurfaceKHR` 窗口表面对象，该对象表示一种抽象的表面类型，用于呈现渲染后的图像。
@@ -16,7 +16,7 @@ Vulkan作为平台无关的API，需要通过WSI（窗口系统集成）扩展�
 实际上我们已经启用了此扩展，因为它在 `glfwGetRequiredInstanceExtensions` 返回的列表中。
 该列表还包括我们将在接下来的几章中使用的其他 WSI 扩展。
 
-> 注意 Vulkan 进行离屏渲染不需要窗口系统，也就不需要这些扩展。
+> 离屏渲染不需要窗口系统，也就不需要这些扩展。
 
 ## **创建窗口表面**
 
@@ -45,7 +45,7 @@ void initVulkan() {
     createInstance();
     setupDebugMessenger();
     createSurface();
-    pickPhysicalDevice();
+    selectPhysicalDevice();
     createLogicalDevice();
 }
 
@@ -100,13 +100,13 @@ struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;
 
-    bool isComplete() {
+    bool isComplete() const {
         return graphicsFamily.has_value() && presentFamily.has_value();
     }
 };
 ```
 
-下面修改 `findQueueFamilies` 函数，以查找具有呈现到我们的窗口表面的能力的队列族。
+下面修改 `findQueueFamilies` 函数，以查找具有呈现到窗口表面的能力的队列族。
 将下面的代码放在与 `vk::QueueFlagBits::eGraphic` 相同的循环中
 
 ```cpp
@@ -132,10 +132,11 @@ vk::raii::Queue m_presentQueue{ nullptr };
 
 ```cpp
 std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-// isDeviceSuitable() 函数已经保证了队列族可用
-std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
-float queuePriority = 1.0f;
+const auto [graphics, present] = findQueueFamilies( m_physicalDevice );
+std::set<uint32_t> uniqueQueueFamilies = { graphics.value(), present.value() };
+
+constexpr float queuePriority = 1.0f;
 for (uint32_t queueFamily : uniqueQueueFamilies) {
     vk::DeviceQueueCreateInfo queueCreateInfo;
     queueCreateInfo.queueFamilyIndex = queueFamily;
@@ -144,18 +145,19 @@ for (uint32_t queueFamily : uniqueQueueFamilies) {
 }
 ```
 
+> 这里使用了 C++17 的结构化绑定以快速提取类成员。
+
 然后修改 `setQueueCreateInfos` 以指向创建信息数组：（参数变量名加个`s`）
 
 ```cpp
-vk::DeviceCreateInfo createInfo;
 createInfo.setQueueCreateInfos( queueCreateInfos );
-createInfo.pEnabledFeatures = &deviceFeatures;
 ```
 
-最后，不要忘了在函数末尾获取队列句柄：
+最后修改函数末尾获取队列句柄的语句：
 
 ```cpp
-m_presentQueue = m_device.getQueue( indices.presentFamily.value(), 0 );
+m_graphicsQueue = m_device.getQueue( graphics.value(), 0 );
+m_presentQueue = m_device.getQueue( present.value(), 0 );
 ```
 
 如果队列族相同，这两个句柄很可能具有相同的值，但这依然可以正常运行。

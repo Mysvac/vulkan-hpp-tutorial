@@ -1,11 +1,17 @@
+#include <iostream>
+#include <print>
+#include <stdexcept>
+
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #include <GLFW/glfw3.h>
 
-#include <iostream>
-#include <vector>
-#include <memory>
-#include <stdexcept>
+
+
+constexpr uint32_t WIDTH = 800;
+constexpr uint32_t HEIGHT = 600;
+
+
 
 class HelloTriangleApplication {
 public:
@@ -17,16 +23,10 @@ public:
     }
 
 private:
-    /////////////////////////////////////////////////////////////////
-    /// static values
-    static constexpr uint32_t WIDTH = 800;
-    static constexpr uint32_t HEIGHT = 600;
-    /////////////////////////////////////////////////////////////////
-
-    /////////////////////////////////////////////////////////////////
-    /// class member
+    /////////////////////////////////////////////////////////////
+    //// class member
     GLFWwindow* m_window{ nullptr };
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////
 
     void initWindow() {
         glfwInit();
@@ -51,21 +51,17 @@ private:
         glfwDestroyWindow( m_window );
         glfwTerminate();
     }
-
-    
 };
 
 int main() {
-    HelloTriangleApplication app;
-
     try {
+        HelloTriangleApplication app;
         app.run();
-    } catch(const vk::SystemError & err ){
+    } catch(const vk::SystemError& err ) {
         // use err.code() to check err type
-        std::cout << "vk::SystemError: " << err.what() << std::endl;
-    } catch (const std::exception & err ){
-        std::cout << "std::exception: " << err.what() << std::endl;
+        std::println( std::cerr, "vk::SystemError - code: {} ",err.code().message());
+        std::println( std::cerr, "vk::SystemError - what: {}",err.what());
+    } catch (const std::exception& err ) {
+        std::println( std::cerr, "std::exception: {}", err.what());
     }
-
-    return 0;
 }

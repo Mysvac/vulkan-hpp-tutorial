@@ -45,10 +45,10 @@ comments: true
 
 ```cpp
 void createBuffer(
-    vk::DeviceSize size, 
-    vk::BufferUsageFlags usage, 
-    vk::MemoryPropertyFlags properties, 
-    vk::raii::Buffer& buffer, 
+    const vk::DeviceSize size,
+    const vk::BufferUsageFlags usage,
+    const vk::MemoryPropertyFlags properties,
+    vk::raii::Buffer& buffer,
     vk::raii::DeviceMemory& bufferMemory
 ) {
     vk::BufferCreateInfo bufferInfo;
@@ -58,7 +58,7 @@ void createBuffer(
 
     buffer = m_device.createBuffer(bufferInfo);
 
-    vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
+    const vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
 
     vk::MemoryAllocateInfo allocInfo;
     allocInfo.allocationSize = memRequirements.size;
@@ -76,18 +76,18 @@ void createBuffer(
 
 ```cpp
 void createVertexBuffer() {
-    vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    const vk::DeviceSize bufferSize = sizeof(Vertex) * vertices.size();
 
     createBuffer(bufferSize,
         vk::BufferUsageFlagBits::eVertexBuffer,
-        vk::MemoryPropertyFlagBits::eHostVisible | 
+        vk::MemoryPropertyFlagBits::eHostVisible |
         vk::MemoryPropertyFlagBits::eHostCoherent,
         m_vertexBuffer,
         m_vertexBufferMemory
     );
 
     void* data = m_vertexBufferMemory.mapMemory(0, bufferSize);
-    memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
+    memcpy(data, vertices.data(), bufferSize);
     m_vertexBufferMemory.unmapMemory();
 }
 ```
@@ -100,7 +100,7 @@ void createVertexBuffer() {
 
 ```cpp
 void createVertexBuffer() {
-    vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    const vk::DeviceSize bufferSize = sizeof(Vertex) * vertices.size();
 
     vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
     vk::raii::Buffer stagingBuffer{ nullptr };
@@ -137,7 +137,7 @@ void createVertexBuffer() {
 我们现在创建一个新函数 `copyBuffer` ，用于缓冲之间的数据拷贝，
 
 ```cpp
-void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::DeviceSize size) {
+void copyBuffer(const vk::raii::Buffer& srcBuffer,const vk::raii::Buffer& dstBuffer,const vk::DeviceSize size) const {
 
 }
 ```
@@ -146,7 +146,7 @@ void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::De
 同时最好为这些临时命令缓冲创建一个独立的命令池，程序可以更好进行资源分配的优化，此时需要使用 `vk::CommandBufferLevel::ePrimary` 标记。
 
 ```cpp
-void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::DeviceSize size) {
+void copyBuffer(const vk::raii::Buffer& srcBuffer,const vk::raii::Buffer& dstBuffer,const vk::DeviceSize size) const {
     vk::CommandBufferAllocateInfo allocInfo;
     allocInfo.level = vk::CommandBufferLevel::ePrimary;
     allocInfo.commandPool = m_commandPool;
@@ -154,7 +154,7 @@ void copyBuffer(vk::raii::Buffer& srcBuffer, vk::raii::Buffer& dstBuffer, vk::De
 
     // std::vector<vk::raii::CommandBuffer>
     auto commandBuffers = m_device.allocateCommandBuffers(allocInfo);
-    vk::raii::CommandBuffer commandBuffer = std::move(commandBuffers.at(0));
+    const vk::raii::CommandBuffer commandBuffer = std::move(commandBuffers.at(0));
 }
 ```
 
@@ -231,8 +231,8 @@ copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
 
 **[shader-CMake代码](../../codes/02/00_vertexinput/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/00_vertexinput/shaders/shader.vert)**
+**[shader-vert代码](../../codes/02/00_vertexinput/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/02/00_vertexinput/shaders/shader.frag)**
+**[shader-frag代码](../../codes/02/00_vertexinput/shaders/graphics.frag.glsl)**
 
 ---

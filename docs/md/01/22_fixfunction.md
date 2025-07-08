@@ -34,11 +34,10 @@ comments: true
 
 ```cpp
 // 启用视口和裁剪矩形动态状态
-std::vector<vk::DynamicState> dynamicStates = {
+const auto dynamicStates = {
     vk::DynamicState::eViewport,
     vk::DynamicState::eScissor
 };
-
 vk::PipelineDynamicStateCreateInfo dynamicState;
 dynamicState.setDynamicStates( dynamicStates );
 ```
@@ -69,16 +68,16 @@ vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
 前者在 `topology` 成员中指定，常见的值有这些
 
 
-|   `vk::PrimitiveTopology` |                 含义                          |  
-|-----------------------|--------------------------------------------------|
-| `ePointList`          | 点集，点来自顶点                                   |  
-| `eLineList`           | 每 2 个顶点绘制一条线，不重复使用顶点               |  
-| `eLineStrip`          | 每条线的结束顶点用作下一条线的起始顶点               |  
-| `eTriangleList`       | 每 3 个顶点绘制一个三角形，不重复使用顶点            |  
-| `eTriangleStrip`      | 每个三角形的第二/三个顶点用作下一个三角形的前两个顶点 |  
+| `vk::PrimitiveTopology` | 含义                          |  
+|-------------------------|-----------------------------|
+| `ePointList`            | 点集，点来自顶点                    |  
+| `eLineList`             | 每 2 个顶点绘制一条线，不重复使用顶点        |  
+| `eLineStrip`            | 每条线的结束顶点用作下一条线的起始顶点         |  
+| `eTriangleList`         | 每 3 个顶点绘制一个三角形，不重复使用顶点      |  
+| `eTriangleStrip`        | 每个三角形的第二/三个顶点用作下一个三角形的前两个顶点 |  
 
 
-通常，顶点按索引顺序从顶点缓冲中加载，但使用索引缓冲区，您可以自己指定要使用的索引。
+通常，顶点按顺序从顶点缓冲中加载。您可以使用索引缓冲指定要使用的顶点与顺序。
 这允许您执行诸如重用顶点之类的优化，这将在后续的“索引缓冲”章节介绍。
 
 对于后者，如果您将 `primitiveRestartEnable` 成员设置为 `true`，则可以通过使用特殊的索引 `0xFFFF` 或 `0xFFFFFFFF` 在 `Strip` 拓扑模式中打断线和三角形。
@@ -161,7 +160,9 @@ viewportState.setScissors( 0, scissor );
 ```
 
 使用动态状态，甚至可以在单个命令缓冲区中指定不同的视口或裁剪矩形。
+
 无论您如何设置它们，都可以在某些显卡上使用多个视口和裁剪矩形，通过结构体成员引用它们的数组。
+使用多个视口和裁剪矩形需要启用对应的 GPU 特性（参考物理设备与逻辑设备章节）。
 
 ## **光栅化器**
 
@@ -191,17 +192,18 @@ rasterizer.polygonMode = vk::PolygonMode::eFill;
 
 `polygonMode` 确定如何将几何图元转换为片段，至少有三种常见模式可用：
 
-|   `vk::PolygonMode`   |   功能   |    说明   |
-|------------------------|----------------|--------------------| 
-| `eFill`  | 生成覆盖多边形内部区域的片段 |  默认，片段覆盖所有内容 |
-| `eLine`  | 仅多边形的边被渲染为线段 |  线的宽度由 `vk::LineWidth` 字段控制 |
-| `ePoint` | 仅多边形的顶点被渲染为点片段  |  点的大小可由着色器的 `gl_PointSize` 控制 |
+| `vk::PolygonMode` | 功能             | 说明                           |
+|-------------------|----------------|------------------------------| 
+| `eFill`           | 生成覆盖多边形内部区域的片段 | 默认，片段覆盖所有内容                  |
+| `eLine`           | 仅多边形的边被渲染为线段   | 线的宽度由 `vk::LineWidth` 字段控制   |
+| `ePoint`          | 仅多边形的顶点被渲染为点片段 | 点的大小可由着色器的 `gl_PointSize` 控制 |
 
 ```cpp
 rasterizer.lineWidth = 1.0f;
 ```
 
 `lineWidth` 成员很简单，它以片段数为单位描述线条绘制的粗细，默认使用 1.0f ，支持的最大线宽取决于硬件。
+粗于 1.0f 的线条需要启用 `wideLines` GPU 特性。
 
 ```cpp
 rasterizer.cullMode = vk::CullModeFlagBits::eBack;
@@ -220,7 +222,7 @@ rasterizer.depthBiasEnable = false;
 
 ## **多重采样**
 
-使用 `vk::PipelineMultisampleStateCreateInfo` 结构配置多重采样，这是 **抗锯齿/防走样** 的方法之一，需要启用 GPU 功能。
+使用 `vk::PipelineMultisampleStateCreateInfo` 结构配置多重采样，这是 **抗锯齿/防走样** 的方法之一，需要启用 GPU 特性。
 
 它的工作原理非常简单，将单个像素拆分成多个区域，判断各小区域是否在图元的有效范围内\(在范围内就正常色彩，不在就无色\)，最后取平均值以保证几何体边缘色彩平滑过渡。
 
@@ -333,7 +335,7 @@ colorBlending.setAttachments( colorBlendAttachment );
 
 创建一个类成员来保存此对象，因为我们将在稍后的章节从其他函数中引用它：
 
-```c++
+```cpp
 vk::raii::PipelineLayout m_pipelineLayout{ nullptr };
 ```
 
@@ -353,8 +355,6 @@ m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 从头开始设置所有这些工作量很大，但优点是我们现在几乎完全了解了图形管线中发生的一切！
 这减少了因某些组件的默认状态不是您期望的那样而遇到意外行为的可能性。
 
-但是在我们最终创建图形管线之前，还需要创建一个对象，那就是 **渲染通道** 。
-
 ---
 
 **[C++代码](../../codes/01/22_fixfunction/main.cpp)**
@@ -365,8 +365,8 @@ m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 
 **[shader-CMake代码](../../codes/01/21_shader/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
+**[shader-vert代码](../../codes/01/21_shader/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+**[shader-frag代码](../../codes/01/21_shader/shaders/graphics.frag.glsl)**
 
 ---

@@ -34,6 +34,8 @@ comments: true
     - 处理片段可见性（深度/模板测试）
     - 混合操作：Alpha混合、叠加等颜色混合模式
 
+> 注意到图形管线最后会向帧缓冲输出，也就是输出到我们的颜色附件（交换链图像）中。
+
 ### 固定阶段与可编程阶段
 
 **绿色**的是固定功能阶段，**橙色**的是可编程阶段。
@@ -70,10 +72,12 @@ void initVulkan() {
     createInstance();
     setupDebugMessenger();
     createSurface();
-    pickPhysicalDevice();
+    selectPhysicalDevice();
     createLogicalDevice();
     createSwapChain();
     createImageViews();
+    createRenderPass();
+    createFramebuffers();
     createGraphicsPipeline();
 }
 

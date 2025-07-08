@@ -9,24 +9,23 @@ comments: true
 
 注意，CMake 和 vcpkg 自身的安装，以及 MSVC/Clang 等编译器的安装，不是本教程的内容。
 
+> 作为跨平台的教程，我们不限制编译器的选择，但请保证它支持您需要的 C++ 标准。
+
 ## **安装 Vulkan SDK**
 Vulkan SDK 是开发Vulkan应用程序的核心组件，包含：
 
 - 头文件
+- 函数加载器
 - 标准验证层
-- 调试工具
-- Vulkan 函数加载器
-- Shader 编译支持
+- 着色器编译支持
 - ······
 
 可以从 [LunarG官网](https://vulkan.lunarg.com/) 下载SDK，无需注册账户。
 
 
 ### Windows 安装
-1. 建议使用 Visual Studio 2022 以获得完整C++20支持
-2. 从 [官网](https://vulkan.lunarg.com/) 下载 Vulkan SDK 并运行安装程序
-3. 重要：允许安装程序设置环境变量
-4. 验证安装：
+1. 从 **[官网](https://vulkan.lunarg.com/)** 下载 Vulkan SDK 并运行安装程序，**允许它设置环境变量**
+2. 验证安装：
     - 进入 SDK 安装目录的 Bin 子目录
     - 运行 vkcube.exe 演示程序
     - 应看到旋转的立方体窗口
@@ -85,9 +84,7 @@ vkcube
 
 ## **依赖库安装**
 
-我们使用 vcpkg 作为跨平台包管理器。
-
-vcpkg 安装参考 [官方文档](https://learn.microsoft.com/zh-cn/vcpkg/get_started/overview)
+我们使用 vcpkg 作为跨平台包管理器，安装方式请参考 [官方文档](https://learn.microsoft.com/zh-cn/vcpkg/get_started/overview) 。
 
 ### GLFW
 Vulkan 本身是一个平台无关的 API，不包含用于创建窗口以显示渲染结果的工具。
@@ -99,7 +96,7 @@ vcpkg install glfw3
 ```
 
 ### GLM
-与 DirectX 12 不同，Vulkan 不包含用于线性代数运算的库。我们使用 [GLM](https://github.com/g-truc/glm) 线性代数库，它专为图形 API 设计，常用于 OpenGL。
+与 DirectX 12 不同，Vulkan 不包含用于线性代数运算的库。我们使用 [GLM](https://github.com/g-truc/glm) 线性代数库，它专为图形 API 设计，常用于 OpenGL 与 Vulkan 。
 
 安装命令：
 ```shell
@@ -140,7 +137,8 @@ set(CMAKE_TOOLCHAIN_FILE "${VCPKG_CMAKE_PATH}/scripts/buildsystems/vcpkg.cmake")
 
 project(HelloVulkan LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+# 此处使用 23 标准，你可以按需设置
+set(CMAKE_CXX_STANDARD 23)
 
 # 需要设置VULKAN_SDK环境变量，比如 D:\Vulkan\1.4.309.0
 # 环境变量默认在Vulkan SDK安装时，自动设置
@@ -169,42 +167,45 @@ target_link_libraries(${PROJECT_NAME} PRIVATE glfw )
 
 ```cpp
 // main.cpp
+#include <iostream>
+#include <string_view>
+#include <print>
+
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
+
 #include <GLFW/glfw3.h>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <iostream>
-
 int main() {
-    glfwInit();
+    // vulkan test
+    const vk::raii::Context context;
+    const auto extensions = context.enumerateInstanceExtensionProperties();
+    std::cout << "vulkan available extensions:" << std::endl;
+    for (const auto& extension : extensions) {
+        std::println("{}", std::string_view( extension.extensionName ));
+    }
 
+    // glm test
+    constexpr glm::mat4 matrix(1.0f);
+    constexpr glm::vec4 vec(1.0f, 2.0f, 3.0f, 4.0f);
+    constexpr glm::vec4 test = matrix * vec;
+    std::println("{} {} {} {}", test.x, test.y, test.z, test.w);
+
+    // glfw test
+    glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
-
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-    std::cout << extensionCount << " extensions supported\n";
-
-    glm::mat4 matrix;
-    glm::vec4 vec;
-    auto test = matrix * vec;
-
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
     }
-
     glfwDestroyWindow(window);
-
     glfwTerminate();
-
-    return 0;
 }
-
 ```
 
 你无需理解上述C++代码的含义，这只是测试库是否成功导入。
@@ -221,8 +222,6 @@ cmake --build build
 运行：
 ```shell
 # Windows
-build/Debug/HelloVulkan.exe
-# 或
 build/HelloVulkan.exe
 
 # Linux/MacOS
@@ -231,8 +230,9 @@ build/HelloVulkan
 
 **预期结果：**
 
-- 弹出空白窗口
-- 关闭窗口后，控制台输出支持的Vulkan扩展数量
+- 控制台输出 Vulkan 可用的扩展列表
+- 控制台输出 GLM 计算结果： 1 2 3 4
+- 弹出空白窗口，可点击右上角关闭窗口
 
 ### 关于CMake预设
 

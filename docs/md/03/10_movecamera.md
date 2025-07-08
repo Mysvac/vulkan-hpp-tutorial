@@ -9,7 +9,18 @@ comments: true
 我们后续还会载入各种各样的几何体，不可能每次都手动调整模型大小或计算摄像头合适位置。
 所以在这一节，我们将获取外设输入并实时移动摄像头位置与角度。
 
-> 很大程度上这并非 Vulkan 自身的内容，但它可以让我们更好地观察后续教程的效果。
+这主要是为了丰富后续章节的代码体验，顺便讲解一些 Vulkan 空间坐标与屏幕坐标的内容，因此不会实现非常完善的输入系统。
+
+## **坐标系**
+
+计算机图形学中通常使用 Y 轴作为高度轴，但这并非强制性的。
+在之前的章节中，我们使用了 Z 轴作为高度轴（注意视口变化 `lookAt` 函数的第三个参数）。
+
+在本章中我们将处理视图变换矩阵，将 Y 轴作为高度轴，然后翻正模型。
+
+注意 Vulkan 使用右手坐标系，（从Y轴上方往下看）从X轴正方向出发，顺时针旋转90度到达Z轴正方向，而非逆时针旋转 90 度。
+
+![right_handed_coordinate](../../images/0310/right_handed_coordinate.png)
 
 ## **GLFW获取键盘输入**
 
@@ -31,7 +42,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 glfwSetKeyCallback(m_window, key_callback);
 ```
 
-`key` 和 `action` 分别是按键和对应的行为。 `scancode` 是输入设备的扫描码，一般不使用。 `mods` 是一个位键盘，则用于检查 `ctrl`、`shift` 等组合键是否按下。 
+`key` 和 `action` 分别是按键和对应的行为。 `scancode` 是输入设备的扫描码，一般不使用。 `mods` 是一个位键盘，则用于检查 `ctrl`、`shift` 等组合键是否按下。
 
 需要注意的是，即使使用了回调函数，也需要等到 `glfwPollEvents()` 调用时才会触发。
 
@@ -46,17 +57,6 @@ if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS) {
 ```
 
 这很简单，使用 `glfwGetKey` 函数检查按键，返回按键的状态。
-
-## **坐标系**
-
-计算机图形学中通常使用 Y 轴作为高度轴，但这并非强制性的。
-在加载模型的章节中，我们就使用了 Z 轴（注意视口变化 `lookAt` 函数的第三个参数）。
-
-在本章中我们将处理视口变换矩阵，将 Y 轴作为高度轴、并调整模型角度。
-
-注意 Vulkan 使用右手坐标系，（从Y轴上方往下看）从X轴正方向出发，顺时针旋转90度到达Z轴正方向，而非逆时针旋转90度。
-
-![right_handed_coordinate](../../images/0310/right_handed_coordinate.png)
 
 ## **修改MVP变换**
 
@@ -96,7 +96,7 @@ front = glm::normalize(front);
 ```cpp
 UniformBufferObject ubo{};
 ubo.model = glm::mat4(1.0f);    // 设为单位矩阵，模型不再自转
-ubo.view = glm::lookAt(         // 使用成员变量计算视口变换
+ubo.view = glm::lookAt(         // 使用成员变量计算视图变换
     m_cameraPos, 
     m_cameraPos + front, 
     m_cameraUp
@@ -125,7 +125,7 @@ ubo.model *= glm::rotate(
 );
 ```
 
-现在你应该看到和之前类似的图像（实际视角与下图会有偏差）：
+现在你应该看到和之前类似的图像：
 
 ![drawing_model](../../images/0310/right_room.png)
 
@@ -139,7 +139,8 @@ ubo.model *= glm::rotate(
 现在创建一个辅助函数 `updateCamera` 用于更新视口矩阵参数，并在 `updateUniformBuffer` 中调用它：
 
 ```cpp
-void updateUniformBuffer(uint32_t currentImage) {
+// 移除函数的 const 修饰符
+void updateUniformBuffer(const uint32_t currentImage) {
     updateCamera();
     ......
 }
@@ -153,15 +154,15 @@ void updateCamera() {
 ```cpp
 void updateCamera() {
     static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+    const auto currentTime = std::chrono::high_resolution_clock::now();
+    const float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
     startTime = currentTime;
 }
 ```
 
 ### 2. 相机位置变化
 
-我们使用 WSAD 控制水平方向的移动，所以还需要计算出摄像头的朝向，但是需要忽略 Y 轴。
+我们使用 `WSAD` 控制水平方向的移动，所以还需要计算出摄像头的朝向，但是需要忽略 Y 轴。
 
 ```cpp
 glm::vec3 front;
@@ -212,8 +213,8 @@ if (glfwGetKey(m_window, GLFW_KEY_RIGHT) == GLFW_PRESS)
     m_yaw   += m_cameraRotateSpeed * time;
 
 // 限制 m_yaw 在 [-180.0f, 180.0f] 之内
-m_yaw = std::fmodf(m_yaw + 180.0f, 360.0f);
 if (m_yaw < 0.0f) m_yaw += 360.0f;
+m_yaw = std::fmodf(m_yaw + 180.0f, 360.0f);
 m_yaw -= 180.0f;
 
 // 限制 m_pitch，防止视角翻转
@@ -245,10 +246,10 @@ float m_cameraRotateSpeed = 25.0f;
 
 **[根项目CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 
-**[shader-CMake代码](../../codes/02/40_depthbuffer/shaders/CMakeLists.txt)**
+**[shader-CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/40_depthbuffer/shaders/shader.vert)**
+**[shader-vert代码](../../codes/03/00_loadmodel/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/02/40_depthbuffer/shaders/shader.frag)**
+**[shader-frag代码](../../codes/03/00_loadmodel/shaders/graphics.frag.glsl)**
 
 ---

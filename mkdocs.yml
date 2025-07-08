@@ -26,11 +26,6 @@ theme:
 
 markdown_extensions:
   - pymdownx.superfences
-  - pymdownx.highlight:
-      use_pygments: true
-
-extra_css:
-  - custom/css/style.css
 
 nav:
   - 首页: index.md
@@ -48,18 +43,18 @@ nav:
       - 窗口表面: md/01/10_surface.md
       - 交换链: md/01/11_swapchain.md
       - 图像视图: md/01/12_imageview.md
+      - 渲染通道: md/01/13_renderpass.md
+      - 帧缓冲: md/01/14_framebuffer.md
     - 图形管线基础:
       - 介绍: md/01/20_pipeline.md
       - 着色器: md/01/21_shader.md
       - 固定功能: md/01/22_fixfunction.md
-      - 渲染通道: md/01/23_renderpass.md
-      - 管线创建: md/01/24_conclusion.md
+      - 管线创建: md/01/23_conclusion.md
     - 绘制:
-      - 帧缓冲: md/01/30_framebuffer.md
-      - 命令缓冲: md/01/31_commandbuffer.md
-      - 渲染和呈现: md/01/32_rendering.md
-      - 飞行中的帧: md/01/33_flightframe.md
-    - 重建交换链: md/01/40_recreateswapchain.md
+      - 命令缓冲: md/01/30_commandbuffer.md
+      - 渲染和呈现: md/01/31_rendering.md
+      - 飞行中的帧: md/01/32_flightframe.md
+      - 重建交换链: md/01/33_recreateswapchain.md
   - 缓冲与图像:
     - 顶点缓冲:
       - 顶点输入描述: md/02/00_vertexinput.md
@@ -79,47 +74,33 @@ nav:
     - 移动摄像机: md/03/10_movecamera.md
     - 生成Mipmaps: md/03/20_mipmaps.md
     - 多重采样: md/03/30_multisample.md
-    - 实例化渲染: md/03/40_instancedrendering.md
-    - 推送常量: md/03/50_pushconstant.md
-    - 动态uniform: md/03/60_dynamicuniform.md
-    - 分离图像与采样器: md/03/70_separatesampler.md
-    - 管线缓存: md/03/80_pipelinecache.md
-    - 计算着色器与SSBO: md/03/90_compute.md
+    - 待重构:
+      - 实例化渲染: md/03/40_instancedrendering.md
+      - 推送常量: md/03/50_pushconstant.md
+      - 动态uniform: md/03/60_dynamicuniform.md
+      - 分离图像与采样器: md/03/70_separatesampler.md   # 移动到进阶-杂项
+      - 管线缓存: md/03/80_pipelinecache.md           # 移动到进阶-杂项
+      - 计算着色器与SSBO: md/03/90_compute.md
   - 进阶功能:
     - C++模块化: md/04/00_cxxmodule.md
     - 杂项:
-        - 查询池: md/04/10_querypool.md
-        - 特化常量: md/04/11_specialization.md
-        - TODO: todo.md # pNext 与 sType
-        - TODO: todo.md # 新版同步
+      - 特化常量: md/04/11_specialization.md
+      - 查询池: md/04/10_querypool.md
+      - TODO: todo.md # pNext 与 sType + 同步2.0语法 + 动态渲染 + 辅助命令缓冲
     - 多管线渲染:
-        - 阴影映射: md/04/20_shadowmap.md
-        - 延迟渲染: md/04/21_deferred.md
-        - TODO: todo.md # 模板测试
-        - TODO: todo.md # 延迟渲染
+      - 阴影映射: md/04/20_shadowmap.md
+      - 延迟渲染: md/04/21_deferred.md
+      - TODO: todo.md # 模板测试
     - 多线程渲染:
-      - TODO: todo.md # 资源加载系统
-      - TODO: todo.md # 并行命令录制
+      - TODO: todo.md # 并行命令录制 + 队列并发
     - 离屏渲染:
-      - TODO: todo.md # 离屏渲染
-      - TODO: todo.md # 帧缓冲分离
-      - TODO: todo.md # 虚拟纹理
+      - TODO: todo.md # 离屏渲染 + 帧缓冲分离（多视图）
     - 着色器进阶:
-      - TODO: todo.md  # 几何着色器
-      - TODO: todo.md  # 细分着色器
-      - TODO: todo.md # 任务与网格着色器
+      - TODO: todo.md  # 几何着色器 + 细分着色器 + 任务与网格着色器
     - 光线追踪:
-      - TODO: todo.md # 加速结构
-      - TODO: todo.md # 光追管线
-      - TODO: todo.md # 实例化处理
+      - TODO: todo.md # 加速结构 + 光照着色器 + 配置 + 管线 + 光线查询
     - 性能优化:
-      - TODO: todo.md # 管线屏障
-      - TODO: todo.md # 队列并发
-      - TODO: todo.md # 稀疏资源
-      - TODO: todo.md # 内存分配
+      - TODO: todo.md # 间接绘制 + 稀疏资源 + 内存分配库
     - 高级计算:
-      - TODO: todo.md # 共享内存
-      - TODO: todo.md # 原子操作
-      - TODO: todo.md # 异步计算
-      - TODO: todo.md # 子组操作
+      - TODO: todo.md # 共享内存 + 原子操作 + 子组操作
   - 隐私政策: policy.md

@@ -15,24 +15,24 @@ comments: true
 
 ## **创建缓冲**
 
-创建一个新的函数 `createVertexBuffer` ，在 `createCommandBuffers` 之前调用：
+创建一个新的函数 `createVertexBuffer` ：
 
 ```cpp
 void initVulkan() {
     createInstance();
     setupDebugMessenger();
     createSurface();
-    pickPhysicalDevice();
+    selectPhysicalDevice();
     createLogicalDevice();
     createSwapChain();
     createImageViews();
     createRenderPass();
-    createGraphicsPipeline();
     createFramebuffers();
+    createGraphicsPipeline();
     createCommandPool();
-    createVertexBuffer();
     createCommandBuffers();
     createSyncObjects();
+    createVertexBuffer();
 }
 
 void createVertexBuffer() {
@@ -46,10 +46,10 @@ void createVertexBuffer() {
 vk::BufferCreateInfo bufferInfo;
 ```
 
-首先填写了 `size` 参数，它定义了缓冲的总字节数，我们使用第一个元素的大小乘以总长度。
+首先填写 `size` 参数，它定义了缓冲的总字节数，我们使用 Vertex 的大小乘以总长度。
 
 ```cpp
-bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+bufferInfo.size = sizeof(Vertex) * vertices.size();
 ```
 
 第二个参数是 `usage` ，它表示这些数据的用途，可以是多个位掩码的组合。
@@ -69,16 +69,9 @@ bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 `flags` 参数用于配置稀疏缓冲内存，暂时无需设置，保持默认即可。
 
 现在可以创建缓冲了，首先创建一个 `vk::raii::Buffer` 类型的 `m_vertexBuffer` 成员。
-由于它不依赖交换链，且应该保证它在程序结束前都可用于渲染命令，我们可以把它放在交换链的上方:
 
 ```cpp
-// ......
-vk::raii::Queue m_graphicsQueue{ nullptr };
-vk::raii::Queue m_presentQueue{ nullptr };
 vk::raii::Buffer m_vertexBuffer{ nullptr };
-vk::raii::SwapchainKHR m_swapChain{ nullptr };
-std::vector<vk::Image> m_swapChainImages;
-// ......
 ```
 
 然后在 `createVertexBuffer` 函数中创建它：
@@ -99,22 +92,22 @@ void createVertexBuffer() {
 虽然缓冲已经创建了，但它实际还未分配任何内存。分配内存的第一步是查询他的内存需求量：
 
 ```cpp
-vk::MemoryRequirements memRequirements = m_vertexBuffer.getMemoryRequirements();
+const vk::MemoryRequirements memRequirements = m_vertexBuffer.getMemoryRequirements();
 ```
 
 `vk::MemoryRequirements` 结构体包含如下信息：
 
-| 成员变量 | 含义 |
-|----------|------|
-| `size` | 需要的内存大小（字节），可能与 `bufferInfo.size` 不同 |
-| `alignment` | 内存对齐方式，取决于 `bufferInfo.usage` 和 `bufferInfo.flags` |
-| `memoryTypeBits` | 适用于缓冲的内存类型的位字段 |
+| 成员变量             | 含义                                                 |
+|------------------|----------------------------------------------------|
+| `size`           | 需要的内存大小（字节），可能与 `bufferInfo.size` 不同               |
+| `alignment`      | 内存对齐方式，取决于 `bufferInfo.usage` 和 `bufferInfo.flags` |
+| `memoryTypeBits` | 适用于缓冲的内存类型的位字段                                     |
 
 显卡可以分配不同类型的内存\(显存\)，这些不同的内存类型可能有不同的操作或性能表现。
 我们需要根据需求寻找合适的内存类型，现在让我们创建新函数 `findMemoryType` ：
 
 ```cpp
-uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
+uint32_t findMemoryType(const uint32_t typeFilter,const vk::MemoryPropertyFlags properties) const {
 
 }
 ```
@@ -123,7 +116,7 @@ uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
 
 ```cpp
 // vk::PhysicalDeviceMemoryProperties
-auto memProperties = m_physicalDevice.getMemoryProperties();
+const auto memProperties = m_physicalDevice.getMemoryProperties();
 ```
 
 `vk::PhysicalDeviceMemoryProperties` 结构体中有两个数组 `memoryTypes` 和 `memoryHeaps` 。
@@ -153,10 +146,9 @@ return 0; // optional
 
 ```cpp
 for(uint32_t i = 0; i < memProperties.memoryTypeCount; ++i){
-    if( (typeFilter & (1 << i)) &&
-        (memProperties.memoryTypes[i].propertyFlags & properties ) == properties ) {
-        return i;
-    }
+    if ((typeFilter & (1 << i)) &&
+        (memProperties.memoryTypes[i].propertyFlags & properties ) == properties
+    ) return i;
 }
 ```
 
@@ -167,8 +159,10 @@ for(uint32_t i = 0; i < memProperties.memoryTypeCount; ++i){
 ```cpp
 vk::MemoryAllocateInfo allocInfo;
 allocInfo.allocationSize = memRequirements.size;
-allocInfo.memoryTypeIndex = findMemoryType( memRequirements.memoryTypeBits,
-    vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent 
+allocInfo.memoryTypeIndex = findMemoryType( 
+    memRequirements.memoryTypeBits,
+    vk::MemoryPropertyFlagBits::eHostVisible | 
+    vk::MemoryPropertyFlagBits::eHostCoherent 
 );
 ```
 
@@ -200,8 +194,7 @@ m_vertexBuffer.bindMemory(m_vertexBufferMemory, 0);
 现在是时候把顶点数据拷贝到缓冲中了，我们使用`mapMemory`获取内存地址指针:
 
 ```cpp
-void* data;
-data = m_vertexBufferMemory.mapMemory(0, bufferInfo.size);
+void* data = m_vertexBufferMemory.mapMemory(0, bufferInfo.size);
 ```
 
 这个函数允许我们访问由偏移量和大小定义的指定内存区域。
@@ -211,8 +204,7 @@ data = m_vertexBufferMemory.mapMemory(0, bufferInfo.size);
 现在我们可以简单的拷贝资源，然后使用`unmapMemory`取消映射。
 
 ```cpp
-void* data;
-data = m_vertexBufferMemory.mapMemory(0, bufferInfo.size);
+void* data = m_vertexBufferMemory.mapMemory(0, bufferInfo.size);
 memcpy(data, vertices.data(), static_cast<size_t>(bufferInfo.size));
 m_vertexBufferMemory.unmapMemory();
 ```
@@ -225,7 +217,7 @@ m_vertexBufferMemory.unmapMemory();
 - 写入映射的内存后立刻调用 `flushMappedMemoryRanges` ，并在映射的内存读取前调用 `invalidateMappedMemoryRanges` 。
 
 我们使用了第一种方式，在 `findMemoryType` 函数参数中添加了一致性标志位。
-不过需要注意的是，这可能比显式刷新的性能略低一些，但我们将在下一章说明为什么这无关紧要。
+不过需要注意的是，这可能比显式刷新的性能略低一些，但我这无关紧要，因为我们只会复制一次。
 
 刷新内存范围和使用一致性内存堆意味着驱动程序可以注意到我们写入了缓冲，但这不意味着在 GPU 上立即可见。
 GPU 上的数据转移是个隐含的过程，规范只[告诉我们](https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/chap7.html#synchronization-submission-host-writes)，它保证在下次调用 `queue.submit` 时完成。
@@ -237,14 +229,11 @@ GPU 上的数据转移是个隐含的过程，规范只[告诉我们](https://ww
 在 `draw` 语句上方添加一些内容，再修改 `draw` 语句：
 
 ```cpp
-// ......
-
-std::array<vk::Buffer,1> vertexBuffers { m_vertexBuffer };
-std::array<vk::DeviceSize,1> offsets { 0 };
+const std::array<vk::Buffer,1> vertexBuffers { m_vertexBuffer };
+constexpr std::array<vk::DeviceSize,1> offsets { 0 };
 commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
 
 commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
-// ......
 ```
 
 `bindVertexBuffers` 的第一个参数指定顶点缓冲绑定点的偏移量。
@@ -254,12 +243,12 @@ commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 现在运行程序，你应该可以看到熟悉的三角形：
 
-![彩色三角形](../../images/0132/triangle.png)
+![彩色三角形](../../images/0131/triangle.png)
 
 尝试修改顶点的颜色：
 
 ```cpp
-inline static const std::vector<Vertex> vertices = {
+const std::vector<Vertex> vertices = {
     {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
     {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
     {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
@@ -286,8 +275,8 @@ inline static const std::vector<Vertex> vertices = {
 
 **[shader-CMake代码](../../codes/02/00_vertexinput/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/00_vertexinput/shaders/shader.vert)**
+**[shader-vert代码](../../codes/02/00_vertexinput/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/02/00_vertexinput/shaders/shader.frag)**
+**[shader-frag代码](../../codes/02/00_vertexinput/shaders/graphics.frag.glsl)**
 
 ---

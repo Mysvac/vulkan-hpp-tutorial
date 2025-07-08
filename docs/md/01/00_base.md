@@ -10,13 +10,13 @@ comments: true
 在本章中，我们将从以下代码开始，请修改 `main.cpp` 。
 
 ```cpp
+#include <iostream>
+#include <print>
+#include <stdexcept>
+
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
-#include <iostream>
-#include <vector>
-#include <memory>
-#include <stdexcept>
 
 class HelloTriangleApplication {
 public:
@@ -41,18 +41,16 @@ private:
 };
 
 int main() {
-    HelloTriangleApplication app;
-
     try {
+        HelloTriangleApplication app;
         app.run();
-    } catch(const vk::SystemError& err ){
+    } catch(const vk::SystemError& err ) {
         // use err.code() to check err type
-        std::cout << "vk::SystemError: " << err.what() << std::endl;
-    } catch (const std::exception& err ){
-        std::cout << "std::exception: " << err.what() << std::endl;
+        std::println( std::cerr, "vk::SystemError - code: {} ",err.code().message());
+        std::println( std::cerr, "vk::SystemError - what: {}",err.what());
+    } catch (const std::exception& err ) {
+        std::println( std::cerr, "std::exception: {}", err.what());
     }
-
-    return 0;
 }
 ```
 
@@ -74,11 +72,11 @@ int main() {
 
 ### 2. 定义窗口常量
 
-我们需要指定窗口大小，不推荐硬编码，请添加2个静态常量成员。
+我们需要指定窗口大小，不推荐硬编码，请添加2个常量：
 
 ```cpp
-static constexpr uint32_t WIDTH = 800;
-static constexpr uint32_t HEIGHT = 600;
+constexpr uint32_t WIDTH = 800;
+constexpr uint32_t HEIGHT = 600;
 ```
 
 ### 3. 扩展应用程序类
@@ -121,6 +119,7 @@ private:
 ### 4. 添加主循环
 
 为了使应用程序保持运行直到发生错误或窗口关闭，我们需要向 `mainLoop` 函数添加一个循环：
+
 ```cpp
 void mainLoop() {
     while (!glfwWindowShouldClose( m_window )) {
@@ -128,6 +127,7 @@ void mainLoop() {
     }
 }
 ```
+
 它循环并检查事件，例如按下 `X` 按钮，直到窗口被用户关闭。 `glfwPollEvents` 函数将处理本次循环期间发生的所有窗口事件。
 
 ### 5. 清理资源

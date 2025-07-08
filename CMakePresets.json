@@ -18,8 +18,8 @@
       }
     },
     {
-      "name": "win-x64",
-      "description": "Windows x64 config presets(MSVC + Ninja Multi-Config)",
+      "name": "win-msvc",
+      "description": "Windows x64 config (MSVC + Ninja Multi-Config)",
       "inherits": "ninja-base",
       "generator": "Ninja Multi-Config",
       "cacheVariables": {
@@ -35,6 +35,17 @@
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
+      }
+    },
+    {
+      "name": "win-clang",
+      "description": "Windows x64 config (Clang + MinGW + Ninja Multi-Config), not support STD Module",
+      "inherits": "win-msvc",
+      "generator": "Ninja Multi-Config",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER": "clang"
       }
     },
     {
@@ -82,17 +93,31 @@
   ],
   "buildPresets": [
     {
-      "name": "win-x64-build-debug",
-      "displayName": "win-x64 Build Debug",
-      "description": "win-x64 build Debug preset",
-      "configurePreset": "win-x64",
+      "name": "win-msvc-build-debug",
+      "displayName": "win-msvc Build Debug",
+      "description": "win-msvc build Debug preset",
+      "configurePreset": "win-msvc",
       "configuration": "Debug"
     },
     {
-      "name": "win-x64-build-release",
-      "displayName": "win-x64 Build Release",
-      "description": "win-x64 build Release preset",
-      "configurePreset": "win-x64",
+      "name": "win-msvc-build-release",
+      "displayName": "win-msvc Build Release",
+      "description": "win-msvc build Release preset",
+      "configurePreset": "win-msvc",
+      "configuration": "Release"
+    },
+    {
+      "name": "win-clang-build-debug",
+      "displayName": "win-clang Build Debug",
+      "description": "win-clang build Debug preset",
+      "configurePreset": "win-clang",
+      "configuration": "Debug"
+    },
+    {
+      "name": "win-clang-build-release",
+      "displayName": "win-clang Build Release",
+      "description": "win-clang build Release preset",
+      "configurePreset": "win-clang",
       "configuration": "Release"
     },
     {

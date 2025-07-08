@@ -26,7 +26,6 @@ void initVulkan() {
     ...
     createTextureImage();
     createTextureImageView();
-    createVertexBuffer();
     ...
 }
 
@@ -58,7 +57,7 @@ m_textureImageView = m_device.createImageView(viewInfo);
 我们重复写了很多逻辑，现在可以把他们抽象成当个函数 `createImageView` ：
 
 ```cpp
-vk::raii::ImageView createImageView(vk::Image image, vk::Format format) {
+vk::raii::ImageView createImageView(const vk::Image image,const vk::Format format) const {
     vk::ImageViewCreateInfo viewInfo;
     viewInfo.image = image;
     viewInfo.viewType = vk::ImageViewType::e2D;
@@ -86,8 +85,8 @@ void createTextureImageView() {
 ```cpp
 void createImageViews() {
     m_swapChainImageViews.reserve( m_swapChainImages.size() );
-    for (size_t i = 0; i < m_swapChainImages.size(); ++i) {
-        m_swapChainImageViews.emplace_back( createImageView(m_swapChainImages[i], m_swapChainImageFormat) );
+    for (const auto& image : m_swapChainImages) {
+        m_swapChainImageViews.emplace_back( createImageView(image, m_swapChainImageFormat) );
     }
 }
 ```
@@ -105,14 +104,14 @@ void createImageViews() {
 
 如果你通过周围的四个纹素进行线性插值，就可以得到右边更平滑的图片。
 
-当然，有部分应用更希望得到左边的艺术效果（比如 Minecraft），但大多数图像应用都希望得到右侧更平衡的效果。
-本教程的过滤器将使用线性差值，但会提及如何只选用最近纹素保留原图效果（像 Minecraft 一样）。
+当然，有部分应用更希望得到左边的艺术效果（比如 [Minecraft](https://www.minecraft.net/zh-hans)），但大多数应用都希望得到右侧更平衡的效果。
+本教程的过滤器将使用线性差值，但会提及如何只选用最近纹素实现左图效果。
 
 欠采样是相反的问题，将纹理图像映射到一个像素更少的几何体。当以锐角采样高频图案（如棋盘纹理）时，这将导致伪影
 
 ![anisotropic_filter](../../images/0231/anisotropic_filtering.png)
 
-如左图所示，远程纹理变得混乱。解决此问题的方法是 各向异性过滤 ，它也可以有采样器设置。
+如左图所示，远程纹理变得混乱。解决此问题的方法是 各向异性过滤 ，它也可以由采样器设置。
 
 > 超采样与欠采样，mipmap与各向异性过滤，都在闫令琪老师的 [GAMES101](https://www.bilibili.com/video/av90798049) 课程中有过介绍。
 
@@ -162,13 +161,13 @@ samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
 注意，轴称为 U、V 和 W 而不是 X、Y 和 Z，这是纹理空间坐标的约定。
 下面给出此字段的可用值， 其中大多数在上面的图像中有演示：
 
-| vk::SamplerAddressMode | 效果 |
-|------------------------|------|
-| `eRepeat` | 当超出图像尺寸时重复纹理 |
-| `eMirroredRepeat` | 重复，但超出尺寸时反转坐标得到镜像图像 |
-| `eClampToEdge` | 超出时获取图像的最近边缘的颜色 |
-| `eMirrorClampToEdge` | 类似边缘裁剪，但是使用的是对称边缘的颜色 |
-| `eClampToBorder` | 超出时返回固定色彩 |
+| vk::SamplerAddressMode | 效果                   |
+|------------------------|----------------------|
+| `eRepeat`              | 当超出图像尺寸时重复纹理         |
+| `eMirroredRepeat`      | 重复，但超出尺寸时反转坐标得到镜像图像  |
+| `eClampToEdge`         | 超出时获取图像的最近边缘的颜色      |
+| `eMirrorClampToEdge`   | 类似边缘裁剪，但是使用的是对称边缘的颜色 |
+| `eClampToBorder`       | 超出时返回固定色彩            |
 
 现在不需要关心使用哪种寻址模式，因为本教程不会超出图像范围，这些模式的效果都一样。
 不过需要说明的是， `eRepeat` 可能是最常用的模式，因为它在绘制地面/墙体等纹理时很好用。
@@ -185,7 +184,7 @@ samplerInfo.maxAnisotropy = ???;
 现在我们检索物理设备属性，从而为它设置合适的值：
 
 ```cpp
-auto properties = m_physicalDevice.getProperties();
+const auto properties = m_physicalDevice.getProperties();
 ```
 
 如果你仔细看过 `vk::PhysicalDeviceProperties` 的文档，你会知道它有个 `limits` 成员，内部有个 `maxSamplerAnisotropy` 成员限制了各向异性过滤的最大值，我们可以直接用它:
@@ -261,13 +260,14 @@ deviceFeatures.samplerAnisotropy = true;
 即使现代显卡不太可能不支持它，我们也应该更新 `isDeviceSuitable` 以检查它是否可用
 
 ```cpp
-bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
-    
+bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const {
     ...
 
-    auto supportedFeatures = physicalDevice.getFeatures();
-
-    return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+    if (const auto supportedFeatures = physicalDevice.getFeatures();
+        !supportedFeatures.samplerAnisotropy
+    ) return false;
+    
+    ...
 }
 ```
 
@@ -278,7 +278,7 @@ samplerInfo.anisotropyEnable = false;
 samplerInfo.maxAnisotropy = 1.0f;
 ```
 
----
+## **测试**
 
 现在运行程序，效果依然不变，但应该没有错误发生。
 
@@ -295,8 +295,8 @@ samplerInfo.maxAnisotropy = 1.0f;
 
 **[shader-CMake代码](../../codes/02/20_descriptor1/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/20_descriptor1/shaders/shader.vert)**
+**[shader-vert代码](../../codes/02/20_descriptor1/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/02/20_descriptor1/shaders/shader.frag)**
+**[shader-frag代码](../../codes/02/20_descriptor1/shaders/graphics.frag.glsl)**
 
 ---

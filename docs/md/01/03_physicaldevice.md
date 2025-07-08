@@ -4,8 +4,8 @@ comments: true
 ---
 # **物理设备与队列族**
 
-在创建实例之后，我们需要查找并选择系统中合适的物理设备\(常指显卡\)。
-实际上，我们可以选择任意数量的显卡并同时使用它们，但在本教程中，我们只使用第一张满足我们需求的显卡。
+在创建实例之后，我们需要查找并选择系统中合适的物理设备，这通常指显卡。
+你可以选择任意数量的显卡并同时使用它们，但在本教程中，我们只使用第一张满足我们需求的显卡。
 
 > 相关概念：[Vulkan-Guide \[Querying Properties, Extensions, Features ...\]](https://docs.vulkan.org/guide/latest/querying_extensions_features.html)
 
@@ -19,16 +19,16 @@ comments: true
 vk::raii::PhysicalDevice m_physicalDevice{ nullptr };
 ```
 
-然后添加一个函数 `pickPhysicalDevice`，并在 `initVulkan` 函数中调用它：
+然后添加一个函数 `selectPhysicalDevice`，并在 `initVulkan` 函数中调用它：
 
 ```cpp
 void initVulkan() {
     createInstance();
     setupDebugMessenger();
-    pickPhysicalDevice();
+    selectPhysicalDevice();
 }
 
-void pickPhysicalDevice() {
+void selectPhysicalDevice() {
 
 }
 ```
@@ -36,9 +36,9 @@ void pickPhysicalDevice() {
 ### 2. 获取可用设备列表
 
 ```cpp
-void pickPhysicalDevice() {
+void selectPhysicalDevice() {
     // std::vector<vk::raii::PhysicalDevice>
-    auto physicalDevices = m_instance.enumeratePhysicalDevices();
+    const auto physicalDevices = m_instance.enumeratePhysicalDevices();
     if(physicalDevices.empty()){
         throw std::runtime_error("failed to find GPUs with Vulkan support!");
     }
@@ -53,7 +53,7 @@ void pickPhysicalDevice() {
 现在我们需要评估每个设备，并检查它们是否适合满足要求。为此我们引入一个新函数：
 
 ```cpp
-bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
+bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const {
     return true;
 }
 ```
@@ -63,14 +63,19 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 遍历并挑选一个满足的物理设备，如果没有就抛出异常：
 
 ```cpp
-for (const auto& it : physicalDevices) {
-    if (isDeviceSuitable(it)) {
-        m_physicalDevice = it;
-        break;
+void selectPhysicalDevice() {
+    
+    ......
+    
+    for (const auto& it : physicalDevices) {
+        if (isDeviceSuitable(it)) {
+            m_physicalDevice = it;
+            break;
+        }
     }
-}
-if(m_physicalDevice == nullptr){
-    throw std::runtime_error("failed to find a suitable GPU!");
+    if(m_physicalDevice == nullptr){
+        throw std::runtime_error("failed to find a suitable GPU!");
+    }
 }
 ```
 
@@ -88,15 +93,20 @@ vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
 vk::PhysicalDeviceFeatures features = physicalDevice.getFeatures();
 ```
 
+Properties 是 GPU 的基本属性，Features 则是 GPU 支持的可选功能。
+
 - `Properties` : 基本设备属性，例如名称、类型和支持的 Vulkan 版本。
 - `Features` : 可选功能（如纹理压缩、64 位浮点数和多视口渲染）的支持。
+
+后者尤为重要，因为不同显卡的功能集可能不同，比如某些手机 GPU 可能不支持网格着色器。
+即使某个 GPU Feature 可用，我们也需要在后续逻辑设备创建时显式启用它们，否则 Vulkan 认为你不会用到这些功能。
 
 假设我们的应用程序需要支持几何着色器的独立显卡。那么可以这样写
 
 ```cpp
-bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
-    auto properties = physicalDevice.getProperties();
-    auto features = physicalDevice.getFeatures();
+bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const {
+    const auto properties = physicalDevice.getProperties();
+    const auto features = physicalDevice.getFeatures();
 
     return features.geometryShader && 
         properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu;
@@ -108,9 +118,9 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 你还可以创建自己的评分机制，然后挑选最好的显卡，像这样：
 
 ```cpp
-int rateDeviceSuitability(const vk::raii::PhysicalDevice& physicalDevice) {
-    auto properties = physicalDevice.getProperties();
-    auto features = physicalDevice.getFeatures();
+int rateDeviceSuitability(const vk::raii::PhysicalDevice& physicalDevice) const {
+    const auto properties = physicalDevice.getProperties();
+    const auto features = physicalDevice.getFeatures();
 
     // 必要性功能检查
     if (!features.geometryShader) {
@@ -134,7 +144,7 @@ int rateDeviceSuitability(const vk::raii::PhysicalDevice& physicalDevice) {
 作为教程的开始部分，我们目前仅需要 Vulkan 支持，下面暂时使用这个最简单的判断函数：
 
 ```cpp
-bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
+bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const {
     return true;
 }
 ```
@@ -158,7 +168,7 @@ Vulkan 中的几乎每个操作，从绘制到上传纹理，都需要将命令�
 现在我们只打算查找支持图形命令的队列族，因此该函数可能如下所示：
 
 ```cpp
-uint32_t findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
+uint32_t findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) const {
     // 查找图像队列族
 }
 ```
@@ -170,7 +180,7 @@ struct QueueFamilyIndices {
     uint32_t graphicsFamily;
 };
 
-QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
+QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) const {
     QueueFamilyIndices indices;
     // 查找图像队列族
     return indices;
@@ -179,20 +189,17 @@ QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDev
 
 ### 2. 更好的队列存储
 
-此函数可能找不到有用的队列族。
-但是有时候找不到也可以正常执行，比如我们可能希望使用具有专用传输队列族的设备，但不强制要求。
+此函数可能找不到有用的队列族，但有时找不到也可以正常执行，比如我们希望使用具有专用传输队列族的设备，但不强制要求。
 
 不应该使用魔术值来指示队列族的不存在，因为 `uint32_t` 的任何值都可能是有效的队列族索引，包括 `0`。
-幸运的是，C++17 引入了一种数据结构 `std::optional<>` 来区分值存在与不存在的情况，它可以这样使用：
+所以这里使用 C++17 的 `std::optional<>` 数据结构来区分值存在与不存在的情况，它可以这样使用：
 
 ```cpp
 std::optional<uint32_t> graphicsFamily;
-
-std::cout << std::boolalpha << graphicsFamily.has_value() << std::endl; // false
+std::cout << graphicsFamily.has_value() << std::endl; // 0 (false)
 
 graphicsFamily = 0;
-
-std::cout << std::boolalpha << graphicsFamily.has_value() << std::endl; // true
+std::cout << graphicsFamily.has_value() << std::endl; // 1 (true)
 ```
 
 于是我们可以将代码修改成这样：
@@ -208,7 +215,7 @@ struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
 };
 
-QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) {
+QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDevice) const {
     QueueFamilyIndices indices;
     // Assign index to queue families that could be found
     return indices;
@@ -221,12 +228,12 @@ QueueFamilyIndices findQueueFamilies(const vk::raii::PhysicalDevice& physicalDev
 
 ```cpp
 // std::vector<vk::QueueFamilyProperties>
-auto queueFamilies = physicalDevice.getQueueFamilyProperties();
+const auto queueFamilies = physicalDevice.getQueueFamilyProperties();
 ```
 
 `vk::QueueFamilyProperties`只包含基本信息，包括支持的操作类型以及该族可创建的队列数量，但在这里已经足够了。
 
-我们需要找到至少一个支持 `vk::QueueFlagBits::eGraphics` 的队列族。
+我们需要找到至少一个支持 `vk::QueueFlagBits::eGraphics` 的队列族（即图形队列族）。
 
 ```cpp
 for (int i = 0; const auto& queueFamily : queueFamilies) {
@@ -242,11 +249,11 @@ for (int i = 0; const auto& queueFamily : queueFamilies) {
 
 ### 4. 改进设备适用性检查
 
-现在我们可以在 `isDeviceSuitable` 函数中使用它作为检查，以确保设备可以处理我们想要使用的命令：
+现在可以在 `isDeviceSuitable` 函数中使用它作为检查，以确保设备具有我们需要的队列族：
 
 ```cpp
-bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const {
+    const auto indices = findQueueFamilies(physicalDevice);
 
     return indices.graphicsFamily.has_value();
 }
@@ -258,15 +265,15 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
 
-    bool isComplete() {
+    bool isComplete() const {
         return graphicsFamily.has_value();
     }
 };
 
 ......
 
-bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const {
+    const auto indices = findQueueFamilies(physicalDevice);
 
     return indices.isComplete();
 }
@@ -278,9 +285,7 @@ bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) {
 for (int i = 0; const auto& queueFamily : queueFamilies) {
      ...
 
-    if (indices.isComplete()) {
-        break;
-    }
+    if (indices.isComplete())  break;
 
     ++i;
 }
@@ -291,10 +296,6 @@ for (int i = 0; const auto& queueFamily : queueFamilies) {
 ## **测试**
 
 现在构建与运行代码，虽然程序还是和之前一样的效果，但不应报错。
-
----
-
-我们现在足以找到合适的物理设备，下一步是创建逻辑设备以与之交互。
 
 ---
 

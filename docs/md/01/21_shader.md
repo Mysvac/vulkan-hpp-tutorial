@@ -51,8 +51,8 @@ GLSL 是一种具有 C 风格语法的着色语言。
 
 现在，让我们在项目根目录创建 `shaders` 文件夹，用于存放着色器源代码，你也可以使用自己喜欢的文件夹名。
 
-然后，在`shaders/`文件夹中创建两个文件：`shader.vert` 和 `shader.frag`。 
-注意文件名甚至后缀都是完全任意的，但是我们推荐使用固定的后缀或命名区分不同功能的着色器。
+然后，在`shaders/`文件夹中创建两个文件：`graphics.vert.glsl` 和 `graphics.frag.glsl`。 
+注意文件名甚至后缀都是完全任意的，但作者推荐“任意名称+着色器阶段+着色器语法”的三段式命名。
 
 现在你的项目结构应该像这样：
 
@@ -62,8 +62,8 @@ GLSL 是一种具有 C 风格语法的着色语言。
 │
 ├── shaders/                # 着色器源代码目录
 │   │
-│   ├── shader.vert          # 顶点着色器
-│   └── shader.frag          # 片段着色器
+│   ├── graphics.vert.glsl  # 顶点着色器
+│   └── graphics.frag.glsl  # 片段着色器
 │
 └── src/                    # 源代码目录
     │
@@ -93,10 +93,11 @@ Z 坐标现在使用的范围与 Direct3D 中的范围相同，从 0 到 1。
 
 通常，这些坐标将存储在顶点缓冲中，但在 Vulkan 中创建顶点缓冲并用数据填充它并非易事。
 因此，我决定将其推迟到画出第一个基础三角形之后。
-在此期间，我们将做一些不太寻常的事情：直接在顶点着色器代码中包含坐标。代码如下所示：
+在此期间，我们将做一些不太寻常的事情：直接在顶点着色器代码中硬编码坐标。代码如下所示：
 
 ```glsl
 #version 450
+// Vulkan 中的 GLSL 语法需要指定为 450 版本
 
 vec2 positions[3] = vec2[](
     vec2(0.0, -0.5),
@@ -139,18 +140,19 @@ void main() {
 
 GLSL 中的颜色是 4 分量向量，R、G、B 和 alpha 通道，都在 `[0, 1]` 范围内。
 
-与顶点着色器中的 `gl_Position` 不同，没有内置变量来输出当前片段的颜色。
-您必须为每个帧缓冲指定自己的输出变量，其中 `layout(location = 0)` 修饰符指定帧缓冲的索引，它链接到了索引为 `0` 的帧缓冲（将会在后续的“帧缓冲”章节创建）。
+与顶点着色器中的 `gl_Position` 不同，没有内置变量来输出当前片段的颜色，您必须为每个帧缓冲指定自己的输出变量。
 
-> 注意，变量名是不重要的，重要的是变量类型和 location 的值。  
-> 只要保证类型和 location 都一致，就能一个地方 out ，另一个地方 in 。  
+上面的 `layout(location = 0)` 修饰符指定帧缓冲的附件索引，它链接到了索引为 `0` 的附件，也就是我们的颜色附件（对应交换链图像）。
+
+> 注意，变量名是不重要的，重要的是变量类型和 location 的值。
+> 只要保证类型（数据格式）和 location 都一致，就能一个地方 out ，另一个地方 in 。
 > 一个 location 只能放置一种数据。
 
 ### 3. 逐顶点颜色
 
 将整个三角形变成红色不是很吸引人，变成下面这样的效果是不是更漂亮？
 
-![triangle_color](../../images/0121//triangle_coordinates_colors.png)
+![triangle_color](../../images/0121/triangle_coordinates_colors.png)
 
 我们必须对两个着色器进行一些更改才能实现此目的。
 首先，我们需要为三个顶点指定不同的颜色。
@@ -191,7 +193,7 @@ void main() {
 
 ### 4. 编译着色器
 
-现在 `shader.vert` 的内容应该是：
+现在 `graphics.vert.glsl` 的内容应该是：
 
 ```glsl
 #version 450
@@ -216,7 +218,7 @@ void main() {
 }
 ```
 
-`shader.frag` 的内容应该是：
+`graphics.frag.glsl` 的内容应该是：
 
 ```glsl
 #version 450
@@ -234,11 +236,11 @@ void main() {
 
 ```shell
 # window
-xxx/VulkanSDK/x.x.x.x/Bin/glslc.exe shader.vert -o vert.spv
-xxx/VulkanSDK/x.x.x.x/Bin/glslc.exe shader.frag -o frag.spv
+xxx/VulkanSDK/x.x.x.x/Bin/glslc.exe -fshader-stage=vert graphics.vert.glsl -o graphics.vert.spv
+xxx/VulkanSDK/x.x.x.x/Bin/glslc.exe -fshader-stage=frag graphics.frag.glsl -o graphics.frag.spv
 # linux
-/home/user/VulkanSDK/x.x.x.x/x86_64/bin/glslc shader.vert -o vert.spv
-/home/user/VulkanSDK/x.x.x.x/x86_64/bin/glslc shader.frag -o frag.spv
+/home/user/VulkanSDK/x.x.x.x/x86_64/bin/glslc -fshader-stage=vert graphics.vert.glsl -o graphics.vert.spv
+/home/user/VulkanSDK/x.x.x.x/x86_64/bin/glslc -fshader-stage=frag graphics.frag.glsl -o graphics.frag.spv
 ```
 
 这两个命令告诉编译器读取 GLSL 源文件，并使用 `-o`（输出）标志输出 SPIR-V 字节码文件。
@@ -250,11 +252,11 @@ xxx/VulkanSDK/x.x.x.x/Bin/glslc.exe shader.frag -o frag.spv
 它还可以将字节码输出为人类可读的格式，以便您可以准确地了解您的着色器正在做什么以及在此阶段已应用的任何优化。
 
 在命令行上编译着色器是最直接的选择之一，也是我们将在本教程中使用的选择，但也可以直接从您自己的代码中编译着色器。
-Vulkan SDK 包含 libshaderc，这是一个从您的程序中将 GLSL 代码编译为 SPIR-V 的库，我们会在进阶章节介绍。
+Vulkan SDK 包含 libshaderc ，这是一个从您的程序中将 GLSL 代码编译为 SPIR-V 的库，我们会在进阶章节介绍。
 
 ### 5. CMake编译着色器
 
-直接使用命令行显然不够优秀，且写明路径导致无法跨平台，所以我们借助CMake执行命令。
+直接使用命令行显然不够优秀，且写明路径导致无法跨平台，所以我们借助 CMake 执行命令。
 
 > 注意此部分是可选的，你完全可以在每次修改后手动编译。
 
@@ -266,27 +268,29 @@ cmake_minimum_required(VERSION 4.0.0)
 find_package(Vulkan REQUIRED)
 
 set(SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(VERT_SHADER ${SHADER_DIR}/shader.vert)
-set(FRAG_SHADER ${SHADER_DIR}/shader.frag)
-set(SPIRV_VERT ${SHADER_DIR}/vert.spv)
-set(SPIRV_FRAG ${SHADER_DIR}/frag.spv)
+set(STAGE_VERT -fshader-stage=vert)
+set(STAGE_FRAG -fshader-stage=frag)
+set(GRAPHICS_VERT_SHADER ${SHADER_DIR}/graphics.vert.glsl)
+set(GRAPHICS_FRAG_SHADER ${SHADER_DIR}/graphics.frag.glsl)
+set(GRAPHICS_SPIRV_VERT ${SHADER_DIR}/graphics.vert.spv)
+set(GRAPHICS_SPIRV_FRAG ${SHADER_DIR}/graphics.frag.spv)
 
 add_custom_command(
-    OUTPUT ${SPIRV_VERT}
-    COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${VERT_SHADER} -o ${SPIRV_VERT}
-    COMMENT "Compiling shader.vert to vert.spv"
-    DEPENDS ${VERT_SHADER}
+     OUTPUT ${GRAPHICS_SPIRV_VERT}
+     COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${STAGE_VERT} ${GRAPHICS_VERT_SHADER} -o ${GRAPHICS_SPIRV_VERT}
+     COMMENT "Compiling graphics.vert.glsl to graphics.vert.spv"
+     DEPENDS ${GRAPHICS_VERT_SHADER}
 )
 
 add_custom_command(
-    OUTPUT ${SPIRV_FRAG}
-    COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${FRAG_SHADER} -o ${SPIRV_FRAG}
-    COMMENT "Compiling shader.frag to frag.spv"
-    DEPENDS ${FRAG_SHADER}
+     OUTPUT ${GRAPHICS_SPIRV_FRAG}
+     COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${STAGE_FRAG} ${GRAPHICS_FRAG_SHADER} -o ${GRAPHICS_SPIRV_FRAG}
+     COMMENT "Compiling graphics.frag.glsl to graphics.frag.spv"
+     DEPENDS ${GRAPHICS_FRAG_SHADER}
 )
 
 add_custom_target(CompileShaders ALL
-    DEPENDS ${SPIRV_VERT} ${SPIRV_FRAG}
+    DEPENDS ${GRAPHICS_SPIRV_VERT} ${GRAPHICS_SPIRV_FRAG}
 )
 ```
 
@@ -302,7 +306,7 @@ add_custom_target(CompileShaders ALL
 add_subdirectory(shaders)
 ```
 
-现在配置与构建项目，`shaders/` 下应该生成了 `frag.spv` 和 `vert.spv` 两个文件。
+现在配置与构建项目，`shaders/` 下应该生成了 `graphics.frag.spv` 和 `graphics.vert.spv` 两个文件。
 
 ## **加载着色器**
 
@@ -333,7 +337,7 @@ static std::vector<char> readFile(const std::string& filename) {
 从文件末尾开始读取的优点是我们可以读取位置从而确定文件的大小并分配缓冲区。
 
 ```cpp
-size_t fileSize = (size_t) file.tellg();
+const size_t fileSize = file.tellg();
 std::vector<char> buffer(fileSize);
 ```
 
@@ -355,12 +359,12 @@ return buffer;
 在 `createGraphicsPipeline` 函数中使用它，以加载两个着色器的字节码：
 
 ```cpp
-void createGraphicsPipeline() {
-    auto vertShaderCode = readFile("shaders/vert.spv");
-    auto fragShaderCode = readFile("shaders/frag.spv");
-    std::cout << "vertShaderCode.size(): " << vertShaderCode.size() << std::endl;
-    std::cout << "fragShaderCode.size(): " << fragShaderCode.size() << std::endl;
-}
+ void createGraphicsPipeline() {
+     const auto vertShaderCode = readFile("shaders/graphics.vert.spv");
+     const auto fragShaderCode = readFile("shaders/graphics.frag.spv");
+     std::cout << "vertShaderCode.size(): " << vertShaderCode.size() << std::endl;
+     std::cout << "fragShaderCode.size(): " << fragShaderCode.size() << std::endl;
+ }
 ```
 
 我们通过打印缓冲区的大小并检查它们是否与字节的实际文件大小匹配，确保着色器已正确加载。
@@ -374,7 +378,7 @@ void createGraphicsPipeline() {
 让我们创建一个辅助函数 `createShaderModule` 来执行此操作：
 
 ```cpp
-vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) {
+vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const {
 
 }
 ```
@@ -406,14 +410,14 @@ return m_device.createShaderModule(createInfo);
 
 着色器模块只是我们着色器字节码的薄包装，
 从 SPIR-V 字节码到 GPU 机器码的编译链接过程在图形管线创建才发生，
-这意味着我们可以在管线创建完成后立即销毁着色器模块，
+这意味着我们可以在管线创建完成后可以立即销毁着色器模块，
 所以我们将它们作为函数中的局部变量而不是类成员：
 
 ```cpp
 void createGraphicsPipeline() {
-    auto vertShaderCode = readFile("shaders/vert.spv");
-    auto fragShaderCode = readFile("shaders/frag.spv");
-
+    const auto vertShaderCode = readFile("shaders/graphics.vert.spv");
+    const auto fragShaderCode = readFile("shaders/graphics.frag.spv");
+    
     vk::raii::ShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     vk::raii::ShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 }
@@ -438,10 +442,7 @@ vertShaderStageInfo.pName = "main";
 这意味着可以将多个片段着色器组合到一个着色器模块中，并使用不同的入口点来区分它们的行为。
 我们使用标准的 `main` 入口。
 
-还有一个（可选）成员 `pSpecializationInfo`，我们在这里不会使用它，但值得讨论。
-它允许您为着色器常量指定值。您可以使用单个着色器模块通过在管线创建时为其使用的常量指定不同的值来配置其行为。
-这比在渲染时使用变量配置着色器更有效，因为编译器可以进行优化，例如消除依赖于这些值的 `if` 语句。
-如果您没有任何这样的常量，那么您可以将该成员设置为 `nullptr`，我们的构造函数会自动执行此操作。
+还有一个可选成员 `pSpecializationInfo`，它用于设置特化常量，我们会在进阶章节介绍。
 
 片段着色器和上面的代码差不多，记得修改 `stage` 字段。
 
@@ -455,7 +456,7 @@ fragShaderStageInfo.pName = "main";
 最后，定义一个包含这两个结构的数组，我们稍后将在实际的管线创建步骤中使用它。
 
 ```cpp
-std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo, fragShaderStageInfo };
+const auto shaderStages = { vertShaderStageInfo, fragShaderStageInfo };
 ```
 
 ## **测试**
@@ -476,8 +477,8 @@ std::vector<vk::PipelineShaderStageCreateInfo> shaderStages{ vertShaderStageInfo
 
 **[shader-CMake代码](../../codes/01/21_shader/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/01/21_shader/shaders/shader.vert)**
+**[shader-vert代码](../../codes/01/21_shader/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/01/21_shader/shaders/shader.frag)**
+**[shader-frag代码](../../codes/01/21_shader/shaders/graphics.frag.glsl)**
 
 ---

@@ -46,15 +46,15 @@ vk::SampleCountFlagBits m_msaaSamples = vk::SampleCountFlagBits::e1;
 现在设计一个函数 `getMaxUsableSampleCount` 用于获取可能的最大样本数：
 
 ```cpp
-vk::SampleCountFlagBits getMaxUsableSampleCount() {
+vk::SampleCountFlagBits getMaxUsableSampleCount() const {
     // vk::PhysicalDeviceProperties
-    auto properties = m_physicalDevice.getProperties();
+    const auto properties = m_physicalDevice.getProperties();
 
-    vk::SampleCountFlags counts = (
-        properties.limits.framebufferColorSampleCounts & 
+    const vk::SampleCountFlags counts = (
+        properties.limits.framebufferColorSampleCounts &
         properties.limits.framebufferDepthSampleCounts
     );
-    
+
     if(counts & vk::SampleCountFlagBits::e64) return vk::SampleCountFlagBits::e64;
     if(counts & vk::SampleCountFlagBits::e32) return vk::SampleCountFlagBits::e32;
     if(counts & vk::SampleCountFlagBits::e16) return vk::SampleCountFlagBits::e16;
@@ -69,7 +69,7 @@ vk::SampleCountFlagBits getMaxUsableSampleCount() {
 现在稍微修改 `pickPhysicalDevice` 函数
 
 ```cpp
-void pickPhysicalDevice() {
+void selectPhysicalDevice() {
     ...
     for (const auto& it : physicalDevices) {
         if (isDeviceSuitable(it)) {
@@ -88,9 +88,7 @@ void pickPhysicalDevice() {
 
 在 MSAA 中，每个像素先在一个离屏缓冲中采样，再渲染到屏幕上。
 这个新的缓冲与我们一直在渲染的常规图像略有不同 - 它们必须能为每个像素存储多个样本。
-
-一旦创建了多重采样缓冲，就必须将其解析为默认帧缓冲（每个像素仅存储一个样本）。
-这就是为什么我们必须创建一个额外的渲染目标并修改我们当前的绘制过程。
+在渲染流程结束时，需要把多重采样缓冲区的多个样本“合成”成一个像素颜色，写入交换链图像
 
 我们只需要一个渲染目标，因为一次只有一个绘制操作处于活动状态，就像深度缓冲一样。
 添加以下多处采样缓冲所需的资源：
@@ -98,12 +96,11 @@ void pickPhysicalDevice() {
 
 ```cpp
 ...
-std::vector<vk::raii::ImageView> m_swapChainImageViews;
-vk::SampleCountFlagBits m_msaaSamples = vk::SampleCountFlagBits::e1;
+vk::raii::ImageView m_depthImageView{ nullptr };
 vk::raii::DeviceMemory m_colorImageMemory{ nullptr };
 vk::raii::Image m_colorImage{ nullptr };
 vk::raii::ImageView m_colorImageView{ nullptr };
-vk::raii::DeviceMemory m_depthImageMemory{ nullptr };
+vk::raii::RenderPass m_renderPass{ nullptr };
 ...
 ```
 
@@ -114,24 +111,24 @@ vk::raii::DeviceMemory m_depthImageMemory{ nullptr };
 
 ```cpp
 void createImage(
-    uint32_t width,
-    uint32_t height,
-    uint32_t mipLevels,
-    vk::SampleCountFlagBits numSamples,
-    vk::Format format,
-    vk::ImageTiling tiling,
-    vk::ImageUsageFlags usage,
-    vk::MemoryPropertyFlags properties,
+    const uint32_t width,
+    const uint32_t height,
+    const uint32_t mipLevels,
+    const vk::SampleCountFlagBits numSamples,
+    const vk::Format format,
+    const vk::ImageTiling tiling,
+    const vk::ImageUsageFlags usage,
+    const vk::MemoryPropertyFlags properties,
     vk::raii::Image& image,
     vk::raii::DeviceMemory& imageMemory
-) {
+) const {
     ...
     imageInfo.samples = numSamples;
     ...
 }
 ```
 
-现在使用 `e1` 更新几处调用了此函数的代码，我们会再候选具体替换为需要的值：
+现在使用 `e1` 更新几处调用了此函数的代码，我们会在后面替换为具体需要的值：
 
 ```cpp
 // createTextureImage
@@ -169,18 +166,16 @@ createImage(
 
 现在创建一个新函数 `createColorResources` 用于创建多重采样色彩缓冲，这里的 `createImage` 使用 `m_msaasample` 成员变量。
 我们仅使用一个 mip 级别，因为对于每个像素具有多个样本的图像，Vulkan 规范强制执行此操作。
-此外这个颜色缓冲不需要 mipmap，因为它不会用作纹理
+此外这个颜色缓冲不需要 mipmap，因为它不会用作纹理：
 
 ```cpp
 void createColorResources() {
-    vk::Format colorFormat = m_swapChainImageFormat;
-
     createImage(
         m_swapChainExtent.width,
         m_swapChainExtent.height,
         1,
         m_msaaSamples,
-        colorFormat,
+        m_swapChainImageFormat,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eTransientAttachment |
         vk::ImageUsageFlagBits::eColorAttachment,
@@ -190,20 +185,20 @@ void createColorResources() {
     );
     m_colorImageView = createImageView(
         m_colorImage,
-        colorFormat,
+        m_swapChainImageFormat,
         vk::ImageAspectFlagBits::eColor,
         1
     );
 }
 ```
 
-在 `createDepthResource`s 之前调用该函数：
+在 `createDepthResources` 之后调用该函数：
 
 ```cpp
 void initVulkan() {
     ...
-    createColorResources();
     createDepthResources();
+    createColorResources();
     ...
 }
 ```
@@ -219,7 +214,7 @@ void createDepthResources() {
         m_swapChainExtent.width,
         m_swapChainExtent.height,
         1,
-        m_msaaSamples,
+        m_msaaSamples,  // 深度缓冲也使用多重采样
         depthFormat,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -233,21 +228,22 @@ void createDepthResources() {
 
 ### 5. 重建交换链
 
-并更新 `recreateSwapChain`，以便在调整窗口大小时可以以正确的分辨率重建颜色图像
+更新 `recreateSwapChain`，以便在调整窗口大小时可以以正确的分辨率重建颜色图像：
 
 ```cpp
 void recreateSwapChain() {
     ...
+    m_colorImageView = nullptr;
+    m_colorImage = nullptr;
+    m_colorImageMemory = nullptr;
+    
     m_depthImageView = nullptr;
     m_depthImage = nullptr;
     m_depthImageMemory = nullptr;
 
-    m_colorImageView = nullptr;
-    m_colorImage = nullptr;
-    m_colorImageMemory = nullptr;
     ...
-    createColorResources();
     createDepthResources();
+    createColorResources();
     ...
 }
 ```
@@ -256,7 +252,7 @@ void recreateSwapChain() {
 
 ## **添加新附件**
 
-让我们首先处理渲染通道。修改 `createRenderPass` 并更新颜色和深度附件创建信息结构
+首先处理渲染通道。修改 `createRenderPass` 并更新颜色和深度附件创建信息结构：
 
 ```cpp
     void createRenderPass() {
@@ -273,7 +269,8 @@ void recreateSwapChain() {
 您会注意到，我们已将 `finalLayout` 从 `ePresentSrcKHR` 更改为 `eColorAttachmentOptimal`。
 这是因为多重采样图像无法直接呈现，我们需要先它们解析为常规图像。
 此要求不适用于深度缓冲，因为它在任何时候都不会用于呈现。
-因此，我们将不得不仅为颜色添加一个新的附件，即所谓的解析附件
+
+因此，我们将不得不仅为颜色添加一个新的附件，即所谓的解析附件：
 
 ```cpp
 vk::AttachmentDescription colorAttachmentResolve;
@@ -308,37 +305,40 @@ subpass.pDepthStencilAttachment = &depthAttachmentRef;
 subpass.pResolveAttachments = &colorAttachmentResolveRef;
 ```
 
+> `ResolveAttachments` 和 `ColorAttachments` 字段的 setter 都会设置 `colorAttachmentCount` 参数，此处防止混淆，直接字段赋值。
+
 `ColorAttachments` 和 `ResolveAttachments` 的数量要求保存一致，所以共用 `colorAttachmentCount` 记录。
 因此我们将操作分离，分别添加数量和两个开始指针，而不是使用 `setter` 函数。
 
 现在使用新的颜色附件更新渲染通道信息结构：
 
 ```cpp
-auto attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
+const auto attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
 vk::RenderPassCreateInfo renderPassInfo;
 renderPassInfo.setAttachments( attachments );
-renderPassInfo.setSubpasses( subpass );
 ```
 
 在渲染通道就位后，修改 `createFramebuffers` 并将新的图像视图添加到列表中
 
 ```cpp
-std::array<vk::ImageView, 3> attachments { 
-    m_colorImageView, 
+const std::array<vk::ImageView, 3> imageViews {
+    m_colorImageView,
     m_depthImageView,
-    m_swapChainImageViews[i]
+    swapchainImageView
 };
-framebufferInfo.setAttachments( attachments );
+framebufferInfo.setAttachments( imageViews );
 ```
 
-> 注意交换链呈现图像是2号位，新的超采样图像视图才是0号位。
+> 注意新的超采样图像视图才是 0 号位，而交换链呈现图像是 2 号位。
 
 最后，通过修改 `createGraphicsPipeline` 告诉新创建的管线使用多个样本
 
 ```cpp
 void createGraphicsPipeline() {
     ...
+    vk::PipelineMultisampleStateCreateInfo multisampling;
     multisampling.rasterizationSamples =  m_msaaSamples;
+    multisampling.sampleShadingEnable = false;
     ...
 }
 ```
@@ -367,8 +367,7 @@ void createGraphicsPipeline() {
 > 注意虽然像素分成了4份，却之会使用中间的色彩，只着色一次。
 
 这可能会导致一种情况，即你在屏幕上获得一个平滑的多边形，但如果应用的纹理包含高对比度颜色，它仍然会显得走样。
-解决此问题的一种方法是启用“样本着色\(sample shadering\)”，超采样的每小部分单独着色再平均。
-这将进一步提高图像质量，但会增加额外的性能成本
+解决此问题的一种方法是启用“样本着色\(sample shadering\)”， 这将进一步提高图像质量，但会增加额外的性能成本
 
 
 ```cpp
@@ -400,10 +399,10 @@ void createGraphicsPipeline() {
 
 **[根项目CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 
-**[shader-CMake代码](../../codes/02/40_depthbuffer/shaders/CMakeLists.txt)**
+**[shader-CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/40_depthbuffer/shaders/shader.vert)**
+**[shader-vert代码](../../codes/03/00_loadmodel/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/02/40_depthbuffer/shaders/shader.frag)**
+**[shader-frag代码](../../codes/03/00_loadmodel/shaders/graphics.frag.glsl)**
 
 ---

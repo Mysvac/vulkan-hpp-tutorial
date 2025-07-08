@@ -22,7 +22,7 @@ comments: true
 绘制矩形需要四个顶点，所以我们先修改代码中的顶点数据：
 
 ```cpp
-inline static const std::vector<Vertex> vertices = {
+const std::vector<Vertex> vertices = {
     {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
     {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
     {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
@@ -35,12 +35,10 @@ inline static const std::vector<Vertex> vertices = {
 然后我们编写顶点索引数组，为2个三角形所需的6个顶点分配索引：
 
 ```cpp
-inline static const std::vector<uint16_t> indices = {
+const std::vector<uint32_t> indices = {
     0, 1, 2, 2, 3, 0
 };
 ```
-
-你可以使用 `uint16_t` 或 `uint32_t` ，我们这里使用前者，因为我们需要的索引数很少（不超过65535）。
 
 和顶点缓冲一样，我们也需要索引缓冲和缓冲内存。现在添加两个成员变量：
 
@@ -58,11 +56,10 @@ void initVulkan() {
     ......
     createVertexBuffer();
     createIndexBuffer();
-    ......
 }
 
 void createIndexBuffer() {
-    vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    const vk::DeviceSize bufferSize = sizeof(uint32_t) * indices.size();
 
     vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
     vk::raii::Buffer stagingBuffer{ nullptr };
@@ -99,10 +96,10 @@ void createIndexBuffer() {
 特殊的是我们只能绑定一个索引缓冲，即使只有一个索引数据发生变化，也需要拷贝更新整个索引缓冲区。
 
 ```cpp
-// vk::Buffer vertexBuffers[] = { m_vertexBuffer };
-// vk::DeviceSize offsets[] = { 0 };
-commandBuffer.bindVertexBuffers( 0, *m_vertexBuffer, vk::DeviceSize{0} );
-commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint16 );
+// const std::array<vk::Buffer,1> vertexBuffers { m_vertexBuffer };
+// constexpr std::array<vk::DeviceSize,1> offsets { 0 };
+commandBuffer.bindVertexBuffers( 0, *m_vertexBuffer, vk::DeviceSize{ 0 } );
+commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint32 );
 ```
 
 我们略微调整了顶点缓冲的绑定代码，因为我们只有一个顶点缓冲。
@@ -133,7 +130,7 @@ commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 前一章的末尾提到了你应该使用内存分配器，从单个内存分配多个资源。
 但实际上你还应该更进一步，[驱动程序开发者建议](https://developer.nvidia.com/vulkan-memory-management)你将多个缓冲区合并到一个 `vk::Buffer` 中，并在使用时通过偏移量区分不同的缓冲区。
-这样做对于缓存更加友好，因为数据更加紧凑。
+这对于缓存更加友好，因为数据更加紧凑。
 
 如果多个资源在同一渲染操作期间未使用，甚至可以重用相同的内存块，当然前提是它们的数据已刷新。
 这中内存的重用在计算机图形学中被称为 **别名（Aliasing）**。
@@ -148,8 +145,8 @@ commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 **[shader-CMake代码](../../codes/02/00_vertexinput/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/00_vertexinput/shaders/shader.vert)**
+**[shader-vert代码](../../codes/02/00_vertexinput/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/02/00_vertexinput/shaders/shader.frag)**
+**[shader-frag代码](../../codes/02/00_vertexinput/shaders/graphics.frag.glsl)**
 
 ---

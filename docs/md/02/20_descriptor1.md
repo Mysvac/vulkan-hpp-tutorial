@@ -9,19 +9,18 @@ comments: true
 我们在之前的章节中介绍了顶点输入，它必须由顶点着色器获取，片段着色器需要由顶点着色器转发数据。
 此外，顶点输入的数据通常使用“设备本地缓存”获得最高性能，导致我们需要使用暂存缓冲进行更新，非常麻烦。
 
-有没有什么方式，能直接将数据绑定在需要的着色器阶段，而且可以直接更新呢？
-这用到了本节将介绍的**资源描述符(resource descriptors)**。
+有没有什么方式，能让着色器直接访问显存中的数据？
+这就用到了本节将介绍的**资源描述符(resource descriptors)**。
+资源描述符用于描述着色器需要的资源，让着色器可以**直接**访问显存中的数据，对应着色器代码中的 `uniform` 关键字。
 
-资源描述符用于描述着色器需要的资源，让着色器可以**直接**访问内存中的数据，对应着色器代码中的 `uniform` 关键字。
-
-| 名称 | 含义 |
-|------|------|
-| 描述符\(Descriptor\) | 对资源的抽象引用，告诉着色器如何访问某个资源 |
+| 名称                            | 含义                               |
+|-------------------------------|----------------------------------|
+| 描述符\(Descriptor\)             | 对资源的抽象引用，告诉着色器如何访问某个资源           |
 | 描述符集布局\(DescriptorSetLayout\) | 图形管线\(布局\)的一部分，定义所有描述符的类型、数量和绑定点 |
-| 描述符集\(DescriptorSet\) | 实际描述符的集合，描述符必须以描述符集的方式绑定管线 |
-| 描述符池\(Descriptor Pool\) | 用于分配描述符的内存池 |
+| 描述符集\(DescriptorSet\)         | 实际描述符的集合，描述符必须以描述符集的方式绑定管线       |
+| 描述符池\(Descriptor Pool\)       | 用于分配描述符的内存池                      |
 
-在本章中，我们会使用一个缓冲区存放 MVP\(模型-视口-投影\) 变换矩阵，使用这个矩阵让我们的正方形不断旋转。
+在本章中，我们会使用一个缓冲区存放 MVP\(模型-视图-投影\) 变换矩阵，使用这个矩阵让我们的正方形不断旋转。
 并通过描述符允许顶点着色器访问 MVP 矩阵并使用。
 
 描述符的类型很多，我们这一章使用统一缓冲对象(UBO, uniform buffer objects)。
@@ -31,7 +30,7 @@ comments: true
 ## **顶点着色器**
 
 首先修改我们的顶点着色器代码，包含我们上面提到的统一缓冲对象(UBO)。
-这里假设你已经熟悉了MVP变换，这是[GAMES101-现代计算机图形学入门](https://www.bilibili.com/video/BV1X7411F744)最初几节课的内容。
+这里假设你已经熟悉了 MVP 变换，这是[GAMES101-现代计算机图形学入门](https://www.bilibili.com/video/BV1X7411F744)最初几节课的内容。
 
 
 ```glsl
@@ -57,13 +56,13 @@ void main() {
 我们使用了三个变换来获得最终的裁剪坐标。
 
 注意 `uniform`、`in` 和 `out` 三种变量的声明顺序是任意的。
-`binding`和`location`指令类似，我们将在描述符布局中引用此绑定。
+`binding` 和 `location` 指令类似，我们将在描述符布局中引用此绑定。
 
 > `UniformBufferObject` 自定义的类型名，可以任意编写。
 
 ## **描述符集布局**
 
-下一步要在C++代码中定义UBO然后告诉Vulkan它在顶点着色器中对应的描述符。
+下一步要在 C++ 代码中定义 UBO 然后告诉 Vulkan 它在顶点着色器中对应的描述符。
 
 ### 1. 数据格式
 
@@ -77,9 +76,9 @@ struct UniformBufferObject {
 };
 ```
 
-我们使用GLM的类型，它的内存布局完全匹配着色器中的定义，所以我们可以直接使用`memcpy`。
+我们使用 GLM 的类型，它的内存布局完全匹配着色器中的定义，所以我们可以直接使用 `memcpy` 。
 
-> C++ 中的类型名可以和 GLSL 中不一致，重要的是内存布局一致。
+> 类型名不重要，重要的是内存布局。
 
 ### 2. 辅助函数
 
@@ -103,7 +102,7 @@ void createDescriptorSetLayout() {
 
 ### 3. 描述符绑定信息
 
-“描述符”的绑定信息结构体和“顶点输入”的绑定信息结构体不同，顶点输入的绑定信息用于描述数据的传输“数率”，而描述符的绑定信息用于至少资源可以被哪个着色器访问、通过什么方式访问以及数据的大小。
+“描述符”的绑定信息结构体和“顶点输入”的绑定信息结构体不同，顶点输入的绑定信息用于描述数据的传输“数率”，而描述符的绑定信息用于指示资源可以被哪个着色器访问、通过什么方式访问以及数据的大小。
 
 所有绑定信息都通过`vk::DescriptorSetLayoutBinding`结构体指定：
 
@@ -166,13 +165,12 @@ m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 
 ## **Uniform缓冲区**
 
-在下一章中，我们将指定包含UBO数据的缓冲区，这里我们先创建uniform缓冲区。
-
-我们选择将每帧新数据直接复制到uniform缓冲，因此不需要暂存缓冲。
+现在可以创建一个 `uniform` 缓冲区来存储 MVP 变换矩阵。
+我们选择将每帧新数据直接复制到 uniform 缓冲，因此不需要暂存缓冲。
 （此时使用暂存缓冲只会带来额外开销、降低性能。）
 
 我们需要多个缓冲区，因为可能有多个帧同时在飞行中，我们不想在上一帧仍在读取时更新缓冲区以准备下一帧。
-所以我们需要和飞行帧数一样多的uniform缓冲区，现在添加新成员：
+所以我们需要和飞行帧数一样多的 uniform 缓冲区，现在添加新成员：
 
 ```cpp
 vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
@@ -190,28 +188,27 @@ void initVulkan() {
     createVertexBuffer();
     createIndexBuffer();
     createUniformBuffers();
-    ...
 }
 
 void createUniformBuffers() {
-    vk::DeviceSize bufferSize  = sizeof(UniformBufferObject);
+    constexpr vk::DeviceSize bufferSize  = sizeof(UniformBufferObject);
 
     m_uniformBuffers.reserve(MAX_FRAMES_IN_FLIGHT);
     m_uniformBuffersMemory.reserve(MAX_FRAMES_IN_FLIGHT);
     m_uniformBuffersMapped.reserve(MAX_FRAMES_IN_FLIGHT);
-    
+
     for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         m_uniformBuffers.emplace_back( nullptr );
         m_uniformBuffersMemory.emplace_back( nullptr );
         m_uniformBuffersMapped.emplace_back( nullptr );
-        createBuffer(bufferSize, 
-            vk::BufferUsageFlagBits::eUniformBuffer, 
-            vk::MemoryPropertyFlagBits::eHostVisible | 
-            vk::MemoryPropertyFlagBits::eHostCoherent, 
-            m_uniformBuffers[i], 
+        createBuffer(bufferSize,
+            vk::BufferUsageFlagBits::eUniformBuffer,
+            vk::MemoryPropertyFlagBits::eHostVisible |
+            vk::MemoryPropertyFlagBits::eHostCoherent,
+            m_uniformBuffers[i],
             m_uniformBuffersMemory[i]
         );
-        
+
         m_uniformBuffersMapped[i] = m_uniformBuffersMemory[i].mapMemory(0, bufferSize);
     }
 }
@@ -250,15 +247,11 @@ void drawFrame() {
     recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
 
     ...
-
-    vk::SubmitInfo submitInfo;
-
-    ...
 }
 
 ...
 
-void updateUniformBuffer(uint32_t currentImage) {
+void updateUniformBuffer(const uint32_t currentImage) const {
 
 }
 ```
@@ -266,11 +259,11 @@ void updateUniformBuffer(uint32_t currentImage) {
 此函数将每帧生成一个新的变换，以使几何体旋转起来。我们需要包含两个新的头文件来实现此功能
 
 ```cpp
+#include <chrono>
+
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
-#include <chrono>
 ```
 
 `glm/gtc/matrix_transform.hpp` 头文件公开了可用于生成模型变换（如 `glm::rotate`）、视图变换（如 `glm::lookAt`）和投影变换（如 `glm::perspective`）的函数。
@@ -282,11 +275,10 @@ void updateUniformBuffer(uint32_t currentImage) {
 首先使用一些逻辑来计算自渲染开始以来以浮点精度表示的时间（秒）。
 
 ```cpp
-void updateUniformBuffer(uint32_t currentImage) {
+void updateUniformBuffer(const uint32_t currentImage) const {
     static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+    const auto currentTime = std::chrono::high_resolution_clock::now();
+    const float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 }
 ```
 
@@ -322,10 +314,10 @@ ubo.view = glm::lookAt(
 
 ```cpp
 ubo.proj = glm::perspective(
-    glm::radians(45.0f), 
-    static_cast<float>(m_swapChainExtent.width) / m_swapChainExtent.height, 
-    0.1f, 
-    10.0f
+    glm::radians(45.0f),
+    static_cast<float>(m_swapChainExtent.width) / static_cast<float>(m_swapChainExtent.height),
+    0.1f,
+    20.0f
 );
 ```
 
@@ -364,10 +356,10 @@ memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 
 **[shader-CMake代码](../../codes/02/20_descriptor1/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/20_descriptor1/shaders/shader.vert)**
+**[shader-vert代码](../../codes/02/20_descriptor1/shaders/graphics.vert.glsl)**
 
-**[shader-vert代码差异](../../codes/02/20_descriptor1/shaders/vert.diff)**
+**[shader-vert代码差异](../../codes/02/20_descriptor1/shaders/graphics.vert.diff)**
 
-**[shader-frag代码](../../codes/02/20_descriptor1/shaders/shader.frag)**
+**[shader-frag代码](../../codes/02/20_descriptor1/shaders/graphics.frag.glsl)**
 
 ---

@@ -57,20 +57,18 @@
 
 ### 安装构建依赖
 
-项目使用 material-mkdocs 构建，还需要 pymdownx 扩展。请使用 pip 或 conda 安装下面的两个库：
+项目使用 material-mkdocs 构建，请使用 pip 或 conda 安装下面的两个库：
 
 pip:
 
 ```shell
 pip install mkdocs-material
-pip install pygments
 ```
 
 conda（请先选择并激活合适的虚拟环境）:
 
 ```shell
 conda install conda-forge::mkdocs-material
-conda install conda-forge::pygments
 ```
 
 ### 生成静态网页资源

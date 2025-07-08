@@ -30,7 +30,7 @@ void initVulkan() {
     createInstance();
     setupDebugMessenger();
     createSurface();
-    pickPhysicalDevice();
+    selectPhysicalDevice();
     createLogicalDevice();
     createSwapChain();
     createImageViews();
@@ -47,7 +47,7 @@ void createImageViews() {
 
 ```cpp
 m_swapChainImageViews.reserve( m_swapChainImages.size() );
-for (size_t i = 0; i < m_swapChainImages.size(); i++) {
+for (const auto& image : m_swapChainImages) {
     // ......
 }
 ```
@@ -58,7 +58,7 @@ for (size_t i = 0; i < m_swapChainImages.size(); i++) {
 
 ```cpp
 vk::ImageViewCreateInfo createInfo;
-createInfo.image = m_swapChainImages[i];
+createInfo.image = image;
 createInfo.viewType = vk::ImageViewType::e2D;
 createInfo.format = m_swapChainImageFormat;
 ```
@@ -95,9 +95,8 @@ m_swapChainImageViews.emplace_back( m_device.createImageView(createInfo) );
 
 现在运行程序保证没有异常。
 
----
-
-图像视图足以将图像用作纹理，但它还不能完全用作渲染目标。这需要一个额外的间接步骤，称为帧缓冲。但在它之前我们还需设置图形管线。
+图像视图足以将图像用作纹理，但它还不能完全用作渲染目标。
+正如“教程前言”部分所述，我们需要将图像视图（作为附件）绑定到帧缓冲中，并在渲染过程中添加对应的附件描述。
 
 ---
 

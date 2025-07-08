@@ -13,7 +13,7 @@ Vulkan API 的设计理念: **尽量减少驱动程序开销**
 
 Vulkan 引入了一个优雅的系统来实现程序检查，称为 **验证层\(Validation Layer\)**。
 
-以下是诊断验证层中函数实现的一个简化示例
+以下是诊断验证层中函数实现的一个简化示例：
 
 ```cpp
 // 伪代码示例：验证层内部实现原理
@@ -52,31 +52,21 @@ VkResult vkCreateInstance_WithValidation(
 
 > 此层由 Khronos 提供而非核心部分，因此它没有专用的常量或者宏定义，需手动输入字符串。
 
-让我们在类中添加代码：
+在类上方添加以下代码：
 
 ```cpp
-// ......
-#include <array>
-// ......
-
-static constexpr uint32_t WIDTH = 800;
-static constexpr uint32_t HEIGHT = 600;
-
-inline static const std::vector<const char*> validationLayers {
+constexpr std::array<const char*,1> REQUIRED_LAYERS {
     "VK_LAYER_KHRONOS_validation"
 };
 
-// 根据编译模式自动启用
 #ifdef NDEBUG
-    static constexpr bool enableValidationLayers = false;
+constexpr bool ENABLE_VALIDATION_LAYER = false;
 #else
-    static constexpr bool enableValidationLayers = true;
+constexpr bool ENABLE_VALIDATION_LAYER = true;
 #endif
 ```
 
-> `NDEBUG` 宏是 C++ 标准的一部分，意思是“非调试”。
->
-> 此处不介绍常量静态成员的语法，可参考[cppref-静态成员](https://zh.cppreference.com/w/cpp/language/static)。  
+`NDEBUG` 宏是 C++ 标准的一部分，意思是“非调试”。
 
 
 ### 2. 验证层可用性检查
@@ -89,13 +79,13 @@ inline static const std::vector<const char*> validationLayers {
 // ...
 #include <set>
 // ...
-bool checkValidationLayerSupport() {
-    auto layers = m_context.enumerateInstanceLayerProperties();
-    std::set<std::string> t_requiredLayers( validationLayers.begin(), validationLayers.end() );
+bool checkValidationLayerSupport() const {
+    const auto layers = m_context.enumerateInstanceLayerProperties();
+    std::set<std::string> requiredLayers( REQUIRED_LAYERS.begin(), REQUIRED_LAYERS.end() );
     for (const auto& layer : layers) {
-        t_requiredLayers.erase( layer.layerName );
+        requiredLayers.erase( layer.layerName );
     }
-    return t_requiredLayers.empty();
+    return requiredLayers.empty();
 }
 ```
 
@@ -105,12 +95,14 @@ bool checkValidationLayerSupport() {
 
 ```cpp
 void createInstance() {
-    if (enableValidationLayers && !checkValidationLayerSupport()) {
-        throw std::runtime_error("validation layers requested, but not available!");
+    if constexpr ( ENABLE_VALIDATION_LAYER ) {
+        if (!checkValidationLayerSupport()) throw std::runtime_error("validation layers requested, but not available!");
     }
     // ......
 }
 ```
+
+> 编译期 if 实现极致的性能优化（ ）
 
 现在在调试模式下运行程序，并确保不会发生错误。
 
@@ -119,9 +111,9 @@ void createInstance() {
 在 `createInstance` 中添加内容，修改 `vk::InstanceCreateInfo` 结构体，以包含验证层名称：
 
 ```cpp
-if (enableValidationLayers) {
+if constexpr (ENABLE_VALIDATION_LAYER) {
     // 使用 setter 同时设置指针和数量两个成员变量
-    createInfo.setPEnabledLayerNames( validationLayers );
+    createInfo.setPEnabledLayerNames( REQUIRED_LAYERS );
 }
 ```
 
@@ -138,18 +130,14 @@ if (enableValidationLayers) {
 创建一个 `getRequiredExtensions` 函数，用于返回需要的扩展：
 
 ```cpp
-std::vector<const char*> getRequiredExtensions() {
+static std::vector<const char*> getRequiredExtensions() {
     uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
+    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-    if (enableValidationLayers) {
+    extensions.emplace_back( vk::KHRPortabilityEnumerationExtensionName );
+    if constexpr (ENABLE_VALIDATION_LAYER) {
         extensions.emplace_back( vk::EXTDebugUtilsExtensionName );
     }
-    extensions.emplace_back( vk::KHRPortabilityEnumerationExtensionName );
-
     return extensions;
 }
 ```
@@ -172,14 +160,13 @@ createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 添加一个新的静态成员函数，名为 `debugCallback`。
 
 ```cpp
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc( 
+static VKAPI_ATTR uint32_t VKAPI_CALL debugMessageFunc(
     vk::DebugUtilsMessageSeverityFlagBitsEXT       messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT              messageTypes,
     vk::DebugUtilsMessengerCallbackDataEXT const * pCallbackData,
-    void * pUserData ) {
-
-    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-
+    void * pUserData
+) {
+    std::println(std::cerr, "validation layer: {}",  pCallbackData->pMessage);
     return false;
 }
 ```
@@ -190,15 +177,14 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 
 `VKAPI_ATTR` 和 `VKAPI_CALL` 确保该函数具有 Vulkan 调用它的正确签名。
 
-
 第一个参数指定消息的严重性，具有以下可能：
 
-| `vk::DebugUtilsMessageSeverityFlagBitsEXT` | 含义 |  
-|---------------------|--------------------|
-| `eVerbose` | 诊断消息 |  
-| `eInfo` | 信息性消息，例如资源的创建 |  
-| `eWarning` | 关于警告行为的消息 |  
-| `eError` | 关于错误行为的消息，行为可能会导致崩溃 |  
+| `vk::DebugUtilsMessageSeverityFlagBitsEXT` | 含义                  |  
+|--------------------------------------------|---------------------|
+| `eVerbose`                                 | 诊断消息                |  
+| `eInfo`                                    | 信息性消息，例如资源的创建       |  
+| `eWarning`                                 | 关于警告行为的消息           |  
+| `eError`                                   | 关于错误行为的消息，行为可能会导致崩溃 |  
 
 你可以使用比较操作来检查消息严重性，例如
 
@@ -210,21 +196,22 @@ if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
 
 第二个参数 `messageTypes` 可以具有以下值：
 
-| `vk::DebugUtilsMessageTypeFlagsEXT` | 含义 |  
-|---------------------|--------------------|
-| `eGeneral` | 发生了一些与规范或性能无关的事件 |  
-| `eValidation` | 发生了一些违反规范或可能错误的事情 |  
-| `ePerformance` | Vulkan 的潜在非最佳使用 |  
+| `vk::DebugUtilsMessageTypeFlagsEXT` | 含义                |  
+|-------------------------------------|-------------------|
+| `eGeneral`                          | 发生了一些与规范或性能无关的事件  |  
+| `eValidation`                       | 发生了一些违反规范或可能错误的事情 |  
+| `ePerformance`                      | Vulkan 的潜在非最佳使用   |  
 
 
 第三个参数 `pCallbackData` 是一个结构体的指针，此结构体包含消息本身的详细信息，最重要的成员如下：
 
-| 成员 | 含义 |  
-|---------------------|--------------------|
-| `pMessage` | 作为空终止字符串的调试消息 |  
-| `pObjects` | 与消息相关的 Vulkan 对象句柄数组 |  
-| `objectCount` | 数组中对象的数量 |  
+| 成员            | 含义                   |  
+|---------------|----------------------|
+| `pMessage`    | 作为空终止字符串的调试消息        |  
+| `pObjects`    | 与消息相关的 Vulkan 对象句柄数组 |  
+| `objectCount` | 数组中对象的数量             |  
 
+上面的代码简单的将 `pMessage` 输出到了标准错误流。
 
 最后的参数 `pUserData` 参数包含一个指针，供用户自己使用，可以传入任意内容。
 
@@ -252,19 +239,17 @@ void setupDebugMessenger() {
 
 我们需要填写一个结构体，其中包含有关信使及其回调的详细信息：
 ```cpp
-vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( 
+vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(
     vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
     vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-    vk::DebugUtilsMessageSeverityFlagBitsEXT::eError 
+    vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
 );
-
-vk::DebugUtilsMessageTypeFlagsEXT    messageTypeFlags( 
-    vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |         
+vk::DebugUtilsMessageTypeFlagsEXT    messageTypeFlags(
+    vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
     vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-    vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation 
+    vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
 );
-
-vk::DebugUtilsMessengerCreateInfoEXT createInfo( 
+vk::DebugUtilsMessengerCreateInfoEXT createInfo(
     {},                 // flag
     severityFlags,      // messageSeverity
     messageTypeFlags,   // messageType
@@ -295,24 +280,23 @@ m_debugMessenger = m_instance.createDebugUtilsMessengerEXT( createInfo );
 首先创建一个单独的函数用于填充信使的创建信息：
 
 ```cpp
-vk::DebugUtilsMessengerCreateInfoEXT populateDebugMessengerCreateInfo() {
-    vk::DebugUtilsMessageSeverityFlagsEXT severityFlags( 
+static constexpr vk::DebugUtilsMessengerCreateInfoEXT populateDebugMessengerCreateInfo() {
+    constexpr vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError 
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
     );
-    vk::DebugUtilsMessageTypeFlagsEXT    messageTypeFlags( 
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |         
+    constexpr vk::DebugUtilsMessageTypeFlagsEXT    messageTypeFlags(
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
         vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation 
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
     );
-    return vk::DebugUtilsMessengerCreateInfoEXT ( {}, severityFlags, messageTypeFlags, &debugMessageFunc );
+    return { {}, severityFlags, messageTypeFlags, &debugMessageFunc };
 }
 
-void setupDebugMessenger(){
-    if (!enableValidationLayers) return;
-
-    auto createInfo = populateDebugMessengerCreateInfo();
+void setupDebugMessenger() {
+    if constexpr (!ENABLE_VALIDATION_LAYER) return;
+    constexpr auto createInfo = populateDebugMessengerCreateInfo();
     m_debugMessenger = m_instance.createDebugUtilsMessengerEXT( createInfo );
 }
 ```
@@ -320,11 +304,10 @@ void setupDebugMessenger(){
 然后可以在 `createInstance` 函数中重用它：
 
 ```cpp
-// vk::DebugUtilsMessengerCreateInfoEXT
-auto debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
-if (enableValidationLayers) {
-    createInfo.setPEnabledLayerNames( validationLayers );
-    createInfo.pNext = &debugMessengerCreateInfo;
+constexpr auto debugMessengerCreateInfo = populateDebugMessengerCreateInfo();
+if constexpr (ENABLE_VALIDATION_LAYER) {
+    createInfo.setPEnabledLayerNames( REQUIRED_LAYERS );
+    createInfo.pNext = &debugMessengerCreateInfo ;
 }
 ```
 
@@ -338,7 +321,7 @@ if (enableValidationLayers) {
 在那里，你将找到一个 `vk_layer_settings.txt` 文件，它说明了如何配置层。
 
 要为自己的应用程序配置层设置，可以将该文件复制到项目的 `Debug` 和 `Release` 目录，并按照说明设置所需的行为。
-注意本教程的后续章节只使用了本章教授的基础内容。
+注意本教程的后续章节只使用了本章介绍的基础内容。
 
 ## **测试**
 

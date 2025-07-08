@@ -31,7 +31,7 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install MkDocs and dependencies
-        run: pip install mkdocs-material pygments
+        run: pip install mkdocs-material
 
       - name: Build Docs
         run: mkdocs build --site-dir public

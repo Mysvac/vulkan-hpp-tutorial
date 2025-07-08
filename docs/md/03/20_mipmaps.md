@@ -28,8 +28,8 @@ mip 级别是在创建 `vk::Image` 时指定的。此前，我们总将此值设
 
 ```cpp
 ...
-uint32_t m_mipLevels;
-vk::raii::Image m_textureImage{ nullptr };
+uint32_t m_mipLevels{};
+vk::raii::DeviceMemory m_textureImageMemory{ nullptr };
 ...
 ```
 
@@ -39,17 +39,15 @@ vk::raii::Image m_textureImage{ nullptr };
 ```cpp
 int texWidth, texHeight, texChannels;
 stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-if (!pixels) {
-    throw std::runtime_error("failed to load texture image!");
-}
-vk::DeviceSize imageSize = texWidth * texHeight * 4;
+if (!pixels) throw std::runtime_error("failed to load texture image!");
+const vk::DeviceSize imageSize = texWidth * texHeight * 4;
 m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 ...
 ```
 
 加 `1` 是为了保证原始图像具有一个级别。
 
-> 每高一级，宽高缩小一半，总像素数变成前者的1/4。所有 mip 级别的像素数之和不超过0级的4/3。
+> 每高一级，宽高缩小一半，总像素数变成前者的 1/4 。所有 mip 级别的像素数之和不超过 0 级的 4/3 。
 
 ### 2. 修改辅助函数
 
@@ -58,39 +56,39 @@ m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texH
 
 ```cpp
 void createImage(
-    uint32_t width,
-    uint32_t height,
-    uint32_t mipLevels,
-    vk::Format format,
-    vk::ImageTiling tiling,
-    vk::ImageUsageFlags usage,
-    vk::MemoryPropertyFlags properties,
+    const uint32_t width,
+    const uint32_t height,
+    const uint32_t mipLevels,
+    const vk::Format format,
+    const vk::ImageTiling tiling,
+    const vk::ImageUsageFlags usage,
+    const vk::MemoryPropertyFlags properties,
     vk::raii::Image& image,
     vk::raii::DeviceMemory& imageMemory
-) {
+) const {
     ...
     imageInfo.mipLevels = mipLevels;
     ...
 }
 ...
 vk::raii::ImageView createImageView(
-    vk::Image image, 
-    vk::Format format, 
-    vk::ImageAspectFlags aspectFlags,
-    uint32_t mipLevels
-) {
+    const vk::Image image,
+    const vk::Format format,
+    const vk::ImageAspectFlags aspectFlags,
+    const uint32_t mipLevels
+) const {
     ...
     viewInfo.subresourceRange.levelCount = mipLevels;
     ...
 }
 ...
 void transitionImageLayout(
-    vk::raii::Image& image,
-    vk::Format format,
-    vk::ImageLayout oldLayout,
-    vk::ImageLayout newLayout,
-    uint32_t mipLevels
-) {
+    const vk::raii::Image& image,
+    const vk::Format format,
+    const vk::ImageLayout oldLayout,
+    const vk::ImageLayout newLayout,
+    const uint32_t mipLevels
+) const {
     ...
     barrier.subresourceRange.levelCount = mipLevels;
     ...
@@ -112,57 +110,26 @@ createImage(
     m_depthImage,
     m_depthImageMemory
 );
-...
+m_depthImageView = createImageView(
+    m_depthImage,
+    depthFormat,
+    vk::ImageAspectFlagBits::eDepth,
+    1
+);
+......
 // createTextureImage
-createImage( 
-    texWidth, 
+createImage(
+    texWidth,
     texHeight,
     m_mipLevels,
     vk::Format::eR8G8B8A8Srgb,
     vk::ImageTiling::eOptimal,
-    vk::ImageUsageFlagBits::eTransferDst | 
+    vk::ImageUsageFlagBits::eTransferDst |
     vk::ImageUsageFlagBits::eSampled,
     vk::MemoryPropertyFlagBits::eDeviceLocal,
     m_textureImage,
     m_textureImageMemory
 );
-...
-// createImageViews
-m_swapChainImageViews.emplace_back( 
-    createImageView(
-        m_swapChainImages[i], 
-        m_swapChainImageFormat, 
-        vk::ImageAspectFlagBits::eColor,
-        1
-    ) 
-);
-...
-// createDepthResources
-m_depthImageView = createImageView(
-    m_depthImage, 
-    depthFormat, 
-    vk::ImageAspectFlagBits::eDepth,
-    1
-);
-...
-// createTextureImageView
-m_textureImageView = createImageView(
-    m_textureImage, 
-    vk::Format::eR8G8B8A8Srgb, 
-    vk::ImageAspectFlagBits::eColor,
-    m_mipLevels
-);
-... 
-// createDepthResources (this transitionImageLayout is optional)
-transitionImageLayout(
-    m_depthImage,
-    depthFormat,
-    vk::ImageLayout::eUndefined,
-    vk::ImageLayout::eDepthStencilAttachmentOptimal,
-    1
-);
-...
-// createTextureImage
 transitionImageLayout(
     m_textureImage,
     vk::Format::eR8G8B8A8Srgb,
@@ -171,12 +138,29 @@ transitionImageLayout(
     m_mipLevels
 );
 ...
-// createTextureImage
 transitionImageLayout(
     m_textureImage,
     vk::Format::eR8G8B8A8Srgb,
     vk::ImageLayout::eTransferDstOptimal,
     vk::ImageLayout::eShaderReadOnlyOptimal,
+    m_mipLevels
+);
+......
+// createImageViews
+m_swapChainImageViews.emplace_back(
+    createImageView(
+        image,
+        m_swapChainImageFormat,
+        vk::ImageAspectFlagBits::eColor,
+        1
+    )
+);
+......
+// createTextureImageView
+m_textureImageView = createImageView(
+    m_textureImage, 
+    vk::Format::eR8G8B8A8Srgb, 
+    vk::ImageAspectFlagBits::eColor,
     m_mipLevels
 );
 ```
@@ -189,7 +173,7 @@ transitionImageLayout(
 我们需要从单个级别生成其他级别的数据，使用`blitImage`命令。
 此命令用于执行复制、缩放和过滤操作。我们将多次调用它以将数据 blit 到纹理图像的每个级别。
 
-`blitImage` 被认为是传输操作，我们还需要给 `m_textureImage` 加上 `vk::ImageUsageFlagBits::eTransferDst` 标志位：
+`blitImage` 被认为是传输操作，我们还需要给 `m_textureImage` 加上 `eTransferSrc` 标志位：
 
 ```cpp
 createImage( 
@@ -245,7 +229,7 @@ copyBufferToImage(
 
 ### 2. 辅助函数创建
 
-现在添加一个辅助函数用于生成 mipmaps：
+然后添加一个辅助函数用于生成 mipmaps：
 
 ```cpp
 void generateMipmaps(
@@ -254,7 +238,7 @@ void generateMipmaps(
     int32_t texHeight, 
     uint32_t mipLevels
 ) {
-    auto commandBuffer = beginSingleTimeCommands();
+    const auto commandBuffer = beginSingleTimeCommands();
 
     vk::ImageMemoryBarrier barrier;
     barrier.image = image;
@@ -264,6 +248,8 @@ void generateMipmaps(
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = 1;
     barrier.subresourceRange.levelCount = 1;
+    
+    // TODO
 
     endSingleTimeCommands( std::move(commandBuffer) );
 }
@@ -310,7 +296,7 @@ commandBuffer.pipelineBarrier(
 此转换将等待 `i - 1` 级别被填充，无论是来自之前的 blit 命令还是 `copyBufferToImage` 命令。
 当前的 blit 命令将等待此转换。
 
-然后我们需要指定 bilt 命令的操作区域：
+然后我们需要指定 blit 命令的操作区域：
 
 ```cpp
 vk::ImageBlit blit;
@@ -398,10 +384,7 @@ if (mipHeight > 1) mipHeight /= 2;
         barrier
     );
 
-    if (mipWidth > 1) mipWidth /= 2;
-    if (mipHeight > 1) mipHeight /= 2;
-
-    endSingleTimeCommands( std::move(commandBuffer) );
+    endSingleTimeCommands( commandBuffer );
 }
 ```
 
@@ -449,38 +432,39 @@ void createTextureImage() {
     );
 }
 void generateMipmaps(
-    vk::raii::Image& image, 
-    vk::Format imageFormat,
-    int32_t texWidth, 
-    int32_t texHeight, 
-    uint32_t mipLevels
-){
+    const vk::raii::Image& image,
+    const vk::Format imageFormat,
+    const int32_t texWidth,
+    const int32_t texHeight,
+    const uint32_t mipLevels
+) const {
     ...
 }
 ```
 
-在 `generateMipmaps` 获取格式属性：
+可以使用获取格式属性：
 
 ```cpp
 // vk::FormatProperties
-auto formatProperties = m_physicalDevice.getFormatProperties(imageFormat);
+const auto formatProperties = m_physicalDevice.getFormatProperties(imageFormat);
 ```
 
 `vk::FormatProperties` 结构体有一些不同的 `TilingFeatures` 字段。
 我们创建的纹理图像使用最优平铺格式，所以需要检查 `optimalTilingFeatures` 是否支持线性采样过滤器，可以这样写：
 
 ```cpp
-if(!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)){
-    throw std::runtime_error("texture image format does not support linear blitting!");
-}
+// vk::FormatProperties
+if(const auto formatProperties = m_physicalDevice.getFormatProperties(imageFormat);
+    !(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)
+) throw std::runtime_error("texture image format does not support linear blitting!");
 ```
 
 还有两种替代方案：
 
-1. 使用一个函数，查找并使用支持线性bliting的图像格式。
+1. 使用一个函数，查找并使用支持线性blit的图像格式。
 2. 使用 stb_image_resize 这样的库实现 mipmap 生成。
 
-应该注意的时，实际应用中一般不会在运行时生成mipmap级别。
+应该注意的是，实际应用中一般不会在运行时生成mipmap级别。
 通常会预生成然后一并放入纹理文件中，从而提高加载速度。
 作为一个练习，读者可以自行寻找合适的纹理图片，尝试从中加载多个mipmap级别。
 
@@ -488,7 +472,7 @@ if(!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSample
 
 ### 1. 字段介绍
 
-我们还需要为采样器指定如何读取这些mimap数据，这非常简单。
+我们还需要为采样器指定如何读取这些 mimap 数据，这非常简单。
 Vulkan 允许我们指定 `minLod`、`maxLod`、`mipLodBias` 和 `mipmapMode`（“Lod”表示“细节级别”）。
 当对纹理进行采样时，采样器会根据以下伪代码选择 mip 级别
 
@@ -518,12 +502,12 @@ if (lod <= 0) {
 }
 ```
 
-如果物体距离摄像机近，。就会使用 `magFilter` 过滤器；反之离得远则使用 `minFilter` 过滤器。
-通常 `lod` 是非负数，因为0表示贴近摄像机，`mipLodBias` 偏移量允许我们强制 Vulkan 使用比通常使用的更低的 `lod` 和 `level` 。
+如果物体距离摄像机近，就会使用 `magFilter` 过滤器；反之离得远则使用 `minFilter` 过滤器。
+通常 `lod` 是非负数，因为 0 表示贴近摄像机，`mipLodBias` 偏移量允许我们强制 Vulkan 使用比通常使用的更低的 `lod` 和 `level` 。
 
 ### 2. 指定字段
 
-我们需要为 `textureSampler` 选择合适的值。
+需要为 `textureSampler` 选择合适的值，修改 `createTextureSampler` 函数。
 我们已经将 `minFilter` 和 `magFilter` 设置为线性差值，现在只需指定合适的 `minLod`、`maxLod`、`mipLodBias` 和 `mipmapMode` 。
 
 ```cpp
@@ -567,10 +551,10 @@ samplerInfo.minLod = static_cast<float>(m_mipLevels / 2);
 
 **[根项目CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 
-**[shader-CMake代码](../../codes/02/40_depthbuffer/shaders/CMakeLists.txt)**
+**[shader-CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/40_depthbuffer/shaders/shader.vert)**
+**[shader-vert代码](../../codes/03/00_loadmodel/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/02/40_depthbuffer/shaders/shader.frag)**
+**[shader-frag代码](../../codes/03/00_loadmodel/shaders/graphics.frag.glsl)**
 
 ---

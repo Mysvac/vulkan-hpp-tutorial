@@ -7,7 +7,7 @@ comments: true
 ## **前言**
 
 我们上一章定义的描述符布局描述了可以绑定的描述符类型。
-在这一章，我们将为每个 `vk::Buffer` 资源创建描述符集，从而绑定到对应的 `uniform` 。
+在这一章，我们将为每个 `vk::Buffer` 资源创建描述符集，并绑定到管线。
 
 ## **描述符池**
 
@@ -19,7 +19,6 @@ void initVulkan() {
     ...
     createUniformBuffers();
     createDescriptorPool();
-    ...
 }
 
 ...
@@ -56,10 +55,10 @@ poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 > 假如 `descriptorCount` 是 4 ，而 `maxSets` 是 2 。
 > 那么你可以分配 2 个描述符集，每个集包含 2 个描述符；或只分配 1 个描述符集，它包含 1~4 个描述符。（描述符总数不超过4。）
 
-在 `m_descriptorSetLayout` 下方添加一个新的类成员来存储描述符池的句柄，并调用 `createDescriptorPool` 来创建它。
+在 `m_uniformBuffersMapped` 下方添加一个新的类成员来存储描述符池的句柄，并调用 `createDescriptorPool` 来创建它。
 
 ```cpp
-vk::raii::DescriptorSetLayout m_descriptorSetLayout{ nullptr };
+std::vector<void*> m_uniformBuffersMapped;
 vk::raii::DescriptorPool m_descriptorPool{ nullptr };
 
 ......
@@ -76,7 +75,6 @@ void initVulkan() {
     ...
     createDescriptorPool();
     createDescriptorSets();
-    ...
 }
 
 ...
@@ -246,15 +244,14 @@ layout(binding = 0) uniform UniformBufferObject {
 
 重新编译您的着色器和程序并运行它，您会发现您迄今为止使用的彩色正方形消失了！那是因为我们没有考虑到对齐要求。
 
-Vulkan 希望您结构中的数据以特定方式在内存中对齐，例如
+在 GLSL 中，UBO 的成员变量还需遵循 std140 布局规则：
 
-- 标量必须按 N 对齐（= 4 字节，给定 32 位浮点数）。
-- `vec2` 必须按 2N 对齐（= 8 字节）
-- `vec3` 或 `vec4` 必须按 4N 对齐（= 16 字节）
-- 嵌套结构必须按其成员的基本对齐方式对齐，向上舍入到 16 的倍数。
-- `mat4` 矩阵必须与 `vec4` 具有相同的对齐方式。
+- 标量（int/float）：对齐到 4 字节。
+- 向量（vec2/vec3/vec4）：对齐到 8/16 字节（vec3 仍按 16 字节对齐）。
+- 数组：每个元素对齐到 16 字节。
+- 矩阵（mat4/mat3）：按列向量对齐（每列 16 字节，mat3 占用 48 字节）。
 
-您可以在 [规范](https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/chap15.html#interfaces-resources-layout) 中找到完整的对齐要求列表。
+您可以在 [规范](https://docs.vulkan.org/spec/latest/chapters/interfaces.html#interfaces-resources-layout) 中找到完整的对齐要求列表。
 
 我们原始的着色器只有三个 `mat4` 字段，已经满足了对齐要求。由于每个 `mat4` 的大小为 4 x 4 x 4 = 64 字节，因此 `model` 的偏移量为 0，`view `的偏移量为 64，`proj` 的偏移量为 128。这些都是 16 的倍数，所以它能正常工作。
 
@@ -353,8 +350,8 @@ layout(set = 1, binding = 0) uniform sampler2D tex;               // 材质数�
 
 **[shader-CMake代码](../../codes/02/20_descriptor1/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/20_descriptor1/shaders/shader.vert)**
+**[shader-vert代码](../../codes/02/20_descriptor1/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/02/20_descriptor1/shaders/shader.frag)**
+**[shader-frag代码](../../codes/02/20_descriptor1/shaders/graphics.frag.glsl)**
 
 ---

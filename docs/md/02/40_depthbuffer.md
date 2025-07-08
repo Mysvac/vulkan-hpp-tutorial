@@ -36,6 +36,17 @@ struct Vertex {
 }
 ```
 
+还需要更新 `vertices` 数据，为每个顶点添加 Z 轴坐标：
+
+```cpp
+const std::vector<Vertex> vertices = {
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+};
+```
+
 然后需要更新顶点着色器的输入和坐标变换代码，用于适配我们的三维坐标：
 
 ```glsl
@@ -52,18 +63,6 @@ void main() {
 }
 ```
 
-
-还需要更新 `vertices` 数据，为每个顶点添加 Z 轴坐标：
-
-```cpp
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-};
-```
-
 现在运行程序，你看到的内容应该和之前一样。
 
 ### 2. 添加几何体
@@ -76,7 +75,7 @@ const std::vector<Vertex> vertices = {
 现在往顶点数据中添加内容，新顶点的Z坐标使用 `-0.5f` ，不要忘了顶点索引：
 
 ```cpp
-inline static const std::vector<Vertex> vertices = {
+const std::vector<Vertex> vertices = {
     {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
     {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
     {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
@@ -87,7 +86,7 @@ inline static const std::vector<Vertex> vertices = {
     {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
     {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 };
-inline static const std::vector<uint16_t> indices = {
+const std::vector<uint32_t> indices = {
     0, 1, 2, 2, 3, 0,
     4, 5, 6, 6, 7, 4
 };
@@ -148,8 +147,8 @@ vk::raii::ImageView m_depthImageView{ nullptr };
 void initVulkan() {
     ...
     createCommandPool();
+    createCommandBuffers();
     createDepthResources();
-    createTextureImage();
     ...
 }
 
@@ -160,6 +159,8 @@ void createDepthResources() {
 }
 ```
 
+内存分配需要用到命令缓冲，所以此函数需要放在命令池创建函数的下方。
+
 ### 2. 查找深度图像格式
 
 创建深度图像非常简单。它应该具有与颜色附件相同的分辨率（由交换链 extent 定义），适用于深度附件的图像用途\(usage\)，最佳平铺和设备本地内存。
@@ -169,36 +170,31 @@ void createDepthResources() {
 与纹理图像不同，我们不需要指定图像的色彩格式，因为深度图记录的是深度信息。
 我们只需要指定精度即可，下面是几种常见的选择：
 
-| vk::Format | 含义 |
-|------------|------|
-| `eD32Sfloat` | 每个深度使用32位有符号浮点数 |
+| vk::Format         | 含义                        |
+|--------------------|---------------------------|
+| `eD32Sfloat`       | 每个深度使用32位有符号浮点数           |
 | `eD32SfloatS8Uint` | 32 位有符号浮点数记录深度，外加 8 位模板分量 |
-| `eD24UnormS8Uint` | 24 位浮点数记录深度，外加 8 位模板分量 |
+| `eD24UnormS8Uint`  | 24 位浮点数记录深度，外加 8 位模板分量    |
 
 模板分量\(stencil component\)被用于 [模板测试\(stencil test\)](https://en.wikipedia.org/wiki/Stencil_buffer)。
 它可以与深度测试组合，我们会在后面的章节中介绍。
 
-可以简单的使用 `eD32Sfloat` ，它受到广泛支持。
-但这里选择编写 `findSupportedFormat` 函数查询合适的格式，这带来更好的灵活性和可用性：
+你可以简单的使用 `eD32Sfloat` ，它受到广泛支持。
+
+作为教程，本章选择编写 `findDepthFormat` 函数查询合适的格式，这带来更好的灵活性和可用性：
 
 ```cpp
-vk::Format findSupportedFormat(
-    const std::vector<vk::Format>& candidates,
-    vk::ImageTiling tiling,
-    vk::FormatFeatureFlags features
-) {
+vk::Format findDepthFormat( const std::vector<vk::Format>& candidates ) const {
 
 }
 ```
 
-支持的格式取决于平铺模式和用途，所以我们包含了这些参数。
-
-我们可以通过物理设备的 `getFormatProperties` 函数获取需要的信息：
+支持的格式取决于平铺模式 `till` 和用途 `Feature` ，我们可以通过物理设备的 `getFormatProperties` 函数获取需要的信息：
 
 ```cpp
-for(vk::Format format : candidates) {
+for(const vk::Format format : candidates) {
     // vk::FormatProperties
-    auto props = m_physicalDevice.getFormatProperties(format);
+    const auto props = m_physicalDevice.getFormatProperties(format);
 }
 ```
 
@@ -208,79 +204,38 @@ for(vk::Format format : candidates) {
 - `optimalTilingFeatures`：最优平铺支持的用例
 - `bufferFeatures`：缓冲支持的用例
 
-只有前两个与这里相关，我们根据参数的 `tiling` 进行选择：
+只有前两个与这里相关，我们直接选择最优平铺，且要求它支持作为深度模板附件：
 
 ```cpp
-switch (tiling){
-case vk::ImageTiling::eLinear:
-    if(props.linearTilingFeatures & features) return format;
-    break;
-case vk::ImageTiling::eOptimal:
-    if(props.optimalTilingFeatures & features) return format;
-    break;
-default: 
-    break;
+if(props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment){
+    return format;
 }
 ```
 
 如果所有候选格式都不支持所需的用途，我们可以直接抛出异常或返回特殊值：
 
 ```cpp
-vk::Format findSupportedFormat(
-    const std::vector<vk::Format>& candidates,
-    vk::ImageTiling tiling,
-    vk::FormatFeatureFlags features
-) {
-    for(vk::Format format : candidates) {
+vk::Format findDepthFormat( const std::vector<vk::Format>& candidates ) const {
+    for(const vk::Format format : candidates) {
         // vk::FormatProperties
-        auto props = m_physicalDevice.getFormatProperties(format);
-
-        switch (tiling){
-        case vk::ImageTiling::eLinear:
-            if(props.linearTilingFeatures & features) return format;
-            break;
-        case vk::ImageTiling::eOptimal:
-            if(props.optimalTilingFeatures & features) return format;
-            break;
-        default: 
-            break;
+        const auto props = m_physicalDevice.getFormatProperties(format);
+        if(props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment){
+            return format;
         }
     }
     throw std::runtime_error("failed to find supported format!");
 }
 ```
 
-现在创建一个 `findDepthFormat` 函数，用于选择具体深度分量并支持用于深度附件的格式：
+在 `createDepthResources` 中使用刚才的函数：
 
 ```cpp
-vk::Format findDepthFormat() {
-    return findSupportedFormat(
-        { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
-        vk::ImageTiling::eOptimal,
-        vk::FormatFeatureFlagBits::eDepthStencilAttachment
-    );
-}
-```
-
-上面选择的三种模式都包含深度分量，但后两者还包含模板分量。
-虽然我们尚未使用它，但在图像布局转换时需要考虑这一点。
-现在添加一个简单的辅助函数判断是否包含深度分量：
-
-```cpp
-bool hasStencilComponent(vk::Format format) {
-    return format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint;
-}
+const vk::Format depthFormat = findDepthFormat({vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint});
 ```
 
 ### 3. 创建深度图像
 
-在 `createDepthResources` 中使用刚才的函数：
-
-```cpp
-vk::Format depthFormat = findDepthFormat();
-```
-
-然后使用前几章的辅助函数 `createImage` 和 `createImageView` 创建对象：
+回到 `createDepthResources` 函数，使用前几章的辅助函数 `createImage` 和 `createImageView` 创建对象：
 
 ```cpp
 createImage(
@@ -296,13 +251,19 @@ createImage(
 m_depthImageView = createImageView(m_depthImage, depthFormat);
 ```
 
-现在 `createImageView` 函数内部的 `subresourceRange.aspectMask` 始终使用 `eColor`，但深度缓冲并不是。
-我们需要使用参数传递 `aspectMask` 而非默认：
+现在 `createImageView` 函数内部的 `subresourceRange.aspectMask` 始终使用 `eColor`，但深度缓冲需要 `eDepth` 。
+我们需要使用参数传递 `aspectMask` ：
 
 ```cpp
-vk::raii::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags) {
+vk::raii::ImageView createImageView(
+    const vk::Image image,
+    const vk::Format format,
+    const vk::ImageAspectFlags aspectFlags
+) const {
     ...
+    
     viewInfo.subresourceRange.aspectMask = aspectFlags;
+    
     ...
 }
 ```
@@ -310,90 +271,29 @@ vk::raii::ImageView createImageView(vk::Image image, vk::Format format, vk::Imag
 然后需要修改用到此函数的三个地方：
 
 ```cpp
-m_swapChainImageViews.emplace_back( 
-    createImageView(m_swapChainImages[i], m_swapChainImageFormat, vk::ImageAspectFlagBits::eColor) 
+// createImageViews
+m_swapChainImageViews.emplace_back(
+    createImageView(image, m_swapChainImageFormat, vk::ImageAspectFlagBits::eColor)
 );
 ...
+// createTextureImageView
 m_textureImageView = createImageView(m_textureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor);
 ...
+// createDepthResources
 m_depthImageView = createImageView(m_depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth);
 ```
 
 创建深度图像就到此为止，我们不需要映射或拿另一个图像复制进去，因为它会在渲染管线开始时像颜色附件一样被清理。
 
-## **显式转换深度图像**
-
-**不需要**显式地将图像的布局转换为深度附件，因为我们将在渲染通道中处理它。
-但为了完整起见，仍然在本节描述此过程。如果你愿意，完全可以跳过这部分内容。
-
-在 `createDepthResources` 函数的末尾调用 `transitionImageLayout`，如下所示
-
-```cpp
-transitionImageLayout(
-    m_depthImage,
-    depthFormat,
-    vk::ImageLayout::eUndefined,
-    vk::ImageLayout::eDepthAttachmentOptimal
-);
-```
-
-我们可以使用 `eUndefined` 是因为深度图像此时并没有内容。
-现在还需要修改 `transitionImageLayout` ，保证它使用正确的 `aspectMask`：
-
-```cpp
-if( newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal ) {
-    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-    if( hasStencilComponent(format) ){
-        barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
-    }
-} else {
-    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-}
-```
-
-即使我们没用到模板\(stencil\)分量，也在启用时需要设置相关属性。
-
-最后还需要设置正确的访问掩码和管线阶段：
-
-```cpp
-if( oldLayout == vk::ImageLayout::eUndefined &&
-    newLayout == vk::ImageLayout::eTransferDstOptimal
-) {
-    barrier.srcAccessMask = {};
-    barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-    sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
-    destinationStage = vk::PipelineStageFlagBits::eTransfer;
-} else if(
-    oldLayout == vk::ImageLayout::eTransferDstOptimal &&
-    newLayout == vk::ImageLayout::eShaderReadOnlyOptimal
-) {
-    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-    sourceStage = vk::PipelineStageFlagBits::eTransfer;
-    destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
-} else if (
-    oldLayout == vk::ImageLayout::eUndefined &&
-    newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal
-) {
-    barrier.srcAccessMask = {};
-    barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-    sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
-    destinationStage = vk::PipelineStageFlagBits::eEarlyFragmentTests;
-} else {
-    throw std::invalid_argument("unsupported layout transition!");
-}
-```
-
-深度缓冲区会在深度测试时被读取并在绘制新片段时被写入。
-读取发生在 `eEarlyFragmentTests` ，写入发生在 `eLateFragmentTests` ，我们只需要选择在最早的阶段之前完成转换操作即可。
+深度图像的图像布局转换将交给渲染通道来处理，我们无需在此处显式转换。
 
 ## **渲染通道**
 
-我们现在需要修改 `createRenderPass` 以包含深度附件，首先指定 `vk::AttachmentDescription`：
+现在需要修改 `createRenderPass` 以包含深度附件，首先指定 `vk::AttachmentDescription`：
 
 ```cpp
 vk::AttachmentDescription depthAttachment;
-depthAttachment.format = findDepthFormat();
+depthAttachment.format = findDepthFormat({vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint});
 depthAttachment.samples = vk::SampleCountFlagBits::e1;
 depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
 depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
@@ -403,21 +303,10 @@ depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
 depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 ```
 
+> 注意到我们的深度资源晚于渲染通道创建，但渲染通道只需附件描述信息，所以没有问题。
+
 `format` 应该与深度图像本身的属性相同。
-我们指定了 `loadOp` 开始时清理内容。
-它绘制完成后不会被使用，所以`storeOp`为 `eDontCare`。
-
-注意我们在此处指定了 `initialLayout` 和 `finalLayout` ，所以渲染管线为我们处理了深度图像布局的转换。
-所以 `createDepthResources` 中的显式转换的代码可以忽略：
-
-```cpp
-// transitionImageLayout(
-//     m_depthImage,
-//     depthFormat,
-//     vk::ImageLayout::eUndefined,
-//     vk::ImageLayout::eDepthStencilAttachmentOptimal
-// );
-```
+我们指定了 `loadOp` 开始时清理内容。它绘制完成后不会被使用，所以`storeOp`为 `eDontCare`。
 
 然后我们回到渲染通道的创建，现在为第一个（唯一的）子通道添加对附件的引用：
 
@@ -432,19 +321,18 @@ subpass.setColorAttachments( colorAttachmentRef );
 subpass.pDepthStencilAttachment = &depthAttachmentRef;
 ```
 
-与颜色附件不同，子Pass只能使用单个深度（+模板）附件，所以没有 `Count` 字段，直接赋值初始指针即可。
+注意到我们设置了 `initialLayout`、`finalLayout` 和子通道中的图像布局，渲染通道会为我们自动处理图像布局转换。
+
+与颜色附件不同，子 Pass 只能使用单个深度（+模板）附件，所以没有 `Count` 字段，直接赋值初始指针即可。
 
 然后需要更新渲染通道的创建信息，加上我们的深度附件。
-上面的`depthAttachmentRef.attachment`是1，因为深度附件会是附件数组的1号元素，正如下面的代码。
+上面的`depthAttachmentRef.attachment`是 1 ，因为深度附件会是附件数组的 1 号元素，正如下面的代码。
 
 ```cpp
-auto attachments = { colorAttachment, depthAttachment };
+const auto attachments = { colorAttachment, depthAttachment };
 vk::RenderPassCreateInfo renderPassInfo;
 renderPassInfo.setAttachments( attachments );
-...
 ```
-
-> 这里用到了初始化列表
 
 最后，我们需要扩展我们的子通道依赖项，以确保深度图像的转换操作和加载开始时的清除操作没有冲突。
 深度图像首先在早期片段测试管线阶段被访问，并且因为我们有一个清除的加载操作，我们应该为写入指定访问掩码。
@@ -460,24 +348,7 @@ dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::Acces
 
 下一步是修改帧缓冲的创建，从而将深度图像绑定到深度附件。
 
-转到 `createFramebuffers` 并将深度图像视图指定为第二个附件：
-
-```cpp
-vk::FramebufferCreateInfo framebufferInfo;
-framebufferInfo.renderPass = m_renderPass;
-std::array<vk::ImageView, 2> attachments { m_swapChainImageViews[i], m_depthImageView };
-framebufferInfo.setAttachments( attachments );
-framebufferInfo.width = m_swapChainExtent.width;
-framebufferInfo.height = m_swapChainExtent.height;
-framebufferInfo.layers = 1;
-```
-
-> 注意前后顺序不能反，第一个是颜色附件，第二个是深度附件。  
-> 你可以用 `auto` 初始化列表，但是需要显式将 `vk::raii::ImageView` 转换成 `vk::ImageView`。
-
-颜色附件对每个交换链都不同，深度图像可以被所有的交换链图像使用，因为我们的信号量保证了同一时间只运行一个子通道。
-
-我们还需要移动 `createFramebuffers`，保证它在深度图像视图之后调用：
+帧缓冲需要用到深度资源的图像视图，我们需要将帧缓冲的创建函数后移：
 
 ```cpp
 void initVulkan() {
@@ -488,9 +359,24 @@ void initVulkan() {
 }
 ```
 
+转到 `createFramebuffers` 并将深度图像视图指定为第二个附件：
+
+```cpp
+for (const auto& swapchainImageView : m_swapChainImageViews) {
+    const std::array<vk::ImageView, 2> imageViews { swapchainImageView, m_depthImageView };
+    framebufferInfo.setAttachments( imageViews );
+    m_swapChainFramebuffers.emplace_back( m_device.createFramebuffer(framebufferInfo) );
+}
+```
+
+注意前后顺序不能反，第一个是颜色附件，第二个是深度附件。  
+
+颜色附件对每个交换链都不同，但我们深度图像可以被所有的交换链图像使用，因为信号量保证了同一时间只运行一个渲染工作。
+
 ## **清除值**
 
-因为我们现在有多个具有 `vk::AttachmentLoadOp::eClear` 的附件，所以我们还需要指定多个清除值。转到 `recordCommandBuffer` 并创建一个 `vk::ClearValue` 结构体数组：
+因为我们现在有多个具有 `vk::AttachmentLoadOp::eClear` 的附件，所以我们还需要指定多个清除值。
+转到 `recordCommandBuffer` 并创建一个 `vk::ClearValue` 结构体数组：
 
 ```cpp
 std::array<vk::ClearValue, 2> clearValues;
@@ -505,7 +391,7 @@ Vulkan 中深度缓冲的深度范围为 `[0.0, 1.0]`，其中 `1.0` 位于远�
 
 > 请注意，`clearValues` 的顺序应与附件的顺序相同。
 
-## **深度与模板状态**
+## **管线配置**
 
 深度附件已经可以使用了，但仍然需要在图形管线中启用深度测试。
 现在转到 `createGraphicsPipeline` 函数中添加 `vk::PipelineDepthStencilStateCreateInfo` 结构体配置：
@@ -533,7 +419,7 @@ depthStencil.minDepthBounds = 0.0f; // Optional if depthBoundsTestEnable is fals
 depthStencil.maxDepthBounds = 1.0f; // Optional if depthBoundsTestEnable is false
 ```
 
-还有三个字段配置模板缓冲操作，我们也不使用它。
+还有三个字段配置模板测试操作，我们也不使用它。
 
 ```cpp
 depthStencil.stencilTestEnable = false; // Optional
@@ -558,25 +444,18 @@ pipelineInfo.pDepthStencilState = &depthStencil;
 
 ```cpp
 void recreateSwapChain() {
-    int width = 0, height = 0;
-    glfwGetFramebufferSize(m_window, &width, &height);
-    while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(m_window, &width, &height);
-        glfwWaitEvents();
-    }
-
+    ......
+    
     m_device.waitIdle();
 
     m_swapChainFramebuffers.clear();
-
-    m_depthImageView = nullptr;
-    m_depthImage = nullptr;
-    m_depthImageMemory = nullptr;
-
     m_swapChainImageViews.clear();
     m_swapChainImages.clear(); // optional
     m_swapChain = nullptr;
 
+    m_depthImageView = nullptr;
+    m_depthImage = nullptr;
+    m_depthImageMemory = nullptr;
 
     createSwapChain();
     createImageViews();
@@ -589,10 +468,6 @@ void recreateSwapChain() {
 
 ---
 
-恭喜，您的应用程序现在终于可以渲染任意 3D 几何体并使其看起来正确了。我们将在下一章中尝试这一点，绘制一个纹理模型！
-
----
-
 **[C++代码](../../codes/02/40_depthbuffer/main.cpp)**
 
 **[C++代码差异](../../codes/02/40_depthbuffer/main.diff)**
@@ -601,12 +476,10 @@ void recreateSwapChain() {
 
 **[shader-CMake代码](../../codes/02/40_depthbuffer/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/40_depthbuffer/shaders/shader.vert)**
+**[shader-vert代码](../../codes/02/40_depthbuffer/shaders/graphics.vert.glsl)**
 
-**[shader-vert代码差异](../../codes/02/40_depthbuffer/shaders/vert.diff)**
+**[shader-vert代码差异](../../codes/02/40_depthbuffer/shaders/graphics.vert.diff)**
 
-**[shader-frag代码](../../codes/02/40_depthbuffer/shaders/shader.frag)**
-
-**[shader-frag代码差异](../../codes/02/40_depthbuffer/shaders/frag.diff)**
+**[shader-frag代码](../../codes/02/40_depthbuffer/shaders/graphics.frag.glsl)**
 
 ---

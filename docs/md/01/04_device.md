@@ -6,7 +6,7 @@ comments: true
 
 ## **创建逻辑设备**
 
-在选择要使用的物理设备之后，我们需要设置一个逻辑设备来与之交互。
+在选择合适的物理设备之后，我们需要设置一个逻辑设备从而与之交互。
 在“教程前言”章节提到，逻辑设备是物理设备的抽象，如果您有需要，甚至可以从同一个物理设备创建多个逻辑设备。
 
 ### 1. 基础结构
@@ -29,7 +29,7 @@ vk::raii::Device m_device{ nullptr };
 void initVulkan() {
     createInstance();
     setupDebugMessenger();
-    pickPhysicalDevice();
+    selectPhysicalDevice();
     createLogicalDevice();
 }
 
@@ -49,15 +49,14 @@ vk::DeviceQueueCreateInfo queueCreateInfo;
 首先需要指定从哪个队列族中创建队列：
 
 ```cpp
-QueueFamilyIndices indices = findQueueFamilies( m_physicalDevice );
-
+const auto indices = findQueueFamilies( m_physicalDevice );
 queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
 ```
 
 还需要指定创建队列的数量，并使用 `0.0` 和 `1.0` 之间的浮点数为它们分配优先级，以影响命令缓冲区执行的调度。即使只有一个队列，这也是必需的。 
 
 ```cpp
-float queuePriority = 1.0f;
+constexpr float queuePriority = 1.0f;
 queueCreateInfo.setQueuePriorities( queuePriority );
 ```
 
@@ -69,7 +68,10 @@ queueCreateInfo.setQueuePriorities( queuePriority );
 
 目前我们不需要任何特殊的东西，可以直接使用默认值。 当我们开始使用 Vulkan 做更有趣的事情时，会回来修改到这个结构。
 
-```c++
+我们之前提到过，物理设备还有很多可选特性，它们的支持性取决于具体的 GPU 硬件。
+如果需要使用这些特性，要在逻辑设备创建时显式启用它们，但我们现在还没有需要的特性。
+
+```cpp
 vk::PhysicalDeviceFeatures deviceFeatures;
 ```
 
@@ -87,16 +89,16 @@ createInfo.pEnabledFeatures = &deviceFeatures;
 
 其余信息与 `vk::InstanceCreateInfo` 结构相似，并要求您指定扩展。不同之处在于这次这些是设备特定的。
 
-> 注意，虽然设备特定的“层”已废弃，但我们仍然需要指定设备特定的扩展。
+> 注意，虽然设备特定的“层”已废弃，但仍然需要指定设备特定的扩展与设备特性。
 
 ### 5. 验证层
 
 设备特定的层很早就被废弃，你无需也不应该使用它们，以下代码将被 Vulkan 忽略。
 
 ```cpp
-// 无效代码
-if (enableValidationLayers) {
-    createInfo.setPEnabledLayerNames( validationLayers );
+if constexpr (ENABLE_VALIDATION_LAYER) {
+    // 无效代码
+    createInfo.setPEnabledLayerNames( REQUIRED_LAYERS );
 }
 ```
 
@@ -118,7 +120,7 @@ vk::raii::Queue m_graphicsQueue{ nullptr };
 
 我们可以使用 `getQueue` 成员函数来获取每个队列族的队列句柄。
 参数是队列族和队列索引。因为我们只从此队列族创建了一个队列，所以简单地使用索引 `0` 。
-```c++
+```cpp
 m_graphicsQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
 ```
 

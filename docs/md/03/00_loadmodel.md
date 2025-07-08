@@ -6,22 +6,21 @@ comments: true
 
 ## **前言**
 
-经过前面的内容，程序已经可以渲染三维网格体了。这一章节我们将从模型文件中加载顶点和索引，而不再硬编码于C++代码中。
+经过前面的内容，程序已经可以渲染三维网格体了。这一章节我们将从模型文件中加载顶点和索引，而不再硬编码于 C++ 代码中。
 
-许多图形API教程都会让读者在本章中编写自己的OBJ文件加载器。
-但任何稍微有趣些的3D程序就会需要此文件格式不支持的功能，比如骨骼动画。
-我们将在本章中从OBJ模型加载网格数据，但我们更关注如何使用这些数据，而不是如何从文件读取。
+我们将使用 OBJ 格式的模型文件，它非常简单且易于使用。
+部分教程会让用户自己写一个 OBJ 解析器，但我们将重点放在 Vulkan 上，而不是模型文件的解析。
 
 ## **库**
 
 我们将使用 [tinyobjloader](https://github.com/syoyo/tinyobjloader) 库用于加载 OBJ 文件的数据。
-它像stb_image一样是单头文件库，你可以直接去仓库下载此文件，但我们依然使用VCPkg安装。
+它像 stb_image 一样是单头文件库，你可以直接去仓库下载此文件，但我们依然使用 vcpkg 安装。
 
 ```shell
 vcpkg install tinyobjloader
 ```
 
-然后在CMakeLists.txt中导入库：
+然后在 CMakeLists.txt 中导入库：
 
 ```cmake
 find_package(tinyobjloader CONFIG REQUIRED)
@@ -34,27 +33,22 @@ target_link_libraries(${PROJECT_NAME} PRIVATE tinyobjloader::tinyobjloader)
 ## **示例网格**
 
 本章中我们依然不启用光照系统，所以我们将使用把光照烘焙到纹理上的模型。
-查找此类模型的简便方法是在 [Sketchfab](https://sketchfab.com/) 上查找。该网站上的许多模型都以 OBJ 格式提供，并具有宽松的许可证。
 
-本教程使用 [Viking room](https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38) 模型，作者是 [nigelgoh](https://sketchfab.com/nigelgoh) \([CC BY 4.0](https://web.archive.org/web/20200428202538/https://sketchfab.com/3d-models/viking-room-a49f1b8e4f5c4ecf9e1fe7d81915ad38)\)。
-原教程文档作者调整了模型的大小和方向，可以直接点击下方的链接下载：
+本文档将使用 [Vulkan Tutorial](https://vulkan-tutorial.com/Loading_models) 中提供的模型文件，可以直接点击下方的链接下载：
 
 - [viking_room.obj](../../res/viking_room.obj)
 - [viking_room.png](../../res/viking_room.png)
 
-欢迎使用你自己的模型，但请确保它仅包含一种材质，且尺寸约 1.5*1.5*1.5 单位。
-如果它大于此尺寸，你必须更改视口矩阵。
+你可以使用任何自己喜欢的模型文件，但请确保它是 OBJ 格式，并且包含纹理图像。
+如果模型尺寸差异过大，你可能需要自行调整 MVP 矩阵的参数。
 
-现在在 `shaders` 和 `textures` 旁创建新文件夹 `models`，将 OBJ 文件放入此文件夹，将纹理图像放入 `textures`文件夹。
+现在在 `shaders` 和 `textures` 旁创建新文件夹 `models` ，将 OBJ 文件放入此文件夹，将纹理图像放入 `textures` 文件夹。
 
 在您的程序中放置两个新的配置变量，以定义模型和纹理路径
 
 ```cpp
-static constexpr uint32_t WIDTH = 800;
-static constexpr uint32_t HEIGHT = 600;
-
-inline static const std::string MODEL_PATH = "models/viking_room.obj";
-inline static const std::string TEXTURE_PATH = "textures/viking_room.png";
+const std::string MODEL_PATH = "models/viking_room.obj";
+const std::string TEXTURE_PATH = "textures/viking_room.png";
 ```
 
 并更新 `createTextureImage` 以使用此路径变量
@@ -63,12 +57,16 @@ inline static const std::string TEXTURE_PATH = "textures/viking_room.png";
 stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 ```
 
+然后你可以直接运行程序，看看是否能正常加载纹理图片。
+
+![texture_load_test](../../images/0300/texture_load_test.png)
+
 ## **前置准备**
 
 ### 1. 修改顶点和索引变量
 
-我们现在需要从模型中加载数据，顶点和索引不能再作为静态成员常量了。
-现在将他们修改为成员变量，记得去除const修饰：
+我们现在需要从模型中加载数据，顶点和索引不能再作为全局常量了。
+现在将他们修改为成员变量：
 
 ```cpp
 std::vector<Vertex> m_vertices;
@@ -77,40 +75,31 @@ vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
 vk::raii::Buffer m_vertexBuffer{ nullptr };
 ```
 
-> 如果提示找不到 `Vertex` ，可以提供前向声明或者把类定义前移动。
-
-注意我们把索引的单个数据改成了 `uint32_t` ，因为模型顶点数超过了 65535 。
-记得修改 `recordCommandBuffer` 中的绑定语句：
+注意我们修改了变量名，加了 `m_`前缀用于区分是不是成员变量，现在需要修改几处地方：
 
 ```cpp
-commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint32 );
-```
-
-注意我们修改了变量名，加了 `m_`前缀用于区分是不是成员变量，你可以不这么做。现在需要修改几处地方：
-
-```cpp
-void recordCommandBuffer(const vk::raii::CommandBuffer& commandBuffer, uint32_t imageIndex) {
+void recordCommandBuffer( ... ) {
     ...
     commandBuffer.drawIndexed(static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
     ...
 }
 void createVertexBuffer() {
-    vk::DeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
+    const vk::DeviceSize bufferSize = sizeof(Vertex) * m_vertices.size();
     ...
-    memcpy(data, m_vertices.data(), static_cast<size_t>(bufferSize));
+    memcpy(data, m_vertices.data(), bufferSize);
     ...
 }
 void createIndexBuffer() {
-    vk::DeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
+    const vk::DeviceSize bufferSize = sizeof(uint32_t) * m_indices.size();
     ...
-    memcpy(data, m_indices.data(), static_cast<size_t>(bufferSize));
+    memcpy(data, m_indices.data(), bufferSize);
     ...
 }
 ```
 
 ### 2. 导入库
 
-tinyobjloader 库的头文件导入和STB基本一致，导入 `tiny_obj_loader.h` 头文件并在前面加上 `TINYOBJLOADER_IMPLEMENTATION` 保证头文件包含函数主体，避免链接错误、
+tinyobjloader 库的导入和 STB 基本一致，导入 `tiny_obj_loader.h` 头文件并在前面加上 `TINYOBJLOADER_IMPLEMENTATION` 保证头文件包含函数主体，避免链接错误、
 
 ```cpp
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -164,13 +153,13 @@ OBJ 文件由位置、法线、纹理坐标和面组成。
 
 `shapes` 容器包含所有单独的对象及其面。每个面都由一个顶点数组组成，并且每个顶点都包含位置、法线和纹理坐标属性的索引。
 
-OBJ 模型还可以为每个面定义材质和纹理，但我们将忽略这些。
+OBJ 模型还可以为每个面定义材质和纹理，但我们暂时忽略这些。
 
 `err` 字符串包含错误，`warn` 字符串包含加载文件时发生的警告，例如缺少材质定义。
 仅当 `LoadObj` 函数返回 `false` 时，加载才真正失败。
 
 如上所述，OBJ 文件中的面实际上可以包含任意数量的顶点，而我们的应用程序只能渲染三角形。
-幸运的是，`LoadObj` 有一个可选参数可以自动三角化此类面，默认情况下启用该参数。
+幸运的是，`LoadObj` 有一个可选参数可以自动三角化这些面，默认情况下启用该参数。
 
 我们将文件中的所有面组合成一个模型，因此只需遍历所有 `shape`
 
@@ -185,7 +174,7 @@ for (const auto& shape : shapes) {
 ```cpp
 for (const auto& shape : shapes) {
     for (const auto& index : shape.mesh.indices) {
-        Vertex vertex;
+        Vertex vertex{};
 
         m_vertices.push_back(vertex);
         m_indices.push_back(m_indices.size());
@@ -215,9 +204,7 @@ vertex.color = {1.0f, 1.0f, 1.0f};
 
 ### 3. 测试与调整
 
-如果您的设备配置不高，建议在 Release 模式或者 -O3 优化下启动程序，否则加载模型可能较慢。
-
-您应该看到类似以下内容
+现在运行程序，您应该看到类似以下内容：
 
 ![inverted_texture_coordinates](../../images/0300/inverted_texture_coordinates.png)
 
@@ -236,7 +223,8 @@ vertex.texCoord = {
 
 ![drawing_model](../../images/0300/drawing_model.png)
 
-> 当模型旋转时，您可能会注意到后部（墙壁的背面）看起来有点奇怪。这是正常的，仅仅是因为该模型设计时就不支持从后侧观看。
+> 当模型旋转时，您可能会注意到后部（墙壁的背面）看起来有点奇怪。
+> 这是正常的，因为模型删除了背面细节，而我们启用了图元的背面剔除。
 
 ## **顶点去重**
 
@@ -245,14 +233,14 @@ vertex.texCoord = {
 
 一种直接的方式是使用`map`或者`unordered_map`来跟踪唯一的顶点和相应的索引。
 
-### 1. unordered_map
+### 1. map
 
-我们将使用 `unordered_map` ，这类数据的分布足够随机，通常可以比 `map` 更快。
+本节将直接使用 `map` ，它更加简单，但实际效率可能不如 `unordered_map`。
 
 ```cpp
-#include <unordered_map>
+#include <map>
 
-std::unordered_map<Vertex, uint32_t> uniqueVertices;
+std::map<Vertex, uint32_t> uniqueVertices;
 
 for (const auto& shape : shapes) {
     for (const auto& index : shape.mesh.indices) {
@@ -275,7 +263,7 @@ for (const auto& shape : shapes) {
             uniqueVertices[vertex] = static_cast<uint32_t>(m_vertices.size());
             m_vertices.push_back(vertex);
         }
-        m_indices.push_back(uniqueVertices[vertex]);
+        m_indices.push_back(uniqueVertices[vertex]);    
     }
 }
 ```
@@ -286,53 +274,40 @@ for (const auto& shape : shapes) {
 > 注意`uniqueVertices`是函数局部变量。
 > 此处`map`的使用可以优化，减少一次查找次数，但我们使用最简单的写法。
 
-### 2. 自定义比较与哈希
+### 2. 自定义比较
 
-现在程序无法通过编译，因为自定义类型没有对应的哈希函数和等于函数。
+现在程序无法通过编译，因为自定义类型没有重置比较运算符，
 
 > `map` 只需要提供 `<` 运算符重载即可。`unordered_map` 则需要 `==` 和 `std::hash<>` 特化。
 
-自定义比较和哈希的方式有很多，最常见的就是提供哈希模板的特化以及`==`运算符重载。
-不过我决定使用一种不太常见的方式：直接向 `std::unordered_map<>` 模板填写第三和第四个模板形参，第三个参数是哈希、第四个是等于。
+我们可以只重载 `<` 运算符，因为标准库的排序都依赖此运算符。
 
-> 示例代码将 `Vertex` 放在了类的私有区域，导致模板特化和`==`重载较为麻烦。
-
-首先导入 GLM 的哈希库，它封装了内置向量的哈希函数，可以简化代码。因为是实验性的，我们需要加上 `GLM_ENABLE_EXPERIMENTAL` 宏。
+> 或者使用 C++20 的“宇宙飞船运算符” `<=>` 并配合 `==` ，它们可以自动生成所有比较运算符。
 
 ```cpp
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
+#include <tuple>
+
+...
+
+struct Vertex {
+    glm::vec3 pos;
+    glm::vec3 color;
+    glm::vec2 texCoord;
+
+    ......
+
+    bool operator<(const Vertex& other) const {
+        return std::tie(pos.x, pos.y, pos.z, color.x, color.y, color.z, texCoord.x, texCoord.y)
+             < std::tie(other.pos.x, other.pos.y, other.pos.z, other.color.x, other.color.y, other.color.z, other.texCoord.x, other.texCoord.y);
+    }
+};
 ```
-
-模板只接受类型，而 lambda 表达式得到的是类对象，所以我们通过 `decltype()` 获取原类型。
-代码像这样：
-
-```cpp
-std::unordered_map<
-    Vertex, 
-    uint32_t,
-    decltype( [](const Vertex& vertex) -> size_t {
-        return (((std::hash<glm::vec3>()(vertex.pos) << 1) ^ std::hash<glm::vec3>()(vertex.color) ) >> 1) ^
-            (std::hash<glm::vec2>()(vertex.texCoord) << 1);
-    } ),
-    decltype( [](const Vertex& vtx_1, const Vertex& vtx_2){
-        return vtx_1.pos == vtx_2.pos && vtx_1.color == vtx_2.color && vtx_1.texCoord == vtx_2.texCoord;
-    } )
-> uniqueVertices;
-```
-
-- 第三个模板形参是哈希算法，看起来比较复杂，但实际只是几个位运算的杂乱组合。
-- 第四个模板形参是键的等于算法，我们要求三个内容完全相等。
-
-> C++20之前，lambda表达式对应的类型的默认构成为`delete`，无法像这样使用。
-> 自C++20起，lambda表达式捕获列表为空时，默认构造为`default`，此时才能作为上面的模板形参。
 
 ## **最后**
 
 您现在应该能够成功编译并运行您的程序。
-如果您检查 `vertices` 的大小，您将看到它从 `11484` 缩小到 `3566`！
-这意味着每个顶点在平均约 3 个三角形中被重用。
-这绝对为我们节省了大量 GPU 内存。
+如果您输出 `vertices` 的大小，您将看到它从 `11484` 缩小到 `3566`！
+这意味着每个顶点在平均约 3 个三角形中被重用，为我们节省了大量内存。
 
 ---
 
@@ -342,10 +317,10 @@ std::unordered_map<
 
 **[根项目CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 
-**[shader-CMake代码](../../codes/02/40_depthbuffer/shaders/CMakeLists.txt)**
+**[shader-CMake代码](../../codes/03/00_loadmodel/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/02/40_depthbuffer/shaders/shader.vert)**
+**[shader-vert代码](../../codes/03/00_loadmodel/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/02/40_depthbuffer/shaders/shader.frag)**
+**[shader-frag代码](../../codes/03/00_loadmodel/shaders/graphics.frag.glsl)**
 
 ---
