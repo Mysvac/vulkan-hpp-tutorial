@@ -24,10 +24,10 @@ comments: true
 现在添加新的静态常量成员，存放模型的路径：
 
 ```cpp
-inline static const std::string BUNNY_PATH = "models/bunny.obj";
+const std::string BUNNY_PATH = "models/bunny.obj";
 ```
 
-我们可以复用使用之前的 `loadModel` 函数，但需要略微调整函数签名和内容：
+我们可以复用使用之前的 `loadModel` 函数，将模型路径作为形参：
 
 ```cpp
 void loadModel(const std::string& model_path) {
@@ -36,14 +36,8 @@ void loadModel(const std::string& model_path) {
         throw std::runtime_error(warn + err);
     }
     ......
-    static std::unordered_map<
-        ......
-    > uniqueVertices;
-    ......
 }
 ```
-
-我们将模型路径作为参数名，并且将 `uniqueVertices` 设为了 `static` ，保证多次模型重用同一个顶点哈希表。
 
 现在可以修改 `initVulkan` 函数，加载两个模型：
 
@@ -55,11 +49,13 @@ loadModel(BUNNY_PATH);
 ### 3. 区分索引
 
 按上面的方式加载模型时，我们无法区分哪些索引是第一个模型的，哪些是第二个的。
-一种解决方案是，使用一个数组记录每个模型的索引起始位置。在 `m_indices` 下方添加一个成员变量 `m_firstIndices` ：
+一种解决方案是，使用数组记录每个模型的索引起始位置和索引数量。
+在 `m_indices` 下方添加成员变量 `m_firstIndices` 和 `m_indexCount` ：
 
 ```cpp
 std::vector<uint32_t> m_indices;
 std::vector<uint32_t> m_firstIndices;
+std::vector<uint32_t> m_indexCount;
 ```
 
 然后修改 `loadModel` 函数，在每次读取时通过已有索引数记录开始位置：
@@ -72,12 +68,15 @@ void loadModel(const std::string& model_path) {
         throw std::runtime_error(warn + err);
     }
 
-    m_firstIndices.push_back(m_indices.size());
+    m_firstIndices.push_back(m_indices.size()); // 记录开始位置
+    
     ......
+    
+    m_indexCount.push_back(m_indices.size() - m_firstIndices.back()); // 索引总数减去开始位置得到实例的索引数
 }
 ```
 
-这样我们可以通过 `m_firstIndices[i]` 查询第 i 个模型的索引开始位置，使用后一个开始位置减当前位置得到模型的顶点数。
+这样我们可以通过 `m_firstIndices[i]` 查询第 i 个模型的索引开始位置，通过 `m_firstIndices[i]` 模型的顶点索引数。
 
 ### 4. 顶点色彩与纹理
 
@@ -120,10 +119,10 @@ void loadModel(const std::string& model_path) {
 而且我们会渲染多只兔子，要将其它们放在不同位置，所以需要不同的模型变换矩阵。
 此外，房屋模型有纹理，而兔子模型没有，我们希望通过一个标志位控制片段着色器是否从纹理中采样。
 
-现在创建一个数据结构用于存放实例数据，我们需要模型和纹理控制字段：
+现在创建一个数据结构用于存放实例数据，我们需要模型矩阵和纹理控制字段：
 
 ```cpp
-struct alignas(16) InstanceData {
+struct InstanceData {
     glm::mat4 model;
     uint32_t enableTexture;
 };
@@ -159,14 +158,14 @@ static std::array<vk::VertexInputAttributeDescription, 5>  getAttributeDescripti
     attributeDescriptions[4].binding = 1;
     attributeDescriptions[4].location = 7;
     attributeDescriptions[4].format = vk::Format::eR32Uint;
-    attributeDescriptions[4].offset = sizeof(glm::mat4);
+    attributeDescriptions[4].offset = offsetof(InstanceData, enableTexture);
     return attributeDescriptions;
 }
 ```
 
 我们在“顶点缓冲”章节介绍过这些内容。
-`location` 的 0~2 已经被顶点缓冲使用，所以这里使用 3~7；
-注意 `enableTexture` 的类型是 `uint32_t` ，对应 `eR32Uint` 。
+`location` 的 0~2 已经被顶点缓冲使用，所以这里使用 3~7。
+`enableTexture` 的类型是 `uint32_t` ，对应 `eR32Uint` 。
 
 最后，在成员变量中添加一个数组用于存储实例数据，可以放在 `m_vertices` 下方：
 
@@ -174,14 +173,12 @@ static std::array<vk::VertexInputAttributeDescription, 5>  getAttributeDescripti
 std::vector<InstanceData> m_instanceDatas;
 ```
 
-> 如果提示找不到 `InstanceData` ，可能需要添加前向声明。
-
 ### 2. 初始化实例数据
 
 首先添加一个静态成员常量，用于指定需要渲染多少只兔子：
 
 ```cpp
-static constexpr int BUNNY_NUMBER = 5;
+constexpr int BUNNY_NUMBER = 5;
 ```
 
 现在创建一个新函数用于初始化实例数据，可以放在 `loadModel(BUNNY_PATH);` 下方：
@@ -209,7 +206,7 @@ void initInstanceDatas() {
 ......
 
 void initInstanceDatas() {
-    InstanceData instanceData;
+    InstanceData instanceData{};
     m_instanceDatas.reserve(BUNNY_NUMBER + 1);
     // 房间的旋转矩阵，参考 `updateUniformBuffer` 中的内容。
     instanceData.model = glm::rotate(
@@ -225,7 +222,7 @@ void initInstanceDatas() {
     m_instanceDatas.emplace_back( instanceData );
     // 随机数生成器
     std::random_device rd;
-    std::mt19937 gen(rd());
+    std::default_random_engine gen(rd());
     std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
     // 初始化兔子的参数
     for (int i = 0; i < BUNNY_NUMBER; ++i) {
@@ -244,7 +241,7 @@ void initInstanceDatas() {
 }
 ```
 
-我们使用了标准库的 `mt19937` 和 `uniform_real_distribution` 用于生成 `[-1.0f, 1.0f)` 之间的随机数，且只允许第一个模型进行纹理采样。
+我们使用了标准库的 `uniform_real_distribution` 用于生成 `[-1.0f, 1.0f)` 之间的随机数，且只允许第一个模型进行纹理采样。
 
 ### 3. 实例缓冲区
 
@@ -278,7 +275,7 @@ void createInstanceBuffer() {
 
 ```cpp
 void createInstanceBuffer() {
-    vk::DeviceSize bufferSize = sizeof(InstanceData) * m_instanceDatas.size();
+    const vk::DeviceSize bufferSize = sizeof(InstanceData) * m_instanceDatas.size();
 
     vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
     vk::raii::Buffer stagingBuffer{ nullptr };
@@ -306,6 +303,8 @@ void createInstanceBuffer() {
 }
 ```
 
+注意一点，实例缓冲区的 `usage` 也是 `eVertexBuffer` ，因为它和顶点缓冲一样绑定在管线的“顶点输入”。
+
 ### 4. 修改管线布局
 
 在 `createGraphicsPipeline()` 函数中修改顶点输入的信息：
@@ -313,18 +312,18 @@ void createInstanceBuffer() {
 ```cpp
 void createGraphicsPipeline() {
     ......
-    auto vertexBindingDescription = Vertex::getBindingDescription();
-    auto vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
-    auto instanceBindingDescription = InstanceData::getBindingDescription();
-    auto instanceAttributeDescriptions = InstanceData::getAttributeDescriptions();
+    vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+    const auto vertexBindingDescription = Vertex::getBindingDescription();
+    const auto vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
+    const auto instanceBindingDescription = InstanceData::getBindingDescription();
+    const auto instanceAttributeDescriptions = InstanceData::getAttributeDescriptions();
 
-    std::vector<vk::VertexInputBindingDescription> bindingDescriptions = { 
-        vertexBindingDescription, 
-        instanceBindingDescription 
+    std::vector<vk::VertexInputBindingDescription> bindingDescriptions = {
+        vertexBindingDescription,
+        instanceBindingDescription
     };
-    std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
-    attributeDescriptions.insert(
-        attributeDescriptions.end(),
+
+    std::vector<vk::VertexInputAttributeDescription> attributeDescriptions(
         vertexAttributeDescriptions.begin(),
         vertexAttributeDescriptions.end()
     );
@@ -347,37 +346,33 @@ void createGraphicsPipeline() {
 在 `recordCommandBuffer()` 中，绑定实例缓冲区：
 
 ```cpp
-vk::Buffer vertexBuffers[] = { *m_vertexBuffer, *m_instanceBuffer };
-vk::DeviceSize offsets[] = { 0, 0 };
+const std::array<vk::Buffer,2> vertexBuffers { m_vertexBuffer, m_instanceBuffer };
+constexpr std::array<vk::DeviceSize,2> offsets { 0, 0 };
 commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
 ```
 
 `m_vertexBuffer` 在数组的 0 号位，`m_instanceBuffer` 在 1 号位，这就是为什么之前的 `binding` 参数分别是 0 和 1 。
 
-
 然后修改下方的绘制代码，直接使用两条绘制命令：
 
 ```cpp
 commandBuffer.drawIndexed(  // 绘制房屋模型
-    m_firstIndices[1],      // vertexCount 一个实例包含的顶点/索引数量
+    m_indexCount[0],        // vertexCount 一个实例包含的顶点/索引数量
     1,                      // instanceCount 实例数量
-    0,                      // firstIndex   索引的开始位置
+    m_firstIndices[0],      // firstIndex   索引的开始位置
     0,                      // vertexOffset 顶点的偏移量
     0                       // firstInstance 实例的开始位置
 );
 commandBuffer.drawIndexed(  // 绘制 BUNNY_NUMBER 个兔子模型
-    static_cast<uint32_t>(m_indices.size() - m_firstIndices[1]),
+    m_indexCount[1],
     BUNNY_NUMBER,
     m_firstIndices[1],
-    0, 
+    0,
     1
 );
 ```
 
-第一条命令用于绘制房屋，只有一个实例，且偏移量都是 0 。
-第二条命令用于绘制兔子，要绘制 `BUNNY_NUMBER` 只，通过索引的差值得到了兔子模型的顶点数量；由于 0 号实例是房屋模型，所以 `firstInstance` 设为 1 ，从 1 号实例开始才是兔子；索引的偏移量同理。
-
-> 注意，计算顶点数时用 `m_indices.size()` 而不是 `m_firstIndices.size()` 。
+我们根据成员变量提供的索引偏移和索引数绘制实例，房屋只需要绘制一个实例，而兔子需要绘制 `BUNNY_NUMBER` 个实例。
 
 ### 6. 修改着色器
 
@@ -443,7 +438,7 @@ if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
         1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
     };
 } else {
-    vertex.texCoord = {0.0f, 0.0f};
+    vertex.texCoord = {0.0f, 0.0f}; // optional
 }
 ```
 
@@ -495,12 +490,12 @@ layout(binding = 0) uniform UniformBufferObject {
 
 **[shader-CMake代码](../../codes/03/40_instancedrendering/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/03/40_instancedrendering/shaders/shader.vert)**
+**[shader-vert代码](../../codes/03/40_instancedrendering/shaders/graphics.vert.glsl)**
 
-**[shader-vert代码差异](../../codes/03/40_instancedrendering/shaders/vert.diff)**
+**[shader-vert代码差异](../../codes/03/40_instancedrendering/shaders/graphics.vert.diff)**
 
-**[shader-frag代码](../../codes/03/40_instancedrendering/shaders/shader.frag)**
+**[shader-frag代码](../../codes/03/40_instancedrendering/shaders/graphics.frag.glsl)**
 
-**[shader-frag代码差异](../../codes/03/40_instancedrendering/shaders/frag.diff)**
+**[shader-frag代码差异](../../codes/03/40_instancedrendering/shaders/graphics.frag.diff)**
 
 ---

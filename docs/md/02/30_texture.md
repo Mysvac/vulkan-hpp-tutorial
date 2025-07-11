@@ -34,7 +34,7 @@ Vulkan 不含内置的图像/模型加载工具，你需要使用第三方库，
 
 本教程将使用`stb_image`库，它属于 [stb库](https://github.com/nothings/stb) ，单头文件且足够轻量，支持 PNG、JPG、BMP 等常见格式。
 
-你可以直接去它的 [Github仓库](https://github.com/nothings/stb) 下载，
+你可以直接去它的 [GitHub仓库](https://github.com/nothings/stb) 下载，
 本教程使用 vcpkg 安装它，使用命令：
 
 ```shell
@@ -145,7 +145,7 @@ stbi_image_free(pixels);
 
 要让着色器能够访问缓冲中的像素值，最好的方式是使用 Vulkan 的图像对象。
 图像对象允许我们简单且快速地使用2D坐标检索对应位置的颜色。
-图像对象中的像素们被称为纹素(texels)，我们后面会使用此名称。
+图像对象中的像素们被称为***纹素\(texels\)**，我们后面会使用此名称。
 
 ### 1. 创建图像对象
 
@@ -177,7 +177,7 @@ imageInfo.arrayLayers = 1;
 
 `extent` 自动指定了图像每个轴包含的纹素数，所以 `depth` 是1。
 我们暂时不使用mipmapping，所以 `mipLevels` 设为了1。
-我们只有一副图像，所以 `arrayLayers` 也为1。
+我们只有一幅图像，所以 `arrayLayers` 也为1。
 
 然后指定图像格式，我们强制读取成了RGBA，所以应该这样写：
 
@@ -199,7 +199,7 @@ imageInfo.tiling = vk::ImageTiling::eOptimal;
 | `eOptimal`        | 以实现定义的顺序排列，以获取最佳访问性能        |
 
 tiling模式在图像创建后之后不能再更改。
-如果你希望能够直接访问图像内存中的纹数，应该使用 `eLinear` 。
+如果你希望能够直接访问图像内存中的纹素，应该使用 `eLinear` 。
 我们将使用暂存缓冲区而不是暂存图像，所以没这必要，可以使用 `eOptimal` 以便着色器高效访问。
 
 然后设置图像的初始布局：
@@ -227,7 +227,7 @@ imageInfo.initialLayout = vk::ImageLayout::eUndefined;
 imageInfo.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
 ```
 
-通过`shaderMode`字段表示图像只由一个队列族使用，通过`samples`字段设置多重采样相关。
+通过`sharingMode`字段表示图像只由一个队列族使用，通过`samples`字段设置多重采样相关。
 
 ```cpp
 imageInfo.sharingMode = vk::SharingMode::eExclusive;

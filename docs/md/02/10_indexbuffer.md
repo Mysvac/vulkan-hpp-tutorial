@@ -118,7 +118,7 @@ commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 ## **最后**
 
-现在可以运行程序，你应该看到这样一副图像：
+现在可以运行程序，你应该看到这样一幅图像：
 
 ![矩形](../../images/0210/indexed_rectangle.png)
 
@@ -133,7 +133,7 @@ commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 这对于缓存更加友好，因为数据更加紧凑。
 
 如果多个资源在同一渲染操作期间未使用，甚至可以重用相同的内存块，当然前提是它们的数据已刷新。
-这中内存的重用在计算机图形学中被称为 **别名（Aliasing）**。
+这种内存的重用在计算机图形学中被称为 **别名（Aliasing）**。
 
 ---
 

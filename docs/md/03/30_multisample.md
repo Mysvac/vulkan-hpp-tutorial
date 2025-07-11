@@ -164,7 +164,7 @@ createImage(
 
 ### 3. 创建色彩资源
 
-现在创建一个新函数 `createColorResources` 用于创建多重采样色彩缓冲，这里的 `createImage` 使用 `m_msaasample` 成员变量。
+现在创建一个新函数 `createColorResources` 用于创建多重采样色彩缓冲，这里的 `createImage` 使用 `m_msaaSamples` 成员变量。
 我们仅使用一个 mip 级别，因为对于每个像素具有多个样本的图像，Vulkan 规范强制执行此操作。
 此外这个颜色缓冲不需要 mipmap，因为它不会用作纹理：
 

@@ -163,7 +163,7 @@ pipelineLayoutInfo.setSetLayouts(*m_descriptorSetLayout);
 m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
 ```
 
-## **Uniform缓冲区**
+## **Uniform 缓冲区**
 
 现在可以创建一个 `uniform` 缓冲区来存储 MVP 变换矩阵。
 我们选择将每帧新数据直接复制到 uniform 缓冲，因此不需要暂存缓冲。

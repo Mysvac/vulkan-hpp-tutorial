@@ -49,38 +49,45 @@ pipelineLayoutInfo.setPushConstantRanges( pushConstantRange );
 
 我们需要在片段着色器中使用它控制模型是否进行纹理采样，所以设置为 `eFragment` 。
 
+推送常量支持的数据容量非常小，以字节为单位，你可以像这样通过物理设备查询：
+
+```cpp
+const auto properties = m_physicalDevice.getProperties();
+uint32_t maxPushConstantsSize = properties.limits.maxPushConstantsSize;
+```
+
 ### 2. 命令记录
 
 现在回到 `recordCommandBuffer` 函数，在两次绘制之前进行推送常量命令即可：
 
 ```cpp
-uint32_t enableTexture = 1; // 启用纹理映射
+uint32_t enableTexture = 1; // 开启纹理映射
 commandBuffer.pushConstants<uint32_t>(
     m_pipelineLayout,
     vk::ShaderStageFlagBits::eFragment,
     0,              // offset
     enableTexture   // value
 );
-commandBuffer.drawIndexed( // 绘制房屋
-    m_firstIndices[1],
+commandBuffer.drawIndexed(
+    m_indexCount[0],
     1,
-    0,
+    m_firstIndices[0],
     0,
     0
 );
 
-enableTexture = 0; // 关闭纹理映射
+enableTexture = 0;  // 关闭纹理映射
 commandBuffer.pushConstants<uint32_t>(
     m_pipelineLayout,
     vk::ShaderStageFlagBits::eFragment,
     0,              // offset
     enableTexture   // value
 );
-commandBuffer.drawIndexed( // 绘制兔子
-    static_cast<uint32_t>(m_indices.size() - m_firstIndices[1]),
+commandBuffer.drawIndexed(
+m_indexCount[1],
     BUNNY_NUMBER,
     m_firstIndices[1],
-    0, 
+    0,
     1
 );
 ```
@@ -136,7 +143,7 @@ layout(push_constant) uniform PushConstants {
 首先修改 `InstanceData` 结构体，删除 `enableTexture` 成员变量：
 
 ```cpp
-struct alignas(16) InstanceData {
+struct InstanceData {
     glm::mat4 model;
     // uint32_t enableTexture;
     ......
@@ -203,12 +210,12 @@ void initInstanceDatas() {
 
 **[shader-CMake代码](../../codes/03/50_pushconstant/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/03/50_pushconstant/shaders/shader.vert)**
+**[shader-vert代码](../../codes/03/50_pushconstant/shaders/graphics.vert.glsl)**
 
-**[shader-vert代码差异](../../codes/03/50_pushconstant/shaders/vert.diff)**
+**[shader-vert代码差异](../../codes/03/50_pushconstant/shaders/graphics.vert.diff)**
 
-**[shader-frag代码](../../codes/03/50_pushconstant/shaders/shader.frag)**
+**[shader-frag代码](../../codes/03/50_pushconstant/shaders/graphics.frag.glsl)**
 
-**[shader-frag代码差异](../../codes/03/50_pushconstant/shaders/frag.diff)**
+**[shader-frag代码差异](../../codes/03/50_pushconstant/shaders/graphics.frag.diff)**
 
 ---

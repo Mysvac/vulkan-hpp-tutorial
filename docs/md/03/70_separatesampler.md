@@ -15,7 +15,7 @@ comments: true
 
 本章我们会添加新模型，但在此之前，先将原有的组合图像采样器修改为分离的图像与采样器。
 
-事实上，C++端的代码修改非常简单。
+事实上，C++ 端的代码修改非常简单。
 无论是“组合图像采样器”还是“分离的图像与采样器”，都需要“图像内存+图像+图像视图+采样器”，而这些资源的创建过程和描述符无关。
 
 我们已经在“纹理映射”章节创建了这些资源，所以本章暂时无需修改它们。
@@ -28,32 +28,32 @@ comments: true
 ```cpp
 void createDescriptorSetLayout() {
     ...
-
-    // samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-    samplerLayoutBinding.descriptorType = vk::DescriptorType::eSampler;
-
-    ...
-
+    // 采样器的描述符布局
+    vk::DescriptorSetLayoutBinding samplerLayoutBinding;
+    samplerLayoutBinding.binding = 0;
+    samplerLayoutBinding.descriptorType = vk::DescriptorType::eSampler; // 原先是 eCombinedImageSampler
+    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+    // 纹理图像的描述符布局
     vk::DescriptorSetLayoutBinding textureLayoutBinding;
-    textureLayoutBinding.binding = 3;
+    textureLayoutBinding.binding = 1;
     textureLayoutBinding.descriptorType = vk::DescriptorType::eSampledImage;
     textureLayoutBinding.descriptorCount = 1;
     textureLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
-    auto bindings = { 
-        uboLayoutBinding, 
+    const auto samplerLayoutBindings = { 
         samplerLayoutBinding, 
-        dynamicUboLayoutBinding,
         textureLayoutBinding
     };
 
+    vk::DescriptorSetLayoutCreateInfo samplerLayoutInfo;
+    samplerLayoutInfo.setBindings( samplerLayoutBindings );
+    
     ...
 }
 ```
 
 我们将采样器描述符的类型从 `eCombinedImageSampler` 变为了 `eSampler` ，因此图像需要独立的描述符，我们为此添加了 `textureLayoutBinding` ，它的类型是 `eSampledImage` ，表示专用于采样器的图像。
-
-`binding` 的 1 号位被采样器使用，0 和 2 号位被UBO使用，因此将纹理图像绑定在 3 号位。
 
 ### 2. 更新描述符池
 
@@ -66,12 +66,12 @@ void createDescriptorPool() {
     ...
 
     poolSizes[1].type = vk::DescriptorType::eSampler; // changed
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolSizes[1].descriptorCount = 1;
 
     ...
 
     poolSizes[3].type = vk::DescriptorType::eSampledImage;
-    poolSizes[3].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolSizes[3].descriptorCount = 1;
 
     ...
 }
@@ -86,38 +86,26 @@ void createDescriptorPool() {
 void createDescriptorSets() {
     ......
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        ......
+    vk::DescriptorImageInfo samplerInfo;
+    samplerInfo.sampler = m_textureSampler;
 
-        // 删除原先的 imageInfo;
+    vk::DescriptorImageInfo textureInfo;
+    textureInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+    textureInfo.imageView = m_textureImageView;
 
-        vk::DescriptorImageInfo samplerInfo;
-        samplerInfo.sampler = m_textureSampler;
+    std::array<vk::WriteDescriptorSet, 2> combinedDescriptorWrites;
+    combinedDescriptorWrites[0].dstSet = m_combinedDescriptorSet;
+    combinedDescriptorWrites[0].dstBinding = 0;
+    combinedDescriptorWrites[0].dstArrayElement = 0;
+    combinedDescriptorWrites[0].descriptorType = vk::DescriptorType::eSampler;
+    combinedDescriptorWrites[0].setImageInfo(samplerInfo);
+    combinedDescriptorWrites[1].dstSet = m_combinedDescriptorSet;
+    combinedDescriptorWrites[1].dstBinding = 1;
+    combinedDescriptorWrites[1].dstArrayElement = 0;
+    combinedDescriptorWrites[1].descriptorType = vk::DescriptorType::eSampledImage;
+    combinedDescriptorWrites[1].setImageInfo(textureInfo);
 
-        ......
-
-        vk::DescriptorImageInfo textureInfo;
-        textureInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        textureInfo.imageView = m_textureImageView;
-
-        ......
-
-        descriptorWrites[1].dstSet = m_descriptorSets[i];
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = vk::DescriptorType::eSampler;
-        descriptorWrites[1].setImageInfo(samplerInfo);
-
-        ......
-
-        descriptorWrites[3].dstSet = m_descriptorSets[i];
-        descriptorWrites[3].dstBinding = 3;
-        descriptorWrites[3].dstArrayElement = 0;
-        descriptorWrites[3].descriptorType = vk::DescriptorType::eSampledImage;
-        descriptorWrites[3].setImageInfo(textureInfo);
-
-        m_device.updateDescriptorSets(descriptorWrites, nullptr);
-    }
+    m_device.updateDescriptorSets(combinedDescriptorWrites, nullptr);
 }
 ```
 
@@ -128,8 +116,8 @@ void createDescriptorSets() {
 ```glsl
 ......
 
-layout(binding = 1) uniform sampler texSampler;
-layout(binding = 3) uniform texture2D texImage;
+layout(set = 1, binding = 0) uniform sampler texSampler;
+layout(set = 1, binding = 1) uniform texture2D texImage;
 
 ......
 
@@ -152,8 +140,9 @@ void main() {
 
 ## **增加模型**
 
-上面的内容虽然使用了分离的采样器和图像，但提醒不出分离的好处。
-下面我们添加一个带纹理的模型，以便更好的演示。
+上面的内容虽然使用了分离的采样器和图像，但体现不出分离的好处。
+
+下面我们添加一个带纹理的模型，顺便展示数组类型的描述符。
 
 ### 1. 下载模型
 
@@ -172,8 +161,8 @@ void main() {
 首先增加两行常量，用于记录模型路径：
 
 ```cpp
-inline static const std::string CRATE_OBJ_PATH = "models/crate.obj";
-inline static const std::string CRATE_TEXTURE_PATH = "textures/crate.jpg";
+const std::string CRATE_OBJ_PATH = "models/crate.obj";
+const std::string CRATE_TEXTURE_PATH = "textures/crate.jpg";
 ```
 
 在 `initVulkan` 函数中使用命令读取模型：
@@ -188,14 +177,14 @@ loadModel(CRATE_OBJ_PATH);
 
 ```cpp
 commandBuffer.drawIndexed( // draw the bunny
-    m_firstIndices[2] - m_firstIndices[1],
+    m_indexCount[1],
     BUNNY_NUMBER,
     m_firstIndices[1],
-    0, 
+    0,
     1
 );
 commandBuffer.drawIndexed( // draw the crate
-    static_cast<uint32_t>(m_indices.size() - m_firstIndices[2]),
+    m_indexCount[2],
     1,
     m_firstIndices[2],
     0,
@@ -234,9 +223,9 @@ void initInstanceDatas() {
 
 ```cpp
 void initDynamicUboMatrices() {
-    m_dynamicUboMatrices.push_back(glm::mat4(1.0f));
-    m_dynamicUboMatrices.push_back(glm::mat4(1.0f));
-    m_dynamicUboMatrices.push_back(glm::mat4(1.0f));
+    m_dynamicUboMatrices.emplace_back(1.0f);
+    m_dynamicUboMatrices.emplace_back(1.0f);
+    m_dynamicUboMatrices.emplace_back(1.0f);
 }
 ```
 
@@ -245,25 +234,18 @@ void initDynamicUboMatrices() {
 ```cpp
 dynamicOffset = 2 * sizeof(glm::mat4);
 commandBuffer.bindDescriptorSets( // 保持模型静止
-    vk::PipelineBindPoint::eGraphics, 
+    vk::PipelineBindPoint::eGraphics,
     m_pipelineLayout,
     0,
-    *m_descriptorSets[m_currentFrame],
+    descriptorSets,
     dynamicOffset
 );
-enableTexture = 0;
-commandBuffer.pushConstants<uint32_t>( // 暂时不附加纹理
-    m_pipelineLayout,
-    vk::ShaderStageFlagBits::eFragment,
-    0,
-    enableTexture
-);
-commandBuffer.drawIndexed( // 绘制 crate
-    static_cast<uint32_t>(m_indices.size() - m_firstIndices[2]),
+commandBuffer.drawIndexed( // draw the crate
+    m_indexCount[2],
     1,
     m_firstIndices[2],
     0,
-    BUNNY_NUMBER + 1
+    BUNNY_NUMBER + 1  // 实例索引
 );
 ```
 
@@ -281,7 +263,7 @@ commandBuffer.drawIndexed( // 绘制 crate
 现在修改成员变量，将纹理资源用可变长数组包装：
 
 ```cpp
-std::vector<vk::raii::DeviceMemory> m_textureImageMemory;
+std::vector<vk::raii::DeviceMemory> m_textureImageMemories;
 std::vector<vk::raii::Image> m_textureImages;
 std::vector<vk::raii::ImageView> m_textureImageViews;
 ```
@@ -298,6 +280,7 @@ void createTextureImage(const std::string& texturePath) {
     
     ...
 
+    // 临时存放纹理图像的缓冲区，创建后移动到成员变量的数组中
     vk::raii::DeviceMemory tmpTextureBufferMemory{ nullptr };
     vk::raii::Image tmpTextureBuffer{ nullptr };
 
@@ -326,7 +309,7 @@ void createTextureImage(const std::string& texturePath) {
     );
 
     m_textureImages.emplace_back( std::move(tmpTextureBuffer) );
-    m_textureImageMemory.emplace_back( std::move(tmpTextureBufferMemory) );
+    m_textureImageMemories.emplace_back( std::move(tmpTextureBufferMemory) );
 }
 ```
 
@@ -347,7 +330,7 @@ void initVulkan() {
 
 ```cpp
 void createTextureImageView() {
-    for (vk::raii::Image& image : m_textureImages) {
+    for (const auto& image : m_textureImages) {
         m_textureImageViews.emplace_back(
             createImageView(
                 *image, 
@@ -380,7 +363,7 @@ void createDescriptorSetLayout() {
 void createDescriptorPool() {
     ......
     poolSizes[3].type = vk::DescriptorType::eSampledImage;
-    poolSizes[3].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 2);
+    poolSizes[3].descriptorCount = 2;
     ......
 }
 ```
@@ -400,11 +383,11 @@ void createDescriptorSets() {
 
     ......
 
-    descriptorWrites[3].dstSet = m_descriptorSets[i];
-    descriptorWrites[3].dstBinding = 3;
-    descriptorWrites[3].dstArrayElement = 0;
-    descriptorWrites[3].descriptorType = vk::DescriptorType::eSampledImage;
-    descriptorWrites[3].setImageInfo(textureInfos);
+    combinedDescriptorWrites[1].dstSet = m_combinedDescriptorSet;
+    combinedDescriptorWrites[1].dstBinding = 1;
+    combinedDescriptorWrites[1].dstArrayElement = 0; // 写入数组的开始索引而非元素数量，保持 0 不变
+    combinedDescriptorWrites[1].descriptorType = vk::DescriptorType::eSampledImage;
+    combinedDescriptorWrites[1].setImageInfo(textureInfos);
 
     ......
 }
@@ -416,7 +399,7 @@ void createDescriptorSets() {
 
 现在着色器已经可以访问到描述符数组，但在此之前，我们需要修改推送常量的值，允许 crate 模型进行纹理采样。
 
-我们还需要指定使用哪一个纹理，幸运的是我们的推送常量使用 `uint` ，可以写入序号，不幸的是纹理数组的索引从 0 开始，而我们使用无符号整数， 0 表示不需要纹理。
+我们还需要指定使用哪一个纹理，不幸的是我们的推送常量使用无复制整数 `uint` ，可以写入序号，但 0 表示不需要纹理。
 
 为此，我们修改管线布局中的命令缓冲设置，修改数据大小：
 
@@ -428,7 +411,7 @@ void createGraphicsPipeline() {
 }
 ```
 
-> 虽然 `int32_t` 和 `uint32_t` 一样大，`sizeof` 的效果相关，但代码的语义不同。
+> 虽然 `int32_t` 和 `uint32_t` 一样大，`sizeof` 的效果相关，但你依然应该修改。
 
 然后调整命令录制的代码，使用 `-1` 表示无需纹理，`>=0` 时表示纹理序号。
 
@@ -439,19 +422,24 @@ void recordCommandBuffer( ... ) {
     uint32_t dynamicOffset = 0;
     int32_t enableTexture = 0;  // 绘制房屋，纹理索引是 0
     commandBuffer.bindDescriptorSets( ... );
-    commandBuffer.pushConstants<uint32_t>( ... );
+    commandBuffer.pushConstants<int32_t>( ... ); // 修改模板形参为 int32_t
     commandBuffer.drawIndexed( ... );
 
     dynamicOffset = sizeof(glm::mat4);
     enableTexture = -1; // 绘制兔子，无纹理，索引用 -1
     commandBuffer.bindDescriptorSets( ... );
-    commandBuffer.pushConstants<uint32_t>( ... );
+    commandBuffer.pushConstants<int32_t>( ... );
     commandBuffer.drawIndexed( ... );
 
     dynamicOffset = 2 * sizeof(glm::mat4);
     enableTexture = 1;  // 绘制正方体，纹理索引是 1
     commandBuffer.bindDescriptorSets( ... );
-    commandBuffer.pushConstants<uint32_t>( ... );
+    commandBuffer.pushConstants<int32_t>(
+        m_pipelineLayout,
+        vk::ShaderStageFlagBits::eFragment,
+        0,              // offset
+        enableTexture   // value
+    );
     commandBuffer.drawIndexed( ... );
 
     ......
@@ -460,7 +448,7 @@ void recordCommandBuffer( ... ) {
 
 ### 6. 修改着色器
 
-我们需要修改片段着色器代码，因为我们使用了描述符数组，修改了推送常量类型，还要根据推送常量决定是否进行纹理采样。
+我们需要修改片段着色器代码，因为我们使用了描述符数组，还要根据推送常量决定是否进行纹理采样。
 
 ```glsl
 ...
@@ -469,8 +457,8 @@ layout(push_constant) uniform PushConstants {
     int enableTexture;
 } pc;
 
-layout(binding = 1) uniform sampler texSampler;
-layout(binding = 3) uniform texture2D texImage[2];
+layout(set = 1, binding = 0) uniform sampler texSampler;
+layout(set = 1, binding = 1) uniform texture2D texImage[2];
 
 ...
 
@@ -501,10 +489,10 @@ void main() {
 
 **[shader-CMake代码](../../codes/03/50_pushconstant/shaders/CMakeLists.txt)**
 
-**[shader-vert代码](../../codes/03/60_dynamicuniform/shaders/shader.vert)**
+**[shader-vert代码](../../codes/03/60_dynamicuniform/shaders/graphics.vert.glsl)**
 
-**[shader-frag代码](../../codes/03/70_separatesampler/shaders/shader.frag)**
+**[shader-frag代码](../../codes/03/70_separatesampler/shaders/graphics.frag.glsl)**
 
-**[shader-frag代码差异](../../codes/03/70_separatesampler/shaders/frag.diff)**
+**[shader-frag代码差异](../../codes/03/70_separatesampler/shaders/graphics.frag.diff)**
 
 ---

@@ -133,16 +133,3 @@ void createPipelineCache() {
 
 ---
 
-**[C++代码](../../codes/03/80_pipelinecache/main.cpp)**
-
-**[C++代码差异](../../codes/03/80_pipelinecache/main.diff)**
-
-**[根项目CMake代码](../../codes/03/50_pushconstant/CMakeLists.txt)**
-
-**[shader-CMake代码](../../codes/03/50_pushconstant/shaders/CMakeLists.txt)**
-
-**[shader-vert代码](../../codes/03/60_dynamicuniform/shaders/shader.vert)**
-
-**[shader-frag代码](../../codes/03/70_separatesampler/shaders/shader.frag)**
-
----

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 4.0.0)
 
 #################################################################################
-#### Set up the vcpkg toolchain, which must be done before the project() function. 
+#### Set up the vcpkg toolchain, which must be done before the project() function.
 # You can also set it up by default through the CMakePresets.json file
 # requires the VCPKG_ROOT environment variable
 # The TO_CMAKE_PATH here is used to convert back slashes to forward slashes
@@ -11,10 +11,10 @@ set(CMAKE_TOOLCHAIN_FILE "${VCPKG_CMAKE_PATH}/scripts/buildsystems/vcpkg.cmake")
 
 project(HelloVulkan LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 #################################################################################
-#### Search for Vulkan package. 
+#### Search for Vulkan package.
 # CMake provides FindVulkan support, but requires the VULKAN_SDK environment variable
 # Setting by default during Vulkan SDK installation, such as E: \ Vulkan \ 1.4.309.0
 find_package(Vulkan REQUIRED)
@@ -39,6 +39,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE tinyobjloader::tinyobjloader)
 #################################################################################
 
 #################################################################################
-#### shaders
+#### shader compilation
 add_subdirectory(shaders)
 #################################################################################

@@ -16,7 +16,7 @@ GPU 的计算能力可以用于图像处理、可见性测试、后期处理、�
 
 在开始实际的内容阅读之前，请下载下面的代码框架：
 
-**[点击下载](../../codes/03/90_compute/base_code.zip)**
+**[点击下载](../../codes/03/80_compute/base_code.zip)**
 
 编译并运行程序，你将看到以下内容：
 
@@ -816,20 +816,20 @@ void drawFrame() {
 
 ---
 
-**[C++代码](../../codes/03/90_compute/src/main.cpp)**
+**[C++代码](../../codes/03/80_compute/src/main.cpp)**
 
-**[C++代码差异](../../codes/03/90_compute/src/main.diff)**
+**[C++代码差异](../../codes/03/80_compute/src/main.diff)**
 
-**[根项目CMake代码](../../codes/03/90_compute/CMakeLists.txt)**
+**[根项目CMake代码](../../codes/03/80_compute/CMakeLists.txt)**
 
-**[shader-CMake代码](../../codes/03/90_compute/shaders/CMakeLists.txt)**
+**[shader-CMake代码](../../codes/03/80_compute/shaders/CMakeLists.txt)**
 
-**[shader-CMake代码差异](../../codes/03/90_compute/shaders/CMakeLists.diff)**
+**[shader-CMake代码差异](../../codes/03/80_compute/shaders/CMakeLists.diff)**
 
-**[shader-vert代码](../../codes/03/90_compute/shaders/shader.vert)**
+**[shader-vert代码](../../codes/03/80_compute/shaders/shader.vert)**
 
-**[shader-frag代码](../../codes/03/90_compute/shaders/shader.frag)**
+**[shader-frag代码](../../codes/03/80_compute/shaders/shader.frag)**
 
-**[shader-comp代码](../../codes/03/90_compute/shaders/shader.comp)**
+**[shader-comp代码](../../codes/03/80_compute/shaders/shader.comp)**
 
 ---

@@ -189,7 +189,7 @@ vk::Format findDepthFormat( const std::vector<vk::Format>& candidates ) const {
 }
 ```
 
-支持的格式取决于平铺模式 `till` 和用途 `Feature` ，我们可以通过物理设备的 `getFormatProperties` 函数获取需要的信息：
+支持的格式取决于平铺模式 `tiling` 和用途 `Feature` ，我们可以通过物理设备的 `getFormatProperties` 函数获取需要的信息：
 
 ```cpp
 for(const vk::Format format : candidates) {

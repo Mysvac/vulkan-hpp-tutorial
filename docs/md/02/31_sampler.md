@@ -172,7 +172,7 @@ samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
 现在不需要关心使用哪种寻址模式，因为本教程不会超出图像范围，这些模式的效果都一样。
 不过需要说明的是， `eRepeat` 可能是最常用的模式，因为它在绘制地面/墙体等纹理时很好用。
 
-下面设置是否启用各向异性性过滤(anisotropy filter)。
+下面设置是否启用各向异性过滤(anisotropy filter)。
 除非你对性能要求极高而图像效果要求较低，否则没理由不启用它。
 
 ```cpp

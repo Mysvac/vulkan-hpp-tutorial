@@ -89,7 +89,7 @@ void createVertexBuffer() {
 
 ## **内存需求**
 
-虽然缓冲已经创建了，但它实际还未分配任何内存。分配内存的第一步是查询他的内存需求量：
+虽然缓冲已经创建了，但它实际还未分配任何内存。分配内存的第一步是查询它的内存需求量：
 
 ```cpp
 const vk::MemoryRequirements memRequirements = m_vertexBuffer.getMemoryRequirements();

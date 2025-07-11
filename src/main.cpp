@@ -9,6 +9,7 @@
 #include <limits>
 #include <algorithm>
 #include <chrono>
+#include <random>
 
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
@@ -28,7 +29,13 @@ constexpr uint32_t HEIGHT = 600;
 const std::string MODEL_PATH = "models/viking_room.obj";
 const std::string TEXTURE_PATH = "textures/viking_room.png";
 
+const std::string CRATE_OBJ_PATH = "models/crate.obj";
+const std::string CRATE_TEXTURE_PATH = "textures/crate.jpg";
+
+const std::string BUNNY_PATH = "models/bunny.obj";
+
 constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+constexpr int BUNNY_NUMBER = 5;
 
 constexpr std::array<const char*,1> REQUIRED_LAYERS {
     "VK_LAYER_KHRONOS_validation"
@@ -96,9 +103,31 @@ struct Vertex {
 };
 
 struct UniformBufferObject {
-    glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
+};
+
+struct InstanceData {
+    glm::mat4 model;
+
+    static vk::VertexInputBindingDescription getBindingDescription() {
+        vk::VertexInputBindingDescription bindingDescription;
+        bindingDescription.binding = 1; // binding 1 for instance data
+        bindingDescription.stride = sizeof(InstanceData);
+        bindingDescription.inputRate = vk::VertexInputRate::eInstance;
+
+        return bindingDescription;
+    }
+    static std::array<vk::VertexInputAttributeDescription, 4>  getAttributeDescriptions() {
+        std::array<vk::VertexInputAttributeDescription, 4> attributeDescriptions;
+        for(uint32_t i = 0; i < 4; ++i) {
+            attributeDescriptions[i].binding = 1; // binding 1 for instance data
+            attributeDescriptions[i].location = 3 + i; // location 3, 4, 5, 6
+            attributeDescriptions[i].format = vk::Format::eR32G32B32A32Sfloat;
+            attributeDescriptions[i].offset = sizeof(glm::vec4) * i;
+        }
+        return attributeDescriptions;
+    }
 };
 
 class HelloTriangleApplication {
@@ -147,17 +176,26 @@ private:
     bool m_framebufferResized = false;
     std::vector<Vertex> m_vertices;
     std::vector<uint32_t> m_indices;
+    std::vector<uint32_t> m_firstIndices;
+    std::vector<uint32_t> m_indexCount;
+    std::vector<InstanceData> m_instanceDatas;
+    std::vector<glm::mat4> m_dynamicUboMatrices;
     vk::raii::DeviceMemory m_vertexBufferMemory{ nullptr };
     vk::raii::Buffer m_vertexBuffer{ nullptr };
+    vk::raii::DeviceMemory m_instanceBufferMemory{ nullptr };
+    vk::raii::Buffer m_instanceBuffer{ nullptr };
     vk::raii::DeviceMemory m_indexBufferMemory{ nullptr };
     vk::raii::Buffer m_indexBuffer{ nullptr };
     std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
     std::vector<vk::raii::Buffer> m_uniformBuffers;
     std::vector<void*> m_uniformBuffersMapped;
+    std::vector<vk::raii::DeviceMemory> m_dynamicUniformBuffersMemory;
+    std::vector<vk::raii::Buffer> m_dynamicUniformBuffers;
+    std::vector<void*> m_dynamicUniformBuffersMapped;
     uint32_t m_mipLevels{};
-    vk::raii::DeviceMemory m_textureImageMemory{ nullptr };
-    vk::raii::Image m_textureImage{ nullptr };
-    vk::raii::ImageView m_textureImageView{ nullptr };
+    std::vector<vk::raii::DeviceMemory> m_textureImageMemories;
+    std::vector<vk::raii::Image> m_textureImages;
+    std::vector<vk::raii::ImageView> m_textureImageViews;
     vk::raii::Sampler m_textureSampler{ nullptr };
     vk::raii::DescriptorPool m_descriptorPool{ nullptr };
     std::vector<vk::raii::DescriptorSet> m_descriptorSets;
@@ -205,11 +243,18 @@ private:
         createColorResources();
         createFramebuffers();
         createSyncObjects();
-        loadModel();
+        loadModel(MODEL_PATH);
+        loadModel(BUNNY_PATH);
+        loadModel(CRATE_OBJ_PATH);
+        initInstanceDatas();
+        initDynamicUboMatrices();
         createVertexBuffer();
+        createInstanceBuffer();
         createIndexBuffer();
         createUniformBuffers();
-        createTextureImage();
+        createDynamicUniformBuffers();
+        createTextureImage(TEXTURE_PATH);
+        createTextureImage(CRATE_TEXTURE_PATH);
         createTextureImageView();
         createTextureSampler();
         createDescriptorPool();
@@ -225,6 +270,10 @@ private:
     }
 
     void cleanup() {
+        for(const auto& it : m_dynamicUniformBuffersMemory){
+            it.unmapMemory();
+        }
+
         for(const auto& it : m_uniformBuffersMemory){
             it.unmapMemory();
         }
@@ -660,9 +709,27 @@ private:
         dynamicState.setDynamicStates( dynamicStates );
 
         vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
-        const auto bindingDescription = Vertex::getBindingDescription();
-        const auto attributeDescriptions = Vertex::getAttributeDescriptions();
-        vertexInputInfo.setVertexBindingDescriptions(bindingDescription);
+        const auto vertexBindingDescription = Vertex::getBindingDescription();
+        const auto vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
+        const auto instanceBindingDescription = InstanceData::getBindingDescription();
+        const auto instanceAttributeDescriptions = InstanceData::getAttributeDescriptions();
+
+        std::vector<vk::VertexInputBindingDescription> bindingDescriptions = {
+            vertexBindingDescription,
+            instanceBindingDescription
+        };
+
+        std::vector<vk::VertexInputAttributeDescription> attributeDescriptions(
+            vertexAttributeDescriptions.begin(),
+            vertexAttributeDescriptions.end()
+        );
+        attributeDescriptions.insert(
+            attributeDescriptions.end(),
+            instanceAttributeDescriptions.begin(),
+            instanceAttributeDescriptions.end()
+        );
+
+        vertexInputInfo.setVertexBindingDescriptions(bindingDescriptions);
         vertexInputInfo.setVertexAttributeDescriptions(attributeDescriptions);
 
         vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
@@ -696,8 +763,13 @@ private:
         colorBlending.logicOp = vk::LogicOp::eCopy;
         colorBlending.setAttachments( colorBlendAttachment );
 
+        vk::PushConstantRange pushConstantRange;
+        pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eFragment;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = sizeof(int32_t);
+
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
-        // 获取内部句柄的数组
+        pipelineLayoutInfo.setPushConstantRanges( pushConstantRange );
         const std::vector<vk::DescriptorSetLayout> descriptorSetLayouts(m_descriptorSetLayouts.begin(), m_descriptorSetLayouts.end());
         pipelineLayoutInfo.setSetLayouts(descriptorSetLayouts);
         m_pipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
@@ -774,19 +846,81 @@ private:
         );
         commandBuffer.setScissor(0, scissor);
 
-        commandBuffer.bindVertexBuffers( 0, *m_vertexBuffer, vk::DeviceSize{ 0 } );
+        const std::array<vk::Buffer,2> vertexBuffers { m_vertexBuffer, m_instanceBuffer };
+        constexpr std::array<vk::DeviceSize,2> offsets { 0, 0 };
+        commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
         commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint32 );
 
         const std::array<vk::DescriptorSet,2> descriptorSets{ m_descriptorSets[m_currentFrame], m_combinedDescriptorSet };
+
+        uint32_t dynamicOffset = 0;
+        int32_t enableTexture = 0;
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics,
             m_pipelineLayout,
             0,
             descriptorSets,
-            nullptr
+            dynamicOffset
+        );
+        commandBuffer.pushConstants<int32_t>(
+            m_pipelineLayout,
+            vk::ShaderStageFlagBits::eFragment,
+            0,              // offset
+            enableTexture   // value
+        );
+        commandBuffer.drawIndexed(
+            m_indexCount[0],
+            1,
+            m_firstIndices[0],
+            0,
+            0
         );
 
-        commandBuffer.drawIndexed(static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
+        dynamicOffset = sizeof(glm::mat4);
+        enableTexture = -1;
+        commandBuffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics,
+            m_pipelineLayout,
+            0,
+            descriptorSets,
+            dynamicOffset
+        );
+        commandBuffer.pushConstants<int32_t>(
+            m_pipelineLayout,
+            vk::ShaderStageFlagBits::eFragment,
+            0,              // offset
+            enableTexture   // value
+        );
+        commandBuffer.drawIndexed(
+            m_indexCount[1],
+            BUNNY_NUMBER,
+            m_firstIndices[1],
+            0,
+            1
+        );
+
+        dynamicOffset = 2 * sizeof(glm::mat4);
+        enableTexture = 1;
+        commandBuffer.bindDescriptorSets( // 保持模型静止
+            vk::PipelineBindPoint::eGraphics,
+            m_pipelineLayout,
+            0,
+            descriptorSets,
+            dynamicOffset
+        );
+        commandBuffer.pushConstants<uint32_t>(
+            m_pipelineLayout,
+            vk::ShaderStageFlagBits::eFragment,
+            0,              // offset
+            enableTexture   // value
+        );
+        commandBuffer.drawIndexed( // draw the crate
+            m_indexCount[2],
+            1,
+            m_firstIndices[2],
+            0,
+            BUNNY_NUMBER + 1
+        );
 
         commandBuffer.endRenderPass();
         commandBuffer.end();
@@ -825,6 +959,7 @@ private:
         m_device.resetFences( *m_inFlightFences[m_currentFrame] );
 
         updateUniformBuffer(m_currentFrame);
+        updateDynamicUniformBuffer(m_currentFrame);
 
         m_commandBuffers[m_currentFrame].reset();
         recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
@@ -1000,18 +1135,36 @@ private:
         uboLayoutBinding.descriptorCount = 1;
         uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
 
+        vk::DescriptorSetLayoutBinding dynamicUboLayoutBinding;
+        dynamicUboLayoutBinding.binding = 1;
+        dynamicUboLayoutBinding.descriptorType = vk::DescriptorType::eUniformBufferDynamic;
+        dynamicUboLayoutBinding.descriptorCount = 1;
+        dynamicUboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+
+        const auto uboLayoutBindings = { uboLayoutBinding, dynamicUboLayoutBinding };
         vk::DescriptorSetLayoutCreateInfo uboLayoutInfo;
-        uboLayoutInfo.setBindings( uboLayoutBinding );
+        uboLayoutInfo.setBindings( uboLayoutBindings );
         m_descriptorSetLayouts.emplace_back( m_device.createDescriptorSetLayout( uboLayoutInfo ) );
 
         vk::DescriptorSetLayoutBinding samplerLayoutBinding;
         samplerLayoutBinding.binding = 0;
-        samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        samplerLayoutBinding.descriptorType = vk::DescriptorType::eSampler; // eCombinedImageSampler
         samplerLayoutBinding.descriptorCount = 1;
         samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+        vk::DescriptorSetLayoutBinding textureLayoutBinding;
+        textureLayoutBinding.binding = 1;
+        textureLayoutBinding.descriptorType = vk::DescriptorType::eSampledImage;
+        textureLayoutBinding.descriptorCount = 2;
+        textureLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+        const auto samplerLayoutBindings = {
+            samplerLayoutBinding,
+            textureLayoutBinding
+        };
+
         vk::DescriptorSetLayoutCreateInfo samplerLayoutInfo;
 
-        samplerLayoutInfo.setBindings( samplerLayoutBinding );
+        samplerLayoutInfo.setBindings( samplerLayoutBindings );
         m_descriptorSetLayouts.emplace_back( m_device.createDescriptorSetLayout( samplerLayoutInfo ) );
     }
     void createUniformBuffers() {
@@ -1087,16 +1240,6 @@ private:
         front = glm::normalize(front);
 
         UniformBufferObject ubo{};
-        ubo.model = glm::rotate(
-            glm::mat4(1.0f),
-            glm::radians(-90.0f),
-            glm::vec3(1.0f, 0.0f, 0.0f)
-        );
-        ubo.model *= glm::rotate(
-            glm::mat4(1.0f),
-            glm::radians(-90.0f),
-            glm::vec3(0.0f, 0.0f, 1.0f)
-        );
         ubo.view = glm::lookAt(
             m_cameraPos,
             m_cameraPos + front,
@@ -1113,11 +1256,15 @@ private:
         memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
     void createDescriptorPool() {
-        std::array<vk::DescriptorPoolSize, 2> poolSizes;
+        std::array<vk::DescriptorPoolSize, 4> poolSizes;
         poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
         poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-        poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
+        poolSizes[1].type = vk::DescriptorType::eSampler; // changed
         poolSizes[1].descriptorCount = 1;
+        poolSizes[2].type = vk::DescriptorType::eUniformBufferDynamic;
+        poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+        poolSizes[3].type = vk::DescriptorType::eSampledImage;
+        poolSizes[3].descriptorCount = 2;
 
         vk::DescriptorPoolCreateInfo poolInfo;
         poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
@@ -1140,33 +1287,53 @@ private:
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(UniformBufferObject);
 
-            vk::WriteDescriptorSet descriptorWrite;
-            descriptorWrite.dstSet = m_descriptorSets[i];
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrite.setBufferInfo(bufferInfo);
+            vk::DescriptorBufferInfo dynamicBufferInfo;
+            dynamicBufferInfo.buffer = m_dynamicUniformBuffers[i];
+            dynamicBufferInfo.offset = 0;
+            dynamicBufferInfo.range = sizeof(glm::mat4);
 
-            m_device.updateDescriptorSets(descriptorWrite, nullptr);
+            std::array<vk::WriteDescriptorSet, 2> descriptorWrites;
+            descriptorWrites[0].dstSet = m_descriptorSets[i];
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[0].setBufferInfo(bufferInfo);
+            descriptorWrites[1].dstSet = m_descriptorSets[i];
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = vk::DescriptorType::eUniformBufferDynamic;
+            descriptorWrites[1].setBufferInfo(dynamicBufferInfo);
+
+            m_device.updateDescriptorSets(descriptorWrites, nullptr);
         }
 
         allocInfo.setSetLayouts(*m_descriptorSetLayouts[1]);
         std::vector<vk::raii::DescriptorSet> sets = m_device.allocateDescriptorSets(allocInfo);
         m_combinedDescriptorSet =  std::move(sets.at(0));
 
-        vk::DescriptorImageInfo imageInfo;
-        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfo.imageView = m_textureImageView;
-        imageInfo.sampler = m_textureSampler;
+        vk::DescriptorImageInfo samplerInfo;
+        samplerInfo.sampler = m_textureSampler;
 
-        vk::WriteDescriptorSet combinedDescriptorWrite;
-        combinedDescriptorWrite.dstSet = m_combinedDescriptorSet;
-        combinedDescriptorWrite.dstBinding = 0;
-        combinedDescriptorWrite.dstArrayElement = 0;
-        combinedDescriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        combinedDescriptorWrite.setImageInfo(imageInfo);
+        std::array<vk::DescriptorImageInfo, 2> textureInfos;
+        for (size_t index = 0; auto& info : textureInfos) {
+            info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            info.imageView = m_textureImageViews[index];
+            ++index;
+        }
 
-        m_device.updateDescriptorSets(combinedDescriptorWrite, nullptr);
+        std::array<vk::WriteDescriptorSet, 2> combinedDescriptorWrites;
+        combinedDescriptorWrites[0].dstSet = m_combinedDescriptorSet;
+        combinedDescriptorWrites[0].dstBinding = 0;
+        combinedDescriptorWrites[0].dstArrayElement = 0;
+        combinedDescriptorWrites[0].descriptorType = vk::DescriptorType::eSampler;
+        combinedDescriptorWrites[0].setImageInfo(samplerInfo);
+        combinedDescriptorWrites[1].dstSet = m_combinedDescriptorSet;
+        combinedDescriptorWrites[1].dstBinding = 1;
+        combinedDescriptorWrites[1].dstArrayElement = 0;
+        combinedDescriptorWrites[1].descriptorType = vk::DescriptorType::eSampledImage;
+        combinedDescriptorWrites[1].setImageInfo(textureInfos);
+
+        m_device.updateDescriptorSets(combinedDescriptorWrites, nullptr);
     }
     /////////////////////////////////////////////////////////////
 
@@ -1412,12 +1579,15 @@ private:
 
         endSingleTimeCommands( commandBuffer );
     }
-    void createTextureImage() {
+    void createTextureImage(const std::string& texturePath) {
         int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        stbi_uc* pixels = stbi_load(texturePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         if (!pixels) throw std::runtime_error("failed to load texture image!");
         const vk::DeviceSize imageSize = texWidth * texHeight * 4;
         m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+
+        vk::raii::DeviceMemory tmpTextureBufferMemory{ nullptr };
+        vk::raii::Image tmpTextureBuffer{ nullptr };
 
         vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
         vk::raii::Buffer stagingBuffer{ nullptr };
@@ -1448,12 +1618,12 @@ private:
             vk::ImageUsageFlagBits::eTransferDst |
             vk::ImageUsageFlagBits::eSampled,
             vk::MemoryPropertyFlagBits::eDeviceLocal,
-            m_textureImage,
-            m_textureImageMemory
+            tmpTextureBuffer,
+            tmpTextureBufferMemory
         );
 
         transitionImageLayout(
-            m_textureImage,
+            tmpTextureBuffer,
             vk::Format::eR8G8B8A8Srgb,
             vk::ImageLayout::eUndefined,
             vk::ImageLayout::eTransferDstOptimal,
@@ -1462,18 +1632,21 @@ private:
 
         copyBufferToImage(
             stagingBuffer,
-            m_textureImage,
+            tmpTextureBuffer,
             static_cast<uint32_t>(texWidth),
             static_cast<uint32_t>(texHeight)
         );
 
         generateMipmaps(
-            m_textureImage,
+            tmpTextureBuffer,
             vk::Format::eR8G8B8A8Srgb,
             texWidth,
             texHeight,
             m_mipLevels
         );
+
+        m_textureImages.emplace_back( std::move(tmpTextureBuffer) );
+        m_textureImageMemories.emplace_back( std::move(tmpTextureBufferMemory) );
     }
     vk::raii::ImageView createImageView(
         const vk::Image image,
@@ -1494,12 +1667,16 @@ private:
         return m_device.createImageView(viewInfo);
     }
     void createTextureImageView() {
-        m_textureImageView = createImageView(
-            m_textureImage,
-            vk::Format::eR8G8B8A8Srgb,
-            vk::ImageAspectFlagBits::eColor,
-            m_mipLevels
-        );
+        for (const auto& image : m_textureImages) {
+            m_textureImageViews.emplace_back(
+                createImageView(
+                    *image,
+                    vk::Format::eR8G8B8A8Srgb,
+                    vk::ImageAspectFlagBits::eColor,
+                    m_mipLevels
+                )
+            );
+        }
     }
     void createTextureSampler() {
         vk::SamplerCreateInfo samplerInfo;
@@ -1562,16 +1739,16 @@ private:
 
     /////////////////////////////////////////////////////////////
     /// 3D Model
-    void loadModel() {
+    void loadModel(const std::string& model_path) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
         std::string warn, err;
 
-        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model_path.c_str())) {
             throw std::runtime_error(warn + err);
         }
-
+        m_firstIndices.push_back(m_indices.size());
         std::map<Vertex, uint32_t> uniqueVertices;
 
         for (const auto& shape : shapes) {
@@ -1584,10 +1761,12 @@ private:
                     attrib.vertices[3 * index.vertex_index + 2]
                 };
 
-                vertex.texCoord = {
-                    attrib.texcoords[2 * index.texcoord_index + 0],
-                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-                };
+                if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
+                    vertex.texCoord = {
+                        attrib.texcoords[2 * index.texcoord_index],
+                        1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                    };
+                }
 
                 vertex.color = {1.0f, 1.0f, 1.0f};
 
@@ -1599,7 +1778,7 @@ private:
 
             }
         }
-
+        m_indexCount.push_back(m_indices.size() - m_firstIndices.back());
         // std::println("Vertex count: {}", m_vertices.size());
     }
     /////////////////////////////////////////////////////////////
@@ -1628,6 +1807,119 @@ private:
         );
     }
     /////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////
+    /// instance data
+    void initInstanceDatas() {
+        InstanceData instanceData{};
+        m_instanceDatas.reserve(BUNNY_NUMBER + 1);
+        instanceData.model = glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(-90.0f),
+            glm::vec3(1.0f, 0.0f, 0.0f)
+        ) *  glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(-90.0f),
+            glm::vec3(0.0f, 0.0f, 1.0f)
+        );
+        m_instanceDatas.emplace_back( instanceData );
+        std::random_device rd;
+        std::default_random_engine gen(rd());
+        std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
+        for (int i = 0; i < BUNNY_NUMBER; ++i) {
+            instanceData.model = glm::translate(
+                glm::mat4(1.0f),
+                glm::vec3(dis(gen), dis(gen), dis(gen))
+            ) * glm::rotate(
+                glm::mat4(1.0f),
+                glm::radians(dis(gen) * 180.0f),
+                glm::vec3(0.0f, 1.0f, 0.0f)
+            );
+            m_instanceDatas.emplace_back( instanceData );
+        }
+        instanceData.model = glm::translate(
+            glm::mat4(1.0f),
+            glm::vec3(0.0f, 0.0f, 1.2f)
+        ) * glm::scale(
+            glm::mat4(1.0f),
+            glm::vec3(0.2f, 0.2f, 0.2f)
+        );
+        m_instanceDatas.emplace_back( instanceData );
+    }
+    void createInstanceBuffer() {
+        const vk::DeviceSize bufferSize = sizeof(InstanceData) * m_instanceDatas.size();
+
+        vk::raii::DeviceMemory stagingBufferMemory{ nullptr };
+        vk::raii::Buffer stagingBuffer{ nullptr };
+        createBuffer(bufferSize,
+            vk::BufferUsageFlagBits::eTransferSrc,
+            vk::MemoryPropertyFlagBits::eHostVisible |
+            vk::MemoryPropertyFlagBits::eHostCoherent,
+            stagingBuffer,
+            stagingBufferMemory
+        );
+
+        void* data = stagingBufferMemory.mapMemory(0, bufferSize);
+        memcpy(data, m_instanceDatas.data(), static_cast<size_t>(bufferSize));
+        stagingBufferMemory.unmapMemory();
+
+        createBuffer(bufferSize,
+            vk::BufferUsageFlagBits::eTransferDst |
+            vk::BufferUsageFlagBits::eVertexBuffer,
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            m_instanceBuffer,
+            m_instanceBufferMemory
+        );
+
+        copyBuffer(stagingBuffer, m_instanceBuffer, bufferSize);
+    }
+    void initDynamicUboMatrices() {
+        m_dynamicUboMatrices.emplace_back(1.0f);
+        m_dynamicUboMatrices.emplace_back(1.0f);
+        m_dynamicUboMatrices.emplace_back(1.0f);
+    }
+    void createDynamicUniformBuffers() {
+        const vk::DeviceSize bufferSize  = sizeof(glm::mat4) * m_dynamicUboMatrices.size();
+
+        m_dynamicUniformBuffers.reserve(MAX_FRAMES_IN_FLIGHT);
+        m_dynamicUniformBuffersMemory.reserve(MAX_FRAMES_IN_FLIGHT);
+        m_dynamicUniformBuffersMapped.reserve(MAX_FRAMES_IN_FLIGHT);
+
+        for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            m_dynamicUniformBuffers.emplace_back( nullptr );
+            m_dynamicUniformBuffersMemory.emplace_back( nullptr );
+            m_dynamicUniformBuffersMapped.emplace_back( nullptr );
+            createBuffer(bufferSize,
+                vk::BufferUsageFlagBits::eUniformBuffer,
+                vk::MemoryPropertyFlagBits::eHostVisible |
+                vk::MemoryPropertyFlagBits::eHostCoherent,
+                m_dynamicUniformBuffers[i],
+                m_dynamicUniformBuffersMemory[i]
+            );
+
+            m_dynamicUniformBuffersMapped[i] = m_dynamicUniformBuffersMemory[i].mapMemory(0, bufferSize);
+        }
+    }
+    void updateDynamicUniformBuffer(const uint32_t currentImage) {
+        static auto startTime = std::chrono::high_resolution_clock::now();
+        const auto currentTime = std::chrono::high_resolution_clock::now();
+        const float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        startTime = currentTime;
+
+        m_dynamicUboMatrices[1] = glm::rotate(
+            m_dynamicUboMatrices[1],
+            glm::radians(time * 60.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+
+        memcpy(
+            m_dynamicUniformBuffersMapped[currentImage],
+            m_dynamicUboMatrices.data(),
+            sizeof(glm::mat4) * m_dynamicUboMatrices.size()
+        );
+    }
+    /////////////////////////////////////////////////////////////
+
 };
 
 int main() {
