@@ -6,10 +6,6 @@ comments: true
 待重构与制作的内容：
 
 ```
-  - 基础功能:
-    ......
-    - 待重构:
-      - 计算着色器与SSBO: md/03/90_compute.md
   - 进阶功能:
     - C++模块化: md/04/00_cxxmodule.md # 待重构
     - 杂项:

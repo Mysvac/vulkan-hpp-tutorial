@@ -20,21 +20,26 @@ GPU 的计算能力可以用于图像处理、可见性测试、后期处理、�
 
 编译并运行程序，你将看到以下内容：
 
-![](../../images/0390/three_point.png)
+![three_point](../../images/0380/three_point.png)
 
 本代码基于“顶点缓冲”章节的最终代码，并做如下修改：
 
-1. 将顶点 `Vertex` 相关数据改名为了粒子 `Particle` 。
+1. 将顶点 `Vertex` 相关数据改名为了粒子 `Particle` ，并随机生成。
 2. 修改图形管线布局的输入装配设置，输入拓扑结构改成了点列表，以绘制粒子而非三角形
 3. 修改着色器，以绘制点集
 
+`main.cpp` 中提供了一个常量，用于控制粒子数量，你可以自行修改它：
+
+```cpp
+constexpr uint32_t PARTICLE_COUNT = 8192;
+```
+
 ## **粒子系统**
 
-本章将实现一个简单的基于 GPU 的粒子系统，用于演示计算着色器与 SSBO 的使用。
+本章将实现一个非常简单的基于 GPU 的粒子系统，用于演示计算着色器与 SSBO 的使用。
 
 > 你可以移动到页面最下方查看效果图。
 
-这种系统在许多游戏中都有使用，通常由数千个需要按逻辑帧速率更新的粒子组成。
 渲染这样的系统需要两个主要组件：顶点\(用顶点缓冲传递\)和更新它们的方式\(比如某种方程\)。
 
 “经典”的基于 CPU 的粒子系统会将粒子数据存于系统主存，然后使用 CPU 更新它们。
@@ -42,13 +47,11 @@ GPU 的计算能力可以用于图像处理、可见性测试、后期处理、�
 
 基于 GPU 的粒子系统不需要这种数据往返，计算着色器将直接更新 GPU 显存中的顶点数据，而此数据区可采用设备本地内存类型，从而获得最高性能。
 
-> 在具有专用计算队列的 GPU 上，可以并行执行计算任务和图像管线的渲染任务，这被称为“异步计算”，我们将在进阶章节介绍。
-
 ## **管线框图**
 
 计算着色器并非图形管线的一部分，让我们看看官方规范的 Vulkan 管线框图：
 
-![vulkan_pipeline_block_diagram](../../images/0390/vulkan_pipeline_block_diagram.png)
+![vulkan_pipeline_block_diagram](../../images/0380/vulkan_pipeline_block_diagram.png)
 
 左侧是我们熟悉的传统图形管线，中间是输入缓冲、描述符与附件，而计算着色器位于右上角。
 
@@ -58,65 +61,28 @@ GPU 的计算能力可以用于图像处理、可见性测试、后期处理、�
 
 ## **数据准备**
 
-Vulkan 提供了两种专用存储类型允许着色器**任意读取和写入缓存**，它们分别是：
+Vulkan 提供了两种专用存储类型允许着色器**任意读取和写入显存**，它们分别是：
 
 - 着色器存储缓冲对象\(Shader Storage Buffer Object, SSBO\)
 - 存储图像
 
-> 我们不会在本章中进行图像处理，但你应该知晓计算着色器也可以用于图像处理。
+> 我们不会在本章中进行图像处理，但你应该知晓计算着色器也可以用于图像。
 
 SSBO 类似于 Uniform 缓冲对象，但它可被着色器写入（UBO是着色器只读的），且可简单的将其他缓冲类型别名化为 SSBO，
 支持任意大的内存（仅受硬件限制）。
 
 SSBO 并非万能，它与 UBO 有不同的用处：
 
-| 类型 | SSBO | UBO |
-|-----------|--------|----------|
-| 内存类型 | 常为设备本地内存 | 常为主机可见内存 |
-| 着色器访问 | 可读可写 | 只读 | 
-| 着色器效率 | 慢\(需要支持随机访问\) | 快\(可常量缓存优化\) |
-| 主机\(CPU\)访问 | 常需通过暂存缓冲 | 常可直接拷贝内存资源 |
+| 类型          | SSBO           | UBO          |
+|-------------|----------------|--------------|
+| 内存类型        | 常为设备本地内存       | 常为主机可见内存     |
+| 着色器访问       | 可读可写           | 只读           | 
+| 着色器效率       | 较慢\(需要支持随机访问\) | 快\(可常量缓存优化\) |
+| 主机\(CPU\)访问 | 常需通过暂存缓冲       | 常可直接拷贝内存资源   |
 
-> 好消息是，将缓冲区标记为 SSBO 几乎不影响缓冲区原有功能的效率（比如作为顶点输入），只有在作为 SSBO 使用时读写较慢。
+好消息是，将缓冲区标记为 SSBO 几乎不影响缓冲区原有功能的效率（比如作为顶点输入），只有在作为 SSBO 使用时读写较慢。
 
-### 1. 生成粒子数据
-
-如果你仔细查看代码，会看到 `Particle` 参数里有个速度，我们会让计算着色器使用它并实时修改粒子缓冲区的数据。三个粒子肯定不够，现在添加一个成员常量记录需要的粒子数：
-
-```cpp
-static constexpr uint32_t PARTICLE_COUNT = 4096;
-```
-
-然后修改 `createParticleBuffer` ，现在使用随机生成的粒子数据：
-
-```cpp
-#include <random>
-......
-void createParticleBuffer() {
-    std::default_random_engine rndEngine(static_cast<unsigned>(time(nullptr)));
-    std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
-    std::vector<Particle> particles(PARTICLE_COUNT);
-    for (auto& particle : particles) {
-        float r = 0.25f * std::sqrt(rndDist(rndEngine));
-        float theta = rndDist(rndEngine) * 2.0f * 3.141592653f;
-        float x = r * std::cos(theta) * HEIGHT / WIDTH;
-        float y = r * std::sin(theta);
-        particle.pos = glm::vec2(x, y);
-        particle.velocity = glm::normalize(glm::vec2(x,y)) * 0.00025f;
-        particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
-    }
-    vk::DeviceSize bufferSize = sizeof(particles[0]) * particles.size();
-
-    ......
-}
-```
-
-> 这里将点随机分布在一个圆形区域中，且具有向外的初速度和随机色彩。
-
-注意我们直接使用了局部变量存放 `particles` ，因为数据上传后全权交给GPU处理，我们的程序不再需要记录它。
-现在你可以删除外部的 `particles` 变量。
-
-### 2. 创建缓冲区
+### 1. 创建缓冲区
 
 为了允许着色器修改缓冲，需要给创建信息添加一个 `usage` 标志位 `eStorageBuffer` ，它表示此缓冲可以用作“存储缓冲”。
 修改 `createParticleBuffer` 函数中粒子缓冲区的创建代码：
@@ -124,13 +90,12 @@ void createParticleBuffer() {
 ```cpp
 void createParticleBuffer() {
     ......
-    // 增加 eStorageBuffer 标志位
-    createBuffer(bufferSize, 
-        vk::BufferUsageFlagBits::eStorageBuffer |
+    createBuffer(bufferSize,
+        vk::BufferUsageFlagBits::eStorageBuffer | // 添加存储缓冲区标志
         vk::BufferUsageFlagBits::eTransferDst |
-        vk::BufferUsageFlagBits::eVertexBuffer, 
+        vk::BufferUsageFlagBits::eVertexBuffer,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
-        m_particleBuffer, 
+        m_particleBuffer,
         m_particleBufferMemory
     );
     ......
@@ -140,141 +105,49 @@ void createParticleBuffer() {
 着色器存储缓冲\(SSB\) 的创建方式就是这么简单，在缓冲区创建时添加一个 `usage` 标志位即可。
 此缓冲区现在既能使用原有的功能（比如这里作为顶点缓冲），还能作为 SSBO 使用。 
 
-之前的章节，顶点缓冲区的数据不会修改，因此只需要一个顶点输入缓冲区。
-现在我们会修改数据，一种较好的方案是为每个飞行中的帧都设置一个输入缓冲区，计算着色器将使用前一个缓冲的数据配合时间差更新当前缓冲。
+### 2. 数据竞争问题
 
-```cpp
-std::vector<vk::raii::DeviceMemory> m_particleBufferMemory;
-std::vector<vk::raii::Buffer> m_particleBuffers;
-......
-void createParticleBuffers() {
-    ......
+计算和渲染并不在同一个管线中，渲染需要读取粒子数据，而计算需要读写数据，我们需要避免数据竞争。
 
-    for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        m_particleBuffers.emplace_back(nullptr);
-        m_particleBufferMemory.emplace_back(nullptr);
-        createBuffer(bufferSize, 
-            vk::BufferUsageFlagBits::eStorageBuffer |
-            vk::BufferUsageFlagBits::eTransferDst |
-            vk::BufferUsageFlagBits::eVertexBuffer, 
-            vk::MemoryPropertyFlagBits::eDeviceLocal,
-            m_particleBuffers[i], 
-            m_particleBufferMemory[i]
-        );
-        copyBuffer(stagingBuffer, m_particleBuffers[i], bufferSize);
-    }
-}
-```
+一种方式是使用单个粒子缓冲区，通过同步原语（如围栏和信号量）保证计算和渲染顺序进行。
+这也是本节使用的方式，只需要额外增加一些信号量即可，非常简单。
 
-> 注意我们修改了函数名，你还需要自己调整一下 `initVulkan` 函数。
+另一种方式是使用双缓冲区，一个表示上一次的数据，一个表示本次的数据。
+渲染管线和计算管线都**读取**同一个缓冲区，但计算管线还需要将新数据**写入**另一个缓冲，这样二者可以同步进行，即“异步计算”，带来更好的性能。
 
-### 3. 修改命令录制
+作为一个挑战，你可以在完成本章的学习后，尝试实现这种更优性能的方式。
+我们会在章节最后给出一些提示，关于需要你实现的额外工作。
 
-我们修改了粒子缓冲区，现在需要修改 `recordCommandBuffer` 函数，输入绑定时使用第 `m_currentFrame` 个缓冲区，绘制时直接使用 `PARTICLE_COUNT` ：
 
-```cpp
-void recordCommandBuffer( ... ) {
-    ......
-    std::array<vk::Buffer,1> vertexBuffers { m_particleBuffers[m_currentFrame] };
-    std::array<vk::DeviceSize,1> offsets { 0 };
-    commandBuffer.bindVertexBuffers( 0, vertexBuffers, offsets );
+### 3. 时间差信息
 
-    commandBuffer.draw(PARTICLE_COUNT, 1, 0, 0);
-    ......
-}
-```
+每次更新粒子的位置，位置的差值应该是 `时间差 * 速度` 。
+计算着色器只需要读取此数据而无需写入，因此可以通过 UBO 传递时间差信息，也可以使用推送常量。
+本章选择使用后者，因为它更简单。
 
-> 注意是 `m_currentFrame` 不是 `imageIndex` 。
+推送常量直接在管线布局中声明，并在命令录制时绑定。我们还没有创建计算管线和对应的命令缓冲，因此将这些工作留到后面进行。
 
-### 4. 时间差信息
-
-每次更新粒子的位置，位置的差值应该是 `时间差\*速度` ，因此我们还需要通过一个 UBO 向计算着色器推送时间间隔信息。
-
-首先添加一个结构体：
-
-```cpp
-struct UniformBufferObject {
-    float deltaTime = 1.0f;
-};
-```
-
-创建 Uniform 缓冲区：
-
-```cpp
-......
-std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
-std::vector<vk::raii::Buffer> m_uniformBuffers;
-std::vector<void*> m_uniformBuffersMapped;
-......
-void initVulkan() {
-    ...
-    createParticleBuffers();
-    createUniformBuffers();
-    ...
-}
-......
-void cleanup() {
-    // 结束指针映射
-    for (const auto& memory : m_uniformBuffersMemory) {
-        memory.unmapMemory();
-    }
-    ...
-}
-......
-void createUniformBuffers() {
-    vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        m_uniformBuffers.emplace_back(nullptr);
-        m_uniformBuffersMemory.emplace_back(nullptr);
-        m_uniformBuffersMapped.emplace_back(nullptr);
-        createBuffer(
-            bufferSize,
-            vk::BufferUsageFlagBits::eUniformBuffer,
-            vk::MemoryPropertyFlagBits::eHostVisible | 
-            vk::MemoryPropertyFlagBits::eHostCoherent,
-            m_uniformBuffers[i],
-            m_uniformBuffersMemory[i]
-        );
-        m_uniformBuffersMapped[i] = m_uniformBuffersMemory[i].mapMemory(0, bufferSize);
-    }
-}
-```
-
-注意着色器只需要读取时间差数据，并不需要写入，所以没有必要使用 SSBO 。
-
-### 5. 更新时间差
-
-我们曾在 Uniform 缓冲章节，通过时间更新 MVP 矩阵。现在只需要获取时间差，更加简单：
+现在先创建一个函数，用于获取时间差数据：
 
 ```cpp
 #include <chrono>
-......
-void drawFrame() {
-    ......
-    updateUniformBuffer(m_currentFrame);
 
-    m_commandBuffers[m_currentFrame].reset();
-    recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
-    ......
-}
 ......
-void updateUniformBuffer(uint32_t currentImage) {
+
+static float getDeltaTime() {
     static auto lastTime = std::chrono::steady_clock::now();
-    auto currentTime = std::chrono::steady_clock::now();
-    float deltaTime = std::chrono::duration<float, std::chrono::milliseconds::period>(currentTime - lastTime).count();
+    const auto currentTime = std::chrono::steady_clock::now();
+    const float res =  std::chrono::duration<float, std::chrono::milliseconds::period>(currentTime - lastTime).count();
     lastTime = currentTime;
-    
-    UniformBufferObject ubo{ deltaTime };
-    memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+    return res;
 }
 ```
 
-> 注意这里是 `milliseconds` ，如果写成 `seconds` ，物体会动的非常慢。
+> 注意这里是 `milliseconds` ，如果写成 `seconds` ，物体的移动会非常慢。
 
-### 6. 描述符
+### 4. 描述符
 
-着色器需要通过描述符才能访问内存资源，现在创建描述符布局：（变量可以声明在关系布局上方）
+着色器需要通过描述符才能访问内存资源，现在创建描述符布局：（可以声明在管线布局上方）
 
 ```cpp
 ......
@@ -286,31 +159,22 @@ void initVulkan() {
     createGraphicsPipeline();
     ...
 }
+
 ......
+
 void createDescriptorSetLayout() {
-    std::array<vk::DescriptorSetLayoutBinding, 3> layoutBindings;
-    // 绑定0：Uniform Buffer 传输时间差
-    layoutBindings[0].binding = 0;
-    layoutBindings[0].descriptorCount = 1;
-    layoutBindings[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-    layoutBindings[0].stageFlags = vk::ShaderStageFlagBits::eCompute;
-    // 绑定1：Storage Buffer 粒子数据 ，1号位用于访问上一组粒子数据
-    layoutBindings[1].binding = 1;
-    layoutBindings[1].descriptorCount = 1;
-    layoutBindings[1].descriptorType = vk::DescriptorType::eStorageBuffer;
-    layoutBindings[1].stageFlags = vk::ShaderStageFlagBits::eCompute;
-    // 绑定2：Storage Buffer 粒子数据 ，2号位用于访问当前组粒子数据
-    layoutBindings[2] = layoutBindings[1];
-    layoutBindings[2].binding = 2;
-
+    vk::DescriptorSetLayoutBinding layoutBinding; // Storage Buffer 粒子数据
+    layoutBinding.binding = 0;
+    layoutBinding.descriptorCount = 1;
+    layoutBinding.descriptorType = vk::DescriptorType::eStorageBuffer; // 存储缓冲区
+    layoutBinding.stageFlags = vk::ShaderStageFlagBits::eCompute; // 计算着色器
     vk::DescriptorSetLayoutCreateInfo layoutInfo;
-    layoutInfo.setBindings( layoutBindings );
-
+    layoutInfo.setBindings( layoutBinding );
     m_descriptorSetLayout = m_device.createDescriptorSetLayout( layoutInfo );
 }
 ```
 
-然后设置描述符池：（注意创建函数的调用位置）
+然后设置描述符池，我们只需要一个描述符集和一个存储缓冲描述符：
 
 ```cpp
 .......
@@ -319,100 +183,69 @@ vk::raii::DescriptorPool m_descriptorPool{ nullptr };
 ......
 void initVulkan() {
     ...
-    createParticleBuffers();
-    createUniformBuffers();
+    createDescriptorSetLayout();
     createDescriptorPool();
     ...
 }
 ......
 void createDescriptorPool() {
-    std::array<vk::DescriptorPoolSize, 2> poolSizes;
-    poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-    // eStorageBuffer 描述符需要两倍数量
-    poolSizes[1].type = vk::DescriptorType::eStorageBuffer;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 2;
+    vk::DescriptorPoolSize poolSize;
+    poolSize.type = vk::DescriptorType::eStorageBuffer; // 存储缓冲区
+    poolSize.descriptorCount = 1;
 
     vk::DescriptorPoolCreateInfo poolInfo;
+    // raii 封装需要使用 eFreeDescriptorSet 标志位
     poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-    poolInfo.setPoolSizes( poolSizes );
+    poolInfo.maxSets = 1;
+    poolInfo.setPoolSizes( poolSize );
 
     m_descriptorPool = m_device.createDescriptorPool( poolInfo );
 }
 ```
 
-描述符集合的分配必须在缓冲区创建之后（分配描述符集需要引用缓冲区），但布局和池的创建可以放前面。现在分配描述符集合：
+描述符布局和描述符池不需要具体的资源，但是描述符集合的分配必须放在缓冲资源创建之后：
 
 ```cpp
 .......
-vk::raii::DescriptorSetLayout m_descriptorSetLayout{ nullptr };
-vk::raii::DescriptorPool m_descriptorPool{ nullptr };
+vk::raii::DeviceMemory m_particleBufferMemory{ nullptr };
+vk::raii::Buffer m_particleBuffer{ nullptr };
 std::vector<vk::raii::DescriptorSet> m_descriptorSets;
 ......
 void initVulkan() {
     ...
-    createParticleBuffers();
-    createUniformBuffers();
-    createDescriptorPool();
-    createDescriptorSets();
-    ...
+    createParticleBuffer();
+    createDescriptorSets(); // 放在粒子创建之后
 }
 ......
 void createDescriptorSets() {
-    std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, *m_descriptorSetLayout);
     vk::DescriptorSetAllocateInfo allocInfo;
     allocInfo.setDescriptorPool( m_descriptorPool );
-    allocInfo.setSetLayouts( layouts );
+    allocInfo.setSetLayouts( *m_descriptorSetLayout ); // 需要至少一次 * 显式转换
 
+    // 此描述符集数组仅单个元素
     m_descriptorSets = m_device.allocateDescriptorSets( allocInfo );
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vk::DescriptorBufferInfo uniformBufferInfo;
-        uniformBufferInfo.buffer = *m_uniformBuffers[i];
-        uniformBufferInfo.offset = 0;
-        uniformBufferInfo.range = sizeof(UniformBufferObject);
+    vk::DescriptorBufferInfo particleBufferInfo;
+    // 绑定粒子缓冲区
+    particleBufferInfo.buffer = m_particleBuffer;
+    particleBufferInfo.offset = 0;
+    particleBufferInfo.range = sizeof(Particle) * PARTICLE_COUNT; // 计算缓冲区大小
 
-        vk::DescriptorBufferInfo particleBufferInfo1;
-        // 绑定上一个缓冲区
-        particleBufferInfo1.buffer = *m_particleBuffers[(i + MAX_FRAMES_IN_FLIGHT - 1) % MAX_FRAMES_IN_FLIGHT];
-        particleBufferInfo1.offset = 0;
-        particleBufferInfo1.range = sizeof(Particle) * PARTICLE_COUNT;
+    vk::WriteDescriptorSet descriptorWrite;
+    descriptorWrite.dstSet = m_descriptorSets.at(0);
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.descriptorType = vk::DescriptorType::eStorageBuffer; // 存储缓冲区类型
+    descriptorWrite.setBufferInfo( particleBufferInfo );
 
-        vk::DescriptorBufferInfo particleBufferInfo2;
-        particleBufferInfo2.buffer = *m_particleBuffers[i];
-        particleBufferInfo2.offset = 0;
-        particleBufferInfo2.range = sizeof(Particle) * PARTICLE_COUNT;
-
-        std::array<vk::WriteDescriptorSet, 3> descriptorWrites;
-        descriptorWrites[0].dstSet = m_descriptorSets[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-        descriptorWrites[0].setBufferInfo( uniformBufferInfo );
-
-        descriptorWrites[1].dstSet = m_descriptorSets[i];
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].descriptorType = vk::DescriptorType::eStorageBuffer;
-        descriptorWrites[1].setBufferInfo( particleBufferInfo1 );
-
-        descriptorWrites[2].dstSet = m_descriptorSets[i];
-        descriptorWrites[2].dstBinding = 2;
-        descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
-        descriptorWrites[2].setBufferInfo( particleBufferInfo2 );
-
-        m_device.updateDescriptorSets(descriptorWrites, nullptr);
-    }
+    m_device.updateDescriptorSets(descriptorWrite, nullptr);
 }
 ```
-
-> 这些内容都在“Uniform 缓冲”章节介绍过，此处不再赘述，你应当能直接看懂。  
-> 如果感到困惑，可回顾曾经的章节或询问 AI 。
 
 ## **计算着色器**
 
 ### 1. 获取数据
 
-现在为项目添加一个着色器文件，可以起名为 `shader.comp` ，放在 `shaders` 文件夹中，然后填写内容以访问 UBO 和 SSBO 的数据：
+现在为项目添加一个着色器文件，可以起名为 `compute.comp.glsl` ，放在 `shaders` 文件夹中，然后填写内容以访问推送常量和粒子数据：
 
 ```glsl
 #version 450
@@ -423,44 +256,37 @@ struct Particle {
   vec4 color;
 };
 
-layout(std140, binding = 0) uniform ParameterUBO {
+layout(push_constant) uniform PushConstants {
     float deltaTime;
-} ubo;
+} pc;
 
-layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
-   Particle particlesIn[ ];
+layout(std140, binding = 0) buffer ParticleSSBO {
+    Particle particles[ ];
 };
 
-layout(std140, binding = 2) buffer ParticleSSBOOut {
-   Particle particlesOut[ ];
-};
 ```
 
 我们定义了一个结构体 `Particle` ，它的成员以及内存布局和我们在 C++ 代码中定义的完全一致。
 SSBO 通过 `buffer` 标识符指定，它包含未知数量的数据，以 `[]` 标记，不需要我们显式指定元素数量。
 
-> `std140` 用于强制使用严格的、标准化的内存对齐规则。
-
 ### 2. 计算空间
 
 在填写具体的主函数之前，让我们先了解一下计算着色器的两个基本概念： **工作组** 和 **调用** 。
 
-“工作组”和“调用”定义了一个抽象模型，用于说明 GPU 的计算硬件如何在三个维度\(XYZ\)中处理工作负荷\(workloads\)。
+“工作组”和“调用”定义了一个抽象模型，用于说明 GPU 的计算硬件如何通过三个维度\(XYZ\)按需处理工作负荷。
 
-> “工作负荷”可以理解为所有的计算任务。
-
+- **调用\(invocations\)**
+    - 指调用一次计算着色器
+    - 是工作组内的执行线程，并行执行
+    - 同一工作组内的调用可通过共享内存通信，并支持同步
+    - 在着色器内指定维度
 - **工作组\(Workgroup\)**
     - 包含多个调用
     - 是 GPU 调度的基本单位
     - 不同工作组之间完全独立（无执行顺序保证）
-    - 用命令缓冲指定维度。
-- **调用\(invocations\)**
-    - 调用一次计算着色器
-    - 工作组内的执行线程，并行执行
-    - 同一工作组内的调用可通过共享内存通信，并支持同步
-    - 在着色器内指定维度
+    - 用命令缓冲指定维度
 
-![compute_space](../../images/0390/compute_space.svg)
+![compute_space](../../images/0380/compute_space.svg)
 
 “调用”的三个维度的乘积等于并行的线程数，常是 32 或 64 的整数倍以保证最高效率，但不能超过 GPU 支持的最大值。
 
@@ -478,7 +304,7 @@ SSBO 通过 `buffer` 标识符指定，它包含未知数量的数据，以 `[]`
 
 ### 3. 调用维度与主函数
 
-我们需要访问的是一维数组，因此调用只需一个维度，那么我们可以这样设置调用的维度：
+我们需要访问的是一维数组，因此调用只需一个维度，那么我们可以在计算着色器中这样设置调用的维度：
 
 ```glsl
 layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
@@ -502,25 +328,24 @@ gl_GlobalInvocationID.x =
 
 你应该能猜到二维和三维时的情况。
 正如上面说的工作组数量应该等于“总计算量/单工作组的计算数”并向上取整，由于最后的“取整”，实际调用次数很可能大于你的需求。
-但我们将粒子数设为了 4096 整，保证索引不会超出数据范围。
+但我们将粒子数设为了 8192 整，保证索引不会超出数据范围。
 
 > 假设计算量是 4000 ，由于总计算数将是 256 的整数倍，最后会有 96 次调用是无效索引。
-> 一种可行的方式是使用 UBO 向计算着色器传输最大索引数，在主函数中判断索引是否越界。
+> 一种可行的方式是使用推送常量向计算着色器传输最大索引数，在主函数中判断索引是否越界。
 
 然后就可以通过索引修改粒子的位置和速度了，唯一注意的是我们将边缘粒子的速度反转，实现撞墙反弹的效果（并防止粒子都飞到屏幕外）:
 
 ```glsl
 void main() {
-    uint index = gl_GlobalInvocationID.x;  
+    uint index = gl_GlobalInvocationID.x;
 
-    Particle particleIn = particlesIn[index];
+    Particle particle = particles[index];
 
-    particlesOut[index].position = particleIn.position + particleIn.velocity.xy * ubo.deltaTime;
-    particlesOut[index].velocity = particleIn.velocity;
+    particles[index].position = particle.position + particle.velocity.xy * pc.deltaTime;
 
     // Flip movement at window border
-    if (abs(particlesOut[index].position.x) >= 1.0) particlesOut[index].velocity.x *= -1;
-    if (abs(particlesOut[index].position.y) >= 1.0) particlesOut[index].velocity.y *= -1;
+    if (abs(particles[index].position.x) >= 1.0) particles[index].velocity.x *= -1;
+    if (abs(particles[index].position.y) >= 1.0) particles[index].velocity.y *= -1;
 }
 ```
 
@@ -531,23 +356,20 @@ void main() {
 ```cmake
 ......
 
-set(COMP_SHADER ${SHADER_DIR}/shader.comp)
-
-......
-
-set(SPIRV_COMP ${SHADER_DIR}/comp.spv)
-
+set(STAGE_COMP "-fshader-stage=comp")
+set(COMPUTE_COMP_SHADER ${SHADER_DIR}/compute.comp.glsl)
+set(COMPUTE_SPIRV_COMP ${SHADER_DIR}/compute.comp.spv)
 ......
 
 add_custom_command(
-    OUTPUT ${SPIRV_COMP}
-    COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${COMP_SHADER} -o ${SPIRV_COMP}
-    COMMENT "Compiling shader.comp to comp.spv"
-    DEPENDS ${COMP_SHADER}
+    OUTPUT ${COMPUTE_SPIRV_COMP}
+    COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${STAGE_COMP} ${COMPUTE_COMP_SHADER} -o ${COMPUTE_SPIRV_COMP}
+    COMMENT "Compiling compute.comp.glsl to compute.comp.spv"
+    DEPENDS ${COMPUTE_COMP_SHADER}
 )
 
 add_custom_target(CompileShaders ALL
-    DEPENDS ${SPIRV_VERT} ${SPIRV_FRAG} ${SPIRV_COMP}
+    DEPENDS ${GRAPHICS_SPIRV_VERT} ${GRAPHICS_SPIRV_FRAG} ${COMPUTE_SPIRV_COMP}
 )
 ```
 
@@ -560,7 +382,7 @@ add_custom_target(CompileShaders ALL
 
 创建计算管线也需要管线布局，为此添加两个变量和一个辅助函数：
 
-> 计算管线变量放在图形管线变量的上方或下方都可以，它们相互独立。
+> 计算管线变量放在图形管线变量的上方或下方都可以，但需要晚于描述符布局。
 
 ```cpp
 ......
@@ -569,7 +391,6 @@ vk::raii::Pipeline m_computePipeline{ nullptr };
 ......
 void initVulkan() {
     ......
-    // createComputePipeline(); // 放上方也一样
     createGraphicsPipeline();
     createComputePipeline();
     ......
@@ -592,8 +413,8 @@ void createComputePipeline() {
     m_computePipelineLayout = m_device.createPipelineLayout(pipelineLayoutInfo);
 
     // 读取并创建着色器模块
-    auto computeShaderCode = readFile("shaders/comp.spv");
-    vk::raii::ShaderModule computeShaderModule = createShaderModule(computeShaderCode);
+    const auto computeShaderCode = readFile("shaders/compute.comp.spv");
+    const vk::raii::ShaderModule computeShaderModule = createShaderModule(computeShaderCode);
 
     // 设置计算着色器阶段信息
     vk::PipelineShaderStageCreateInfo computeShaderStageInfo;
@@ -609,6 +430,21 @@ void createComputePipeline() {
 }
 ```
 
+还有一件事，我们要用到推送常量传递时间差信息，需要在管线布局中添加推送常量范围：
+
+```cpp
+// 推送常量配置
+vk::PushConstantRange pushConstantRange;
+pushConstantRange.stageFlags = vk::ShaderStageFlagBits::eCompute; // 计算着色器阶段
+pushConstantRange.offset = 0; // 偏移量
+pushConstantRange.size = sizeof(float); // 大小为 float
+
+// 创建管线布局
+vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+pipelineLayoutInfo.setPushConstantRanges( pushConstantRange ); // 设置推送常量范围
+......
+```
+
 ## **运行计算命令**
 
 ### 1. 队列族查找
@@ -617,19 +453,16 @@ void createComputePipeline() {
 
 ```cpp
 for (int i = 0; const auto& queueFamily : queueFamilies) {
-    if (
-        (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) &&
+    if ((queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) &&
         (queueFamily.queueFlags & vk::QueueFlagBits::eCompute)
-    ) {
-        indices.graphicsFamily = i;
-    }
+    ) indices.graphicsFamily = i;
     ......
 }
 ```
 
-> 注意，设备可能存在专用于计算操作的队列族，实际应用中可以使用它们获得最佳性能。
+注意，设备可能存在专用于计算操作的队列族，实际应用中可以使用它们获得最佳性能。此时缓冲区将被多个队列族使用，需要调整缓冲创建信息的 `sharingMode` 字段，使用 `eConcurrent` ，并设置 `queueFamilyIndices` 数组。
 
-然后创建一个成员变量存储计算队列，并从逻辑设备中获取：
+现在创建一个成员变量存储计算队列，并从逻辑设备中获取：
 
 ```cpp
 ......
@@ -637,14 +470,14 @@ vk::raii::Queue m_computeQueue{ nullptr };
 ......
 void createLogicalDevice() {
     ......
-    m_computeQueue = m_device.getQueue( indices.graphicsFamily.value(), 0 );
+    m_computeQueue = m_device.getQueue( graphics.value(), 0 );
 }
 ```
 
 ### 2. 创建命令缓冲
 
 和图形管线一样，我们需要一组命令缓冲用于录制命令。
-观察命令池的创建函数 `createCommandPool` ，我们的命令池绑定了图形队列，而此队列支持计算功能（我们刚刚修改了队列族查找函数），因此我们可以直接使用此命令池。
+观察命令池的创建函数，我们的命令池绑定了图形队列，而此队列支持计算功能（我们刚刚修改了队列族查找函数），因此我们可以直接使用此命令池。
 
 现在声明命令缓冲的成员变量，再使用一个辅助函数创建它：
 
@@ -669,49 +502,59 @@ void createComputeCommandBuffers() {
 }
 ```
 
+虽然粒子缓冲会通过同步原语与图形管线同步，只需要一个。但是命令缓冲仍需要多个，以便对应多个飞行中的帧。
+
 ### 3. 命令录制
 
 有了命令缓冲与合适的队列，现在可以开始录制命令了。
 
 ```cpp
 void recordComputeCommandBuffer(const vk::raii::CommandBuffer& commandBuffer) {
-    vk::CommandBufferBeginInfo beginInfo;
+    constexpr vk::CommandBufferBeginInfo beginInfo;
     commandBuffer.begin(beginInfo);
-
-    // 绑定计算管线
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
-
-    // 绑定描述符集
-    commandBuffer.bindDescriptorSets(
-        vk::PipelineBindPoint::eCompute,
-        m_computePipelineLayout,
-        0,
-        *m_descriptorSets[m_currentFrame],
-        nullptr
-    );
-
-    // 调用计算着色器
-    commandBuffer.dispatch((PARTICLE_COUNT + 255) / 256, 1, 1);
+    
+    ......
 
     commandBuffer.end();
 }
 ```
 
-记录命令非常简单，开始->绑定管线->绑定描述符->分发任务->结束。
+记录命令非常简单，开始->绑定管线->绑定描述符->推送常量->分发任务->结束。
+
+```cpp
+// 绑定计算管线
+commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
+
+// 绑定描述符集
+commandBuffer.bindDescriptorSets(
+    vk::PipelineBindPoint::eCompute,
+    m_computePipelineLayout,
+    0,
+    *m_descriptorSets.at(0),
+    nullptr
+);
+
+// 推送常量
+const float deltaTime = getDeltaTime(); // 获取时间差
+commandBuffer.pushConstants<float>(
+    m_computePipelineLayout,
+    vk::ShaderStageFlagBits::eCompute, // 计算着色器阶段
+    0, // 偏移量
+    deltaTime // 数据
+);
+
+// 调用计算着色器
+commandBuffer.dispatch((PARTICLE_COUNT + 255) / 256, 1, 1);
+```
 
 图像管线使用 `draw` 命令进行绘制，而计算管线使用 `dispatch` 命令分发任务，其中三个参数就是工作组的维度。
-`(PARTICLE_COUNT + 255) / 256` 计算就是之前提到的 “总计算量/单工作组计算量”然后向上取整。 
+`(PARTICLE_COUNT + 255) / 256` 计算就是之前提到的 “总计算量/单工作组计算量”然后向上取整。
 
-注意我们一共有 `MAX_FRAMES_IN_FLIGHT` 个描述符布局。我们每次使用第 `m_currentFrame` 个描述符，
-它绑定了第 `m_currentFrame` 个时间间隔，以及第 `m_currentFrame - 1` 和第 `m_currentFrame` 个粒子缓冲区。
-
-因此，应该在时间间隔更新后再录制命令，在 `drawFrame` 函数中：
+在 `drawFrame` 函数中录制命令：
 
 ```cpp
 void drawFrame() {
     ......
-    updateUniformBuffer(m_currentFrame);
-
     m_computeCommandBuffers[m_currentFrame].reset();
     recordComputeCommandBuffer(m_computeCommandBuffers[m_currentFrame]);
 
@@ -727,26 +570,23 @@ void drawFrame() {
 
 我们希望使用这样的流程：
 
-- 【本次计算】要等到【上次计算】完成
-- 【获取图像】要等到【上次绘制】完成
-- 【本次绘制】要等到【本次计算】完成和【本次图像获取】完成
+- 【本节计算】要等到【上传绘制】完成
+- 【本此绘制】要等待【本次计算】和【本次图像获取】完成
 - 【本次呈现】要等到【本次绘制】完成
 
-> 这未必是最优同步策略，但一定是个可行的策略。
-
-为此，我们需要新建计算围栏和计算信号量，添加成员变量并修改 `createSyncObjects` 函数：
+为此，我们需要新建两个信号量，分别表示计算完成和渲染完成。
 
 ```cpp
 ......
 std::vector<vk::raii::Semaphore> m_computeFinishedSemaphores;
-std::vector<vk::raii::Fence> m_computeInFlightFences;
+std::vector<vk::raii::Semaphore> m_graphicsFinishedSemaphores;
 ......
 void createSyncObjects() {
     ...
     for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i){
         ...
-        m_computeFinishedSemaphores.emplace_back( m_device,  semaphoreInfo );
-        m_computeInFlightFences.emplace_back( m_device, fenceInfo );
+        m_computeFinishedSemaphores.emplace_back( m_device, semaphoreInfo );
+        m_graphicsFinishedSemaphores.emplace_back( m_device, semaphoreInfo );
     }
 }
 ......
@@ -754,82 +594,88 @@ void createSyncObjects() {
 
 ### 5. 绘制帧
 
-现在可以根据上面的流程修改 `drawFrame` 函数了，注意我们需要将 Uniform 缓冲的更新和计算命令移动到函数的最前面：
+现在可以根据上面的流程修改 `drawFrame` 函数了：
 
 ```cpp
 void drawFrame() {
-    // 等待上一次的计算任务完成
-    if( auto res = m_device.waitForFences( *m_computeInFlightFences[m_currentFrame], true, UINT64_MAX );
-        res != vk::Result::eSuccess ){
-        throw std::runtime_error{ "compute in drawFrame was failed" };
-    }
-    m_device.resetFences( *m_computeInFlightFences[m_currentFrame] );
+    ......
     
-    // 更新 uniform buffer， 即更新时间间隔
-    updateUniformBuffer(m_currentFrame);
-
-    // 录制计算命令缓冲区
+    // 计算管线命令录制
     m_computeCommandBuffers[m_currentFrame].reset();
     recordComputeCommandBuffer(m_computeCommandBuffers[m_currentFrame]);
+
+    // 标记是不是第一次提交计算命令
+    static bool firstTime = true;
 
     // 设置提交信息，并在任务完成时发送信号量
     vk::SubmitInfo computeSubmitInfo;
     computeSubmitInfo.setCommandBuffers( *m_computeCommandBuffers[m_currentFrame] );
+    // 设置计算完成的信号量
     computeSubmitInfo.setSignalSemaphores( *m_computeFinishedSemaphores[m_currentFrame] );
-
-    // 提交任务并在完成时触发围栏
-    m_computeQueue.submit(computeSubmitInfo, m_computeInFlightFences[m_currentFrame]);
-
-
-    // 等待上一次的渲染任务完成
-    if( auto res = m_device.waitForFences( *m_inFlightFences[m_currentFrame], true, UINT64_MAX );
-        res != vk::Result::eSuccess ){
-        throw std::runtime_error{ "waitForFences in drawFrame was failed" };
+    if (!firstTime) { // 如果不是第一次，则等待上一次绘制完成
+        computeSubmitInfo.setWaitSemaphores( *m_graphicsFinishedSemaphores[ (m_currentFrame+MAX_FRAMES_IN_FLIGHT-1)%MAX_FRAMES_IN_FLIGHT ] );
+        // 在计算着色器阶段等待上一次渲染完成
+        constexpr vk::PipelineStageFlags pipelineStage = vk::PipelineStageFlagBits::eComputeShader;
+        computeSubmitInfo.setWaitDstStageMask( pipelineStage );
+    } else {
+        firstTime = false;
     }
+    m_computeQueue.submit(computeSubmitInfo);
 
-    //  获取下一张图像 记录渲染命令
-    ...... // 未修改
-    
-    // 设置渲染提交参数
+    // 绘制命令录制
+    m_commandBuffers[m_currentFrame].reset();
+    recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
+
     vk::SubmitInfo submitInfo;
-
-    // 现在渲染操作要同时等待 计算任务完成 和 图像就绪
-    std::array<vk::Semaphore, 2> waitSemaphores = { *m_computeFinishedSemaphores[m_currentFrame], *m_imageAvailableSemaphores[m_currentFrame] };
+    // 渲染需要等待图像可用和本次计算完成
+    const std::array<vk::Semaphore,2> waitSemaphores = {
+        m_computeFinishedSemaphores[m_currentFrame],
+        m_imageAvailableSemaphores[m_currentFrame]
+    };
     submitInfo.setWaitSemaphores( waitSemaphores );
-    // 顶点着色器阶段等待计算任务完成 ， 颜色附件输出阶段 会等待 交换链图像可用
-    std::array<vk::PipelineStageFlags,2> waitStages = { vk::PipelineStageFlagBits::eVertexInput, vk::PipelineStageFlagBits::eColorAttachmentOutput };
+    // 在顶点输入阶段等待计算完成，在颜色输出阶段等待图像可用
+    constexpr std::array<vk::PipelineStageFlags,2> waitStages = {
+        vk::PipelineStageFlagBits::eVertexInput,
+        vk::PipelineStageFlagBits::eColorAttachmentOutput
+    };
     submitInfo.setWaitDstStageMask( waitStages );
+    submitInfo.setCommandBuffers( *m_commandBuffers[m_currentFrame] );
 
-    // 其他设置 与 提交渲染命令
-    ...... // 未修改
-
-    // 提交呈现命令，呈现命令要等待渲染命令完成
-    ...... // 未修改
+    // 设置信号量，表示图形渲染完成。renderFinished 提供给呈现呈现，graphicsFinished提供给计算管线
+    const std::array<vk::Semaphore,2> signalSemaphores = {
+        m_renderFinishedSemaphores[m_currentFrame],
+        m_graphicsFinishedSemaphores[m_currentFrame]
+    };
+    submitInfo.setSignalSemaphores( signalSemaphores );
+    m_graphicsQueue.submit(submitInfo, m_inFlightFences[m_currentFrame]);
 }
 ```
 
-## **运行**
+## **最后**
 
-现在你应该能看到类似下面的效果：
+现在可以运行程序，你应该能看到类似下面的效果：
 
-![final](../../images/0390/final.gif)
+![final](../../images/0380/final.gif)
+
+除了此种单一缓冲区的方式外，你也可以选择双缓冲区交替，或者为每个飞行中的帧创建一个缓冲区。
+此时计算管线和图形管线可以并行运行，你需要额外实现如下内容：
+
+- 优先选择计算专用队列族，以便获得更高的并行性能
+- 创建多份粒子缓冲区，缓冲需要被不同队列族使用，需修改 `sharingMode` 和设置 `queueFamilyIndices` 字段
+- 为每个缓冲区创建描述符集并绑定管线
+- 修改计算着色器，读取缓冲的数据修改另一个缓冲区
+- 修改同步逻辑，以便计算和渲染可以并行进行
 
 ---
+
+**[基础代码](../../codes/03/80_compute/base_code.zip)**
 
 **[C++代码](../../codes/03/80_compute/src/main.cpp)**
 
 **[C++代码差异](../../codes/03/80_compute/src/main.diff)**
 
-**[根项目CMake代码](../../codes/03/80_compute/CMakeLists.txt)**
-
 **[shader-CMake代码](../../codes/03/80_compute/shaders/CMakeLists.txt)**
 
-**[shader-CMake代码差异](../../codes/03/80_compute/shaders/CMakeLists.diff)**
-
-**[shader-vert代码](../../codes/03/80_compute/shaders/shader.vert)**
-
-**[shader-frag代码](../../codes/03/80_compute/shaders/shader.frag)**
-
-**[shader-comp代码](../../codes/03/80_compute/shaders/shader.comp)**
+**[shader-comp代码](../../codes/03/80_compute/shaders/compute.comp.glsl)**
 
 ---

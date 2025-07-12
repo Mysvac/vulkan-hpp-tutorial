@@ -78,8 +78,7 @@ nav:
     - 推送常量: md/03/50_pushconstant.md
     - 动态uniform: md/03/60_dynamicuniform.md
     - 分离图像与采样器: md/03/70_separatesampler.md
-    - 待重构:
-      - 计算着色器与SSBO: md/03/80_compute.md
+    - 计算着色器与SSBO: md/03/80_compute.md
   - 进阶功能:
     - C++模块化: md/04/00_cxxmodule.md
     - 杂项:
