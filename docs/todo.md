@@ -7,7 +7,6 @@ comments: true
 
 ```
   - 进阶功能:
-    - C++模块化: md/04/00_cxxmodule.md # 待重构
     - 杂项:
       - 特化常量: md/04/11_specialization.md  # 待重构
       - 查询池: md/04/10_querypool.md  # 待重构

@@ -6,17 +6,14 @@ comments: true
 
 ## **前言**
 
-C++20标准引入了模块功能，它可以加速项目构建，避免宏传播污染，是更加现代的编译方式。
-而 Vulkan-hpp 也提供了内置的模块封装，我们将在本章介绍如何使用它。
+从本章开始，我们将介绍进阶内容。每章的开头部分会提供一个基础代码框架，要求你下载并浏览，然后根据章节内容进行修改和扩展。
 
-> 理论上可以加快，但由于C++社区模块化进度缓慢，标准库仍在实验中，导致大量头文件需放于全局模块片段。
-> 而模块编译有顺序要求，多因素综合反而减缓了编译速度。  
-> 但无论如何，模块化是未来的方向，且使用它编写的代码更加“优雅”可观。
+为了优化项目结构，我们将引入 C++20 的模块功能。模块化可以帮助我们更好地组织代码，减少编译时间，并避免宏定义的污染。
 
-本章将分为三部分，第一部分介绍 `vulkam.cppm` 模块文件的用法，第二部分给出一个模块化的示例项目，第三部分介绍其他工具的模块化（待定）。
+本章我们先介绍 Vulkan-Hpp 提供的模块接口文件，然后为你提供一个模块化的项目示例，最后介绍其他常用库的模块化方法。
 
-> 建议使用 CLion / Visual Studio 等编辑器，它们可以自动识别 CMake 预设且对 C++ 模块有良好的支持（ VSCode 智能感知对模块支持不佳）。
-
+迷枵是忠实的现代 C++ 用户，考虑后决定直接使用 C++23 标准库模块，面向未来。
+C++ 23 标准库模块的使用可以参考 **[这里](https://mysvac.com/archives/191)** 。
 
 ## **Vulkan模块**
 
@@ -27,20 +24,11 @@ C++20标准引入了模块功能，它可以加速项目构建，避免宏传播
 **[点击下载](../../codes/04/00_cxxmodule/base_code.zip)**
 
 请仔细浏览基础代码，目前的内容非常简单，仅输出 `Hello, World!` 。
-
-也可以选择手动编译运行，请查看 `CMakePresets.json` 文件并选择合适的预设，以 MSVC 为例：
-
-```shell
-cmake --preset "win-x64"
-cmake --build --preset "win-x64-build-debug"
-./build/Debug/main.exe
-```
-
-你将看到输出 `Hello, World!` 。
+本文件使用了标准库模块，如果你不清楚如果启用标准库模块，请浏览前言部分提供的链接。
 
 ### 2. 辅助CMake文件
 
-Vulkan-hpp提供了模块文件，并在[官方仓库](https://github.com/KhronosGroup/Vulkan-Hpp)的 README 中给出了使用说明。
+Vulkan-Hpp 提供了模块文件，并在 [官方仓库](https://github.com/KhronosGroup/Vulkan-Hpp) 的 README 中给出了使用说明。
 
 目前还不支持预构建的模块，我们需要使用 vulkan 文件夹下的 `vulkan.cppm` 手动编译。
 我们的基础代码有个 `cmake` 文件夹是空的，现在在里面创建一个 `VulkanHppModule.cmake` 文件。
@@ -136,7 +124,9 @@ endif()
 cmake_minimum_required(VERSION 4.0.0)
 
 project(HelloCppModule LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 20)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_MODULE_STD 1)
 
 include(cmake/VulkanHppModule.cmake)
 
@@ -145,31 +135,30 @@ add_executable(main src/main.cpp)
 target_link_libraries(main PRIVATE VulkanHppModule)
 ```
 
-模块的编译需要 C++20 标准，我们已在 `CMakeLists.txt` 中使用 `set` 设置。
-
 ### 4. 编译测试
 
 现在可以回到 `main.cpp` 文件添加一些测试代码：
 
 ```cpp
-#include <iostream>
-#include <vulkan/vulkan_hpp_macros.hpp> # 此头文件包含hpp封装常用的部分宏
+import std;
 import vulkan_hpp;
 
 int main() {
-    vk::raii::Context ctx; // 初始化上下文
-    
-    vk::ApplicationInfo app_info = {
+    const vk::raii::Context ctx; // 初始化上下文
+
+    constexpr vk::ApplicationInfo app_info = {
         "My App", 1,
         "My Engine", 1,
-        vk::makeApiVersion(1, 0, 0, 0)
+        vk::makeApiVersion(1, 4, 0, 0)
     };
-    vk::InstanceCreateInfo create_info{ {}, &app_info };
-    vk::raii::Instance instance = ctx.createInstance(create_info);
+    const vk::InstanceCreateInfo create_info{ {}, &app_info };
+    const vk::raii::Instance instance = ctx.createInstance(create_info);
 
-    auto physicalDevices = instance.enumeratePhysicalDevices();
-    for (const auto& physicalDevice : physicalDevices) {
-        std::cout << physicalDevice.getProperties().deviceName << std::endl;
+    std::println("Physical Device: ");
+    for(const auto physicalDevices = instance.enumeratePhysicalDevices();
+        const auto& physicalDevice : physicalDevices
+    ) {
+        std::println("\t{}", std::string_view{ physicalDevice.getProperties().deviceName });
     }
 }
 ```
@@ -188,9 +177,18 @@ Intel(R) UHD Graphics ...
 ...... 或其他显卡设备
 ```
 
-Vulkan 的模块化就到这里，后面会介绍本课程其他可能用到的库的模块化方式。
+最终代码：[下载](../../codes/04/00_cxxmodule/vk_module_demo.zip)
+
+## **相关库的模块化**
+
+1. GLFW : **[这里](https://github.com/Mysvac/glfw_cpp_module)**
+2. GLM : TODO
+3. stb_image : TODO
+4. tinyobjloader : TODO
 
 ## **项目模块化示例**
+
+**此小节待重构！！**
 
 请下载下面的示例代码，此代码将“移动摄像机”的代码进行了模块化拆分，使得结构更加清晰：
 
@@ -200,47 +198,15 @@ Vulkan 的模块化就到这里，后面会介绍本课程其他可能用到的�
 
 ![right_room](../../images/0310/right_room.png)
 
-即使已经过去多年，26标准即将到来，C++20的模块编译依然不是一件容易成功的事。
-本实例代码在作者的几台设备上都可以正常编译运行，但在你的设备上可能由于 Vulkan、CMake 或其他依赖库的版本问题导致编译失败，或许需要根据自己的环境进行一些调整。
-
-即使无法运行，你也可以直接查看 `src/` 文件夹内的代码。
-这很有助于你了解 Vulkan 各组件的依赖关系，因为它们现在严格分离在多个模块文件中，而不像之前一样挤在一起。
-
-## **其他工具的模块化**
-
-### 1. GLM模块
-
-// TODO
-
-### 2. GLFW模块
-
-// TODO
-
-### 3. stb_image模块
-
-// TODO
-
-### 4. tinyobjloader模块
-
-// TODO
-
-### 5. VkMemoryAllocator模块
-
-// TODO
-
-### 6. imgui模块
-
-// TODO
+这有助于你了解 Vulkan 各组件的依赖关系，因为它们现在严格分离在多个模块文件中，而不像之前一样挤在一起。
 
 ---
 
 第一部分：
 
-**[main.cpp样例](../../codes/04/00_cxxmodule/src/main.cpp)**
+**[最终代码](../../codes/04/00_cxxmodule/vk_module_demo.zip)**
 
 **[CMakeLists.txt样例](../../codes/04/00_cxxmodule/CMakeLists.txt)**
-
-**[CMakePresets.json样例](../../codes/04/00_cxxmodule/CMakePresets.json)**
 
 **[VulkanHppModule.cmake样例](../../codes/04/00_cxxmodule/cmake/VulkanHppModule.cmake)**
 
