@@ -10,12 +10,11 @@ comments: true
 与推送常量不同，特化常量最后将直接嵌入 SPIR-V 代码中，且管线创建后无法修改，类似于编译时常量。
 
 需要注意，SPIR-V 依然只是一种中间语言，而我们为其嵌入了常量值，因此它可以在生成目标 ISA 时进行优化，如常量折叠、死代码消除等。
-
-综上，它可用于代替高级着色器语言（GLSL/HLSL）中的预处理宏，实现更优雅的着色器代码。
+因此，它可用于（部分）代替高级着色器语言（GLSL/HLSL）中的预处理宏，实现更优雅的着色器代码。
 
 ## **基础代码**
 
-请下载并阅读下面的基础代码，这依然是“C++模块化”章节的第二部分代码：
+请下载并阅读下面的基础代码，这是“C++模块化”章节的第二部分代码：
 
 **[点击下载](../../codes/04/00_cxxmodule/module_code.zip)**
 
@@ -36,14 +35,16 @@ void main() {
 }
 ```
 
-显然特化常量在各个着色器都可用，此处方便演示，请修改 `shaders/shader.frag` 片段着色器：
+显然特化常量在各个着色器都可用，本文以片段着色器为例，请修改 `shaders/graphics.frag.glsl` 文件：
+
 
 ```glsl
 #version 450
-// 提供默认值 0.0 
+
+// 提供默认值 0.0
 layout (constant_id = 0) const float myColor = 0.0;
 
-layout(binding = 1) uniform sampler2D texSampler;
+layout(set = 1, binding = 0) uniform sampler2D texSampler;
 
 layout(location = 0) in vec2 fragTexCoord;
 
@@ -92,7 +93,7 @@ mapEntry.offset     = 0; // 源数据的起始偏移量
 mapEntry.size       = sizeof(float);
 // 3. 特化信息
 vk::SpecializationInfo specializationInfo;
-specializationInfo.setMapEntries(mapEntry);
+specializationInfo.setMapEntries(mapEntry); // 如果需要，可以设置多个映射条目
 specializationInfo.setData<float>(my_color);
 // 此模板设置了 指针 和 数据大小 ，不能放右值
 
@@ -111,7 +112,7 @@ fragment_shader_create_info.pSpecializationInfo = &specializationInfo;
 
 经过基础章节的学习，这些字段你应该能够轻松理解。现在运行程序，你将看到这样的图像：
 
-![../../i](../../images/0411/blue_room.png)
+![blue_room](../../images/0411/blue_room.png)
 
 
 ## **最后**
@@ -127,10 +128,10 @@ fragment_shader_create_info.pSpecializationInfo = &specializationInfo;
 
 **[初始代码集](../../codes/04/00_cxxmodule/module_code.zip)**
 
-**[shader.frag](../../codes/04/11_specialization/shader.frag)**
+**[shader - frag](../../codes/04/10_specialization/graphics.frag.glsl)**
 
-**[GraphicsPipeline.cppm](../../codes/04/11_specialization/GraphicsPipeline.cppm)**
+**[GraphicsPipeline.cppm](../../codes/04/10_specialization/GraphicsPipeline.cppm)**
 
-**[GraphicsPipeline.diff\(差异文件\)](../../codes/04/11_specialization/GraphicsPipeline.diff)**
+**[GraphicsPipeline.diff\(差异文件\)](../../codes/04/10_specialization/GraphicsPipeline.diff)**
 
 ---

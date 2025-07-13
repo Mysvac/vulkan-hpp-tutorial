@@ -8,7 +8,6 @@ comments: true
 ```
   - 进阶功能:
     - 杂项:
-      - 特化常量: md/04/11_specialization.md  # 待重构
       - 查询池: md/04/10_querypool.md  # 待重构
       - TODO: todo.md # pNext 与 sType + 同步2.0语法 + 动态渲染 + 辅助命令缓冲 - 管线缓存
     - 多管线渲染:

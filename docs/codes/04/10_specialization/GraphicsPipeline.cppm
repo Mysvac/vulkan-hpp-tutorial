@@ -1,14 +1,10 @@
-module;
-
-#include <memory>
-#include <vector>
-
 export module GraphicsPipeline;
 
+import std;
 import vulkan_hpp;
 
 import DataLoader;
-import Utility;
+import Tools;
 import Device;
 import RenderPass;
 
@@ -31,7 +27,7 @@ export namespace vht {
     class GraphicsPipeline {
         std::shared_ptr<vht::Device> m_device;
         std::shared_ptr<vht::RenderPass> m_render_pass;
-        vk::raii::DescriptorSetLayout m_descriptor_set_layout{ nullptr };
+        std::vector<vk::raii::DescriptorSetLayout> m_descriptor_set_layouts;
         vk::raii::PipelineLayout m_pipeline_layout{ nullptr };
         vk::raii::Pipeline m_pipeline{ nullptr };
     public:
@@ -42,7 +38,7 @@ export namespace vht {
         }
 
         [[nodiscard]]
-        const vk::raii::DescriptorSetLayout& descriptor_set_layout() const { return m_descriptor_set_layout; }
+        const std::vector<vk::raii::DescriptorSetLayout>& descriptor_set_layouts() const { return m_descriptor_set_layouts; }
         [[nodiscard]]
         const vk::raii::PipelineLayout& pipeline_layout() const { return m_pipeline_layout; }
         [[nodiscard]]
@@ -55,28 +51,30 @@ export namespace vht {
         }
         // 创建描述符集布局
         void create_descriptor_set_layout() {
-            vk::DescriptorSetLayoutBinding ubo_layout_binging;
-            ubo_layout_binging.binding = 0;
-            ubo_layout_binging.descriptorType = vk::DescriptorType::eUniformBuffer;
-            ubo_layout_binging.descriptorCount = 1;
-            ubo_layout_binging.stageFlags = vk::ShaderStageFlagBits::eVertex;
+            vk::DescriptorSetLayoutBinding uboLayoutBinding;
+            uboLayoutBinding.binding = 0;
+            uboLayoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
+            uboLayoutBinding.descriptorCount = 1;
+            uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
 
-            vk::DescriptorSetLayoutBinding sampler_layout_binding;
-            sampler_layout_binding.binding = 1;
-            sampler_layout_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            sampler_layout_binding.descriptorCount = 1;
-            sampler_layout_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+            vk::DescriptorSetLayoutCreateInfo uboLayoutInfo;
+            uboLayoutInfo.setBindings( uboLayoutBinding );
+            m_descriptor_set_layouts.emplace_back( m_device->device().createDescriptorSetLayout( uboLayoutInfo ) );
 
-            auto bindings = { ubo_layout_binging, sampler_layout_binding };
-            vk::DescriptorSetLayoutCreateInfo layoutInfo;
-            layoutInfo.setBindings( bindings );
+            vk::DescriptorSetLayoutBinding samplerLayoutBinding;
+            samplerLayoutBinding.binding = 0;
+            samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            samplerLayoutBinding.descriptorCount = 1;
+            samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+            vk::DescriptorSetLayoutCreateInfo samplerLayoutInfo;
 
-            m_descriptor_set_layout = m_device->device().createDescriptorSetLayout( layoutInfo );
+            samplerLayoutInfo.setBindings( samplerLayoutBinding );
+            m_descriptor_set_layouts.emplace_back( m_device->device().createDescriptorSetLayout( samplerLayoutInfo ) );
         }
         // 创建图形管线
         void create_graphics_pipeline() {
-            const auto vertex_shader_code = vht::read_shader("shaders/vert.spv");
-            const auto fragment_shader_code = vht::read_shader("shaders/frag.spv");
+            const auto vertex_shader_code = vht::read_shader("shaders/graphics.vert.spv");
+            const auto fragment_shader_code = vht::read_shader("shaders/graphics.frag.spv");
             const auto vertex_shader_module = vht::create_shader_module(m_device->device(), vertex_shader_code);
             const auto fragment_shader_module = vht::create_shader_module(m_device->device(), fragment_shader_code);
             vk::PipelineShaderStageCreateInfo vertex_shader_create_info;
@@ -93,15 +91,17 @@ export namespace vht {
             mapEntry.size       = sizeof(float);
             // 3. 特化信息
             vk::SpecializationInfo specializationInfo;
-            specializationInfo.setMapEntries(mapEntry);
+            specializationInfo.setMapEntries(mapEntry); // 如果需要，可以设置多个映射条目
             specializationInfo.setData<float>(my_color);
             // 此模板设置了 指针 和 数据大小 ，不能放右值
 
-            vk::PipelineShaderStageCreateInfo fragment_shader_create_info; // 片段着色器
+            vk::PipelineShaderStageCreateInfo fragment_shader_create_info;
             fragment_shader_create_info.stage = vk::ShaderStageFlagBits::eFragment;
             fragment_shader_create_info.module = fragment_shader_module;
             fragment_shader_create_info.pName = "main";
-            fragment_shader_create_info.pSpecializationInfo = &specializationInfo; // 特化信息
+
+            // 直接在着色器创建信息中绑定“特化信息”
+            fragment_shader_create_info.pSpecializationInfo = &specializationInfo;
 
             const auto shader_stages = { vertex_shader_create_info, fragment_shader_create_info };
 
@@ -109,8 +109,8 @@ export namespace vht {
             vk::PipelineDynamicStateCreateInfo dynamic_state;
             dynamic_state.setDynamicStates(dynamic_states);
 
-            auto binding_description = vht::Vertex::get_binding_description();
-            auto attribute_description = vht::Vertex::get_attribute_description();
+            const auto binding_description = vht::Vertex::get_binding_description();
+            const auto attribute_description = vht::Vertex::get_attribute_description();
             vk::PipelineVertexInputStateCreateInfo vertex_input;
             vertex_input.setVertexBindingDescriptions(binding_description);
             vertex_input.setVertexAttributeDescriptions(attribute_description);
@@ -152,15 +152,19 @@ export namespace vht {
             color_blend.setAttachments( color_blend_attachment );
 
             vk::PipelineLayoutCreateInfo layout_create_info;
-            layout_create_info.setSetLayouts( *m_descriptor_set_layout );
+
+            // 将 raii 类型转换回 vk::DescriptorSetLayout
+            const auto set_layouts = m_descriptor_set_layouts
+                | std::views::transform([](const auto& layout) -> vk::DescriptorSetLayout { return layout; })
+                | std::ranges::to<std::vector>();
+
+            layout_create_info.setSetLayouts( set_layouts );
             m_pipeline_layout = m_device->device().createPipelineLayout( layout_create_info );
 
             vk::GraphicsPipelineCreateInfo create_info;
-            create_info.setStages( shader_stages );
-
             create_info.layout = m_pipeline_layout;
 
-
+            create_info.setStages( shader_stages );
             create_info.pVertexInputState =  &vertex_input;
             create_info.pInputAssemblyState = &input_assembly;
             create_info.pDynamicState = &dynamic_state;
