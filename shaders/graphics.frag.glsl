@@ -1,11 +1,11 @@
 #version 450
 
-layout(location = 0) in vec3 fragColor;
+layout(set = 1, binding = 0) uniform sampler2D texSampler;
+
+layout(location = 0) in vec2 fragTexCoord;
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-
-    vec2 coord = gl_PointCoord - vec2(0.5);
-    outColor = vec4(fragColor, 0.5 - length(coord));
+    outColor = texture(texSampler, fragTexCoord);
 }

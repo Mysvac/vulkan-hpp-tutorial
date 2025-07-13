@@ -179,16 +179,7 @@ Intel(R) UHD Graphics ...
 
 最终代码：[下载](../../codes/04/00_cxxmodule/vk_module_demo.zip)
 
-## **相关库的模块化**
-
-1. GLFW : **[这里](https://github.com/Mysvac/glfw_cpp_module)**
-2. GLM : TODO
-3. stb_image : TODO
-4. tinyobjloader : TODO
-
 ## **项目模块化示例**
-
-**此小节待重构！！**
 
 请下载下面的示例代码，此代码将“移动摄像机”的代码进行了模块化拆分，使得结构更加清晰：
 
@@ -199,6 +190,10 @@ Intel(R) UHD Graphics ...
 ![right_room](../../images/0310/right_room.png)
 
 这有助于你了解 Vulkan 各组件的依赖关系，因为它们现在严格分离在多个模块文件中，而不像之前一样挤在一起。
+
+## **其他库的模块化**
+
+参考上一部分 **[项目模块化示例代码](../../codes/04/00_cxxmodule/module_code.zip)** ，在 `src/third` 中为你提供了其他四个库的模块接口文件。
 
 ---
 
