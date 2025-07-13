@@ -81,17 +81,20 @@ nav:
     - 计算着色器与SSBO: md/03/80_compute.md
   - 进阶功能:
     - C++模块化: md/04/00_cxxmodule.md
-    - 杂项:
+    - 重要杂项:
       - 特化常量: md/04/10_specialization.md
       - 管线缓存: md/04/11_pipelinecache.md
+      - pNext与sType: md/04/12_pnext_stype.md
+      - TODO: todo.md # 同步2.0语法 + 辅助命令缓冲
+    - 普通杂项:
+      - 查询池: md/04/20_querypool.md
+      - 无图像帧缓冲: md/04/21_imageless.md
+      - 动态渲染: md/04/22_dynamicrendering.md
     - 待重构:
-      - 杂项_:
-        - 查询池: md/04/10_querypool.md
-        - TODO: todo.md # pNext 与 sType + 同步2.0语法 + 动态渲染 + 辅助命令缓冲
       - 多管线渲染:
-        - 阴影映射: md/04/20_shadowmap.md
-        - 延迟渲染: md/04/21_deferred.md
-        - TODO: todo.md # 模板测试
+        - 阴影映射: md/04/30_shadowmap.md
+        - 延迟渲染: md/04/31_deferred.md
+        - 模板测试: md/04/32_stenciltest.md
       - 多线程渲染:
         - TODO: todo.md # 并行命令录制 + 队列并发
       - 离屏渲染:
