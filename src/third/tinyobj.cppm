@@ -56,7 +56,6 @@ export namespace tinyobj {
 
     using tinyobj::warning_context;
 
-    using tinyobj::ParseTextureNameAndOption;
     using tinyobj::TinyObjPoint;
     using tinyobj::cross;
     using tinyobj::dot;
