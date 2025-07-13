@@ -11,3 +11,6 @@ build/
 /base_code.zip
 /CMakeUserPresets.json
 /tmp.cpp
+
+/pipeline_cache.data
+

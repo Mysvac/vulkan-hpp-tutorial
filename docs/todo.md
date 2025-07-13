@@ -9,7 +9,7 @@ comments: true
   - 进阶功能:
     - 杂项:
       - 查询池: md/04/10_querypool.md  # 待重构
-      - TODO: todo.md # pNext 与 sType + 同步2.0语法 + 动态渲染 + 辅助命令缓冲 - 管线缓存
+      - TODO: todo.md # pNext 与 sType + 同步2.0语法 + 动态渲染 + 辅助命令缓冲
     - 多管线渲染:
       - 阴影映射: md/04/20_shadowmap.md  # 待重构
       - 延迟渲染: md/04/21_deferred.md  # 待重构

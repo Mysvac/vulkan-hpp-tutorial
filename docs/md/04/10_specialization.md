@@ -12,6 +12,8 @@ comments: true
 需要注意，SPIR-V 依然只是一种中间语言，而我们为其嵌入了常量值，因此它可以在生成目标 ISA 时进行优化，如常量折叠、死代码消除等。
 因此，它可用于（部分）代替高级着色器语言（GLSL/HLSL）中的预处理宏，实现更优雅的着色器代码。
 
+> 关于特化常量：[Vulkan-Guide \[specialization constants\]](https://docs.vulkan.org/guide/latest/mapping_data_to_shaders.html#specialization-constants)
+
 ## **基础代码**
 
 请下载并阅读下面的基础代码，这是“C++模块化”章节的第二部分代码：
@@ -59,7 +61,7 @@ void main() {
 
 现在运行程序可以看到这样的图像：
 
-![yellow_room](../../images/0411/yellow_room.png)
+![yellow_room](../../images/0410/yellow_room.png)
 
 你可以尝试调整 `myColor` 的默认值，可以看到奇怪色彩的图像。
 
@@ -112,7 +114,7 @@ fragment_shader_create_info.pSpecializationInfo = &specializationInfo;
 
 经过基础章节的学习，这些字段你应该能够轻松理解。现在运行程序，你将看到这样的图像：
 
-![blue_room](../../images/0411/blue_room.png)
+![blue_room](../../images/0410/blue_room.png)
 
 
 ## **最后**
