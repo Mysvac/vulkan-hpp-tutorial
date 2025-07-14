@@ -197,7 +197,8 @@ RAII 封装提供了一个模板函数，此函数返回一个 `vk::StructureCha
 我们可以这样获取内部元素：
 
 ```cpp
-const auto feature2 = features.get<vk::PhysicalDeviceFeatures2>();
+const auto feature2 = features.get(); // 获取第一个元素可以省略模板
+// const auto feature2 = features.get<vk::PhysicalDeviceFeatures2>(); 同上
 const auto feature11 = features.get<vk::PhysicalDeviceVulkan11Features>();
 const auto feature12 = features.get<vk::PhysicalDeviceVulkan12Features>();
 const auto feature13 = features.get<vk::PhysicalDeviceVulkan13Features>();
@@ -207,6 +208,51 @@ std::println("{}", feature11.storageInputOutput16);
 std::println("{}", feature12.descriptorIndexing);
 std::println("{}", feature13.synchronization2);
 ```
+
+### 4. 启用 GPU 特性
+
+上面已经介绍了如何查询高版本可用特性，那么如何启用它们呢？
+
+显然我们需要使用 `pNext` 链将特性链接起来，但 `PhysicalDeviceFeatures` 字段并没有 `pNext` 成员，因此我们需要将特性链接到 `vk::DeviceCreateInfo` 上。
+
+
+```cpp
+vk::StructureChain<
+    vk::DeviceCreateInfo,   // 以 CreateInfo 作为链的起点
+    vk::PhysicalDeviceFeatures2, // 注意是 Feature2 才有 pNext 字段
+    vk::PhysicalDeviceVulkan12Features
+> create_info_chain;
+
+create_info_chain.get() // 模板空默认返回链起点
+    .setQueueCreateInfos( queue_create_infos )  // set 返回自身引用，可以链式调用
+    .setPEnabledExtensionNames( vk::KHRSwapchainExtensionName );
+create_info_chain.get<vk::PhysicalDeviceFeatures2>().features
+    .setSamplerAnisotropy( true );  // 设置需要启用的 1.0 版本特性
+create_info_chain.get<vk::PhysicalDeviceVulkan12Features>()
+    .setTimelineSemaphore( true );  // 设置需要的高版本特性
+
+// 创建逻辑设备
+m_device = m_physical_device.createDevice( create_info_chain.get() );
+```
+
+你甚至可以查询全部 GPU 可用特性，然后将 `CreateInfo` 的 `pNext` 成员指向它，直接启用全部可用特性：
+
+```cpp
+const auto features = m_physical_device.getFeatures2<  // 使用 RAII 的物理设备对象
+    vk::PhysicalDeviceFeatures2,
+    vk::PhysicalDeviceVulkan11Features,
+    vk::PhysicalDeviceVulkan12Features,
+    vk::PhysicalDeviceVulkan13Features
+>();
+
+vk::DeviceCreateInfo create_info;
+// 设置需要的扩展名 和 队列创建信息 ......
+// 将 pNext 链指向需要启用的高版本特性链
+create_info.pNext = &features.get();
+
+m_device = m_physical_device.createDevice( create_info );
+```
+
 
 ## **最后**
 

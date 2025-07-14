@@ -59,7 +59,7 @@ export namespace vht {
             if (std::ifstream in("pipeline_cache.data", std::ios::binary | std::ios::ate);
                 in
             ) {
-                const size_t size = in.tellg();
+                const std::size_t size = in.tellg();
                 in.seekg(0);
                 data.resize(size);
                 in.read(data.data(), size);

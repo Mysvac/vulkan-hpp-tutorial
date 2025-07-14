@@ -85,6 +85,7 @@ nav:
       - 特化常量: md/04/10_specialization.md
       - 管线缓存: md/04/11_pipelinecache.md
       - pNext与sType: md/04/12_pnext_stype.md
+      - 新版同步: md/04/13_sync2.md
       - TODO: todo.md # 同步2.0语法 + 辅助命令缓冲
     - 普通杂项:
       - 查询池: md/04/20_querypool.md
