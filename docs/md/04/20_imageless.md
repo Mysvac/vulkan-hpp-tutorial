@@ -18,6 +18,10 @@ comments: true
 
 **[点击下载](../../codes/04/00_cxxmodule/module_code2.zip)**
 
+构建运行，将显示我们熟悉的房屋模型：
+
+![right_room](../../images/0310/right_room.png)
+
 ## **启用设备特性**
 
 无图像帧缓冲需要启用设备特性，修改 `Device.cppm` 中的逻辑设备创建代码：
