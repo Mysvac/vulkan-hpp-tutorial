@@ -83,7 +83,7 @@ export namespace vht {
         }
         // 创建渲染通道
         void create_render_pass() {
-            vk::AttachmentDescription color_attachment;
+            vk::AttachmentDescription2 color_attachment;
             color_attachment.format = m_swapchain->format();
             color_attachment.samples = vk::SampleCountFlagBits::e1;
             color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
@@ -93,11 +93,11 @@ export namespace vht {
             color_attachment.initialLayout = vk::ImageLayout::eUndefined;
             color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
-            vk::AttachmentReference color_attachment_ref;
+            vk::AttachmentReference2 color_attachment_ref;
             color_attachment_ref.attachment = 0;
-            color_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+            color_attachment_ref.layout = vk::ImageLayout::eAttachmentOptimal;
 
-            vk::AttachmentDescription depth_attachment;
+            vk::AttachmentDescription2 depth_attachment;
             depth_attachment.format = m_depth_image->format();
             depth_attachment.samples = vk::SampleCountFlagBits::e1;
             depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
@@ -105,32 +105,37 @@ export namespace vht {
             depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
             depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
             depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
-            depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+            depth_attachment.finalLayout = vk::ImageLayout::eAttachmentOptimal;
 
-            vk::AttachmentReference depth_attachment_ref;
+            vk::AttachmentReference2 depth_attachment_ref;
             depth_attachment_ref.attachment = 1;
-            depth_attachment_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+            depth_attachment_ref.layout = vk::ImageLayout::eAttachmentOptimal;
 
-            vk::SubpassDescription subpass;
+            vk::SubpassDescription2 subpass;
             subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
             subpass.setColorAttachments( color_attachment_ref );
             subpass.setPDepthStencilAttachment( &depth_attachment_ref );
 
-            vk::SubpassDependency dependency;
-            dependency.srcSubpass = vk::SubpassExternal;
-            dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
-            dependency.srcAccessMask = {};
-            dependency.dstSubpass = 0;
-            dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
-            dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+
+            vk::StructureChain<vk::SubpassDependency2, vk::MemoryBarrier2> dependency;
+
+            dependency.get()    // 设置子通道依赖
+                .setDependencyFlags(vk::DependencyFlagBits::eByRegion) // 局部依赖化，优化性能，可选
+                .setSrcSubpass( vk::SubpassExternal )   // 只需要设置两个子通道序号
+                .setDstSubpass( 0 );
+            dependency.get<vk::MemoryBarrier2>()    // 具体同步交给内存屏障
+                .setSrcStageMask( vk::PipelineStageFlagBits2::eColorAttachmentOutput | vk::PipelineStageFlagBits2::eEarlyFragmentTests )
+                .setSrcAccessMask( vk::AccessFlagBits2::eNone )
+                .setDstStageMask( vk::PipelineStageFlagBits2::eColorAttachmentOutput | vk::PipelineStageFlagBits2::eEarlyFragmentTests )
+                .setDstAccessMask( vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentWrite );
 
             const auto attachments = { color_attachment, depth_attachment };
-            vk::RenderPassCreateInfo create_info;
+            vk::RenderPassCreateInfo2 create_info;
             create_info.setAttachments( attachments );
             create_info.setSubpasses( subpass );
-            create_info.setDependencies( dependency );
+            create_info.setDependencies( dependency.get() );
 
-            m_render_pass = m_device->device().createRenderPass( create_info );
+            m_render_pass = m_device->device().createRenderPass2( create_info );
         }
         // 创建帧缓冲区
         void create_framebuffers() {

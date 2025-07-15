@@ -208,48 +208,41 @@ export namespace vht {
     ) {
         const auto command_buffer = begin_command(command_pool, device);
 
-        vk::ImageMemoryBarrier barrier;
-        barrier.oldLayout = oldLayout;
-        barrier.newLayout = newLayout;
-        barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
-        barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
-        barrier.image = image;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
-        barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 
-        vk::PipelineStageFlagBits src_stage;
-        vk::PipelineStageFlagBits dst_stage;
+        vk::ImageMemoryBarrier2 barrier2;
+        barrier2.image = image;
+        barrier2.oldLayout = oldLayout;
+        barrier2.newLayout = newLayout;
+        barrier2.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+        barrier2.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
+        barrier2.subresourceRange = {
+            vk::ImageAspectFlagBits::eColor,
+            0, 1, 0, 1
+        };
 
         if( oldLayout == vk::ImageLayout::eUndefined &&
             newLayout == vk::ImageLayout::eTransferDstOptimal
         ) {
-            barrier.srcAccessMask = {};
-            barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-            src_stage = vk::PipelineStageFlagBits::eTopOfPipe;
-            dst_stage = vk::PipelineStageFlagBits::eTransfer;
+            barrier2.srcStageMask = vk::PipelineStageFlagBits2::eNone;
+            barrier2.srcAccessMask = vk::AccessFlagBits2::eNone;
+            barrier2.dstStageMask = vk::PipelineStageFlagBits2::eTransfer;
+            barrier2.dstAccessMask = vk::AccessFlagBits2::eTransferWrite;
         } else if(
             oldLayout == vk::ImageLayout::eTransferDstOptimal &&
-            newLayout == vk::ImageLayout::eShaderReadOnlyOptimal
+            newLayout == vk::ImageLayout::eReadOnlyOptimal  // 这里调整了布局
         ) {
-            barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-            src_stage = vk::PipelineStageFlagBits::eTransfer;
-            dst_stage = vk::PipelineStageFlagBits::eFragmentShader;
+            barrier2.srcStageMask = vk::PipelineStageFlagBits2::eTransfer;
+            barrier2.srcAccessMask = vk::AccessFlagBits2::eTransferWrite;
+            barrier2.dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
+            barrier2.dstAccessMask = vk::AccessFlagBits2::eShaderRead;
         } else {
             throw std::invalid_argument("unsupported layout transition!");
         }
 
-        command_buffer.pipelineBarrier(
-                src_stage,        // srcStageMask
-                dst_stage,   // dstStageMask
-                {},         // dependencyFlags
-                nullptr,    // memoryBarriers
-                nullptr,    // bufferMemoryBarriers
-                barrier     // imageMemoryBarriers
-        );
+        vk::DependencyInfo dependency_info;
+        dependency_info.setImageMemoryBarriers( barrier2 );
+
+        command_buffer.pipelineBarrier2( dependency_info );
 
         end_command( command_buffer, queue );
     }

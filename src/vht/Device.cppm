@@ -6,6 +6,8 @@ import vulkan_hpp;
 import Context;
 import Window;
 
+constexpr std::array<const char*, 1> DEVICE_EXTENSIONS { vk::KHRSwapchainExtensionName };
+
 export namespace  vht {
     /**
      * @brief 队列族索引
@@ -104,7 +106,7 @@ export namespace  vht {
         [[nodiscard]]
         bool is_device_suitable(const vk::raii::PhysicalDevice& physical_device) const {
             // 检查是否支持交换链扩展
-            std::set<std::string> extension_set{ vk::KHRSwapchainExtensionName };
+            std::set<std::string> extension_set( DEVICE_EXTENSIONS.begin(), DEVICE_EXTENSIONS.end() );
             for (const auto& it : physical_device.enumerateDeviceExtensionProperties()) {
                 extension_set.erase(it.extensionName);
             }
@@ -174,15 +176,25 @@ export namespace  vht {
                 queue_create_infos.emplace_back( queue_create_info );
             }
 
-            vk::PhysicalDeviceFeatures features;
-            features.samplerAnisotropy = true;
-            vk::DeviceCreateInfo create_info;
-            create_info.setQueueCreateInfos( queue_create_infos );
-            create_info.setPEnabledFeatures( &features );
-            constexpr std::array<const char*, 1> device_extensions { vk::KHRSwapchainExtensionName };
-            create_info.setPEnabledExtensionNames( device_extensions );
+            vk::StructureChain<
+                vk::DeviceCreateInfo,
+                vk::PhysicalDeviceFeatures2,
+                vk::PhysicalDeviceVulkan11Features,
+                vk::PhysicalDeviceVulkan12Features,
+                vk::PhysicalDeviceVulkan13Features
+            > device_create_info;
 
-            m_device = m_physical_device.createDevice( create_info );
+            device_create_info.get()
+                .setQueueCreateInfos( queue_create_infos )
+                .setPEnabledExtensionNames( DEVICE_EXTENSIONS );
+            device_create_info.get<vk::PhysicalDeviceFeatures2>().features
+                .setSamplerAnisotropy( true );
+            device_create_info.get<vk::PhysicalDeviceVulkan12Features>()
+                .setTimelineSemaphore( true );
+            device_create_info.get<vk::PhysicalDeviceVulkan13Features>()
+                .setSynchronization2( true );
+
+            m_device = m_physical_device.createDevice( device_create_info.get() );
             m_graphics_queue = m_device.getQueue( graphics_family.value(), 0 );
             m_present_queue = m_device.getQueue( present_family.value(), 0 );
         }

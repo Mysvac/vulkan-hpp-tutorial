@@ -122,7 +122,7 @@ export namespace vht {
                 m_device->graphics_queue(),
                 m_image,
                 vk::ImageLayout::eTransferDstOptimal,
-                vk::ImageLayout::eShaderReadOnlyOptimal
+                vk::ImageLayout::eReadOnlyOptimal
             );
         }
         // 创建纹理图像视图

@@ -47,9 +47,9 @@ export namespace vht {
         std::shared_ptr<vht::InputAssembly> m_input_assembly{ nullptr };
         std::shared_ptr<vht::UniformBuffer> m_uniform_buffer{ nullptr };
         std::shared_ptr<vht::Descriptor> m_descriptor{ nullptr };
-        std::vector<vk::raii::Semaphore> m_image_available_semaphores;
-        std::vector<vk::raii::Semaphore> m_render_finished_semaphores;
-        std::vector<vk::raii::Fence> m_in_flight_fences;
+        std::vector<vk::raii::Semaphore> m_present_semaphores;
+        std::vector<vk::raii::Semaphore> m_image_semaphores;
+        std::vector<vk::raii::Semaphore> m_time_semaphores;
         std::vector<vk::raii::CommandBuffer> m_command_buffers;
         int m_current_frame = 0;
     public:
@@ -79,42 +79,65 @@ export namespace vht {
 
 
         void draw() {
-            // 等待当前帧的栅栏，即确保上一个帧的绘制完成
-            if( const auto res = m_device->device().waitForFences( *m_in_flight_fences[m_current_frame], true, std::numeric_limits<std::uint64_t>::max() );
-                res != vk::Result::eSuccess
-            ) throw std::runtime_error{ "waitForFences in drawFrame was failed" };
+            static std::array<std::uint64_t, MAX_FRAMES_IN_FLIGHT> time_counter{};
+
+            vk::SemaphoreWaitInfo first_wait;
+            first_wait.setSemaphores( *m_time_semaphores[m_current_frame] ); // 需要 * 转换至少一次类型
+            first_wait.setValues( time_counter[m_current_frame] );
+            std::ignore = m_device->device().waitSemaphores( first_wait, std::numeric_limits<std::uint64_t>::max() );
 
             // 获取交换链的下一个图像索引
             std::uint32_t image_index;
             try{
-                auto [res, idx] = m_swapchain->swapchain().acquireNextImage(std::numeric_limits<std::uint64_t>::max(), m_image_available_semaphores[m_current_frame]);
+                auto [res, idx] = m_swapchain->swapchain().acquireNextImage(
+                    std::numeric_limits<std::uint64_t>::max(), m_image_semaphores[m_current_frame]
+                );
                 image_index = idx;
             } catch (const vk::OutOfDateKHRError&){
                 m_render_pass->recreate();
                 return;
             }
-            // 重置当前帧的栅栏，延迟到此处等待，防止上方 return 导致死锁
-            m_device->device().resetFences( *m_in_flight_fences[m_current_frame] );
+
             // 更新 uniform 缓冲区
             m_uniform_buffer->update_uniform_buffer(m_current_frame);
             // 重置当前帧的命令缓冲区，并记录新的命令
             m_command_buffers[m_current_frame].reset();
             record_command_buffer(m_command_buffers[m_current_frame], image_index);
-            // 设置绘制命令的提交信息
-            vk::SubmitInfo submit_info;
-            submit_info.setWaitSemaphores( *m_image_available_semaphores[m_current_frame] );
-            std::array<vk::PipelineStageFlags,1> waitStages = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-            submit_info.setWaitDstStageMask( waitStages );
-            submit_info.setCommandBuffers( *m_command_buffers[m_current_frame] );
-            submit_info.setSignalSemaphores( *m_render_finished_semaphores[m_current_frame] );
+
+            ++time_counter[m_current_frame];  // 增加计数器的值，以便在渲染完成时增加时间线信号量
+            // 等待图像准备完成
+            vk::SemaphoreSubmitInfo wait_image;
+            wait_image.setSemaphore( m_image_semaphores[m_current_frame] );
+            wait_image.setStageMask( vk::PipelineStageFlagBits2::eColorAttachmentOutput );
+            // 二进制信号量，不需要设置值
+
+            // 渲染完成时发出信号
+            std::array<vk::SemaphoreSubmitInfo,2> signal_infos;
+            signal_infos[0].setSemaphore( m_time_semaphores[m_current_frame] ); // 更新时间线信号量
+            // 渲染完成后，将时间线信号量的值设置为计数器的值，保证严格递增
+            signal_infos[0].setValue( time_counter[m_current_frame] );
+            // 触发呈现信号量，表示图像已经渲染完成，可用于呈现
+            signal_infos[1].setSemaphore( m_present_semaphores[m_current_frame] );
+            // 二进制信号量，不需要设置值
+
+            // 设置命令缓冲区提交信息
+            vk::CommandBufferSubmitInfo command_info;
+            command_info.setCommandBuffer( m_command_buffers[m_current_frame] );
+
+            vk::SubmitInfo2 submit_info;
+            submit_info.setWaitSemaphoreInfos( wait_image );
+            submit_info.setSignalSemaphoreInfos( signal_infos );
+            submit_info.setCommandBufferInfos( command_info );
+
             // 提交命令缓冲区到图形队列
-            m_device->graphics_queue().submit(submit_info, m_in_flight_fences[m_current_frame]);
+            m_device->graphics_queue().submit2( submit_info );
+
             // 设置呈现信息
             vk::PresentInfoKHR present_info;
-            present_info.setWaitSemaphores( *m_render_finished_semaphores[m_current_frame] );
+            present_info.setWaitSemaphores( *m_present_semaphores[m_current_frame] );
             present_info.setSwapchains( *m_swapchain->swapchain() );
             present_info.pImageIndices = &image_index;
-            // 提交呈现之类
+            // 提交呈现命令
             try{
                 if(  m_device->present_queue().presentKHR(present_info) == vk::Result::eSuboptimalKHR ) {
                     m_render_pass->recreate();
@@ -146,15 +169,20 @@ export namespace vht {
         }
         // 创建同步对象（信号量和栅栏）
         void create_sync_object() {
-            vk::SemaphoreCreateInfo semaphore_create_info;
-            vk::FenceCreateInfo fence_create_info{ vk::FenceCreateFlagBits::eSignaled  };
-            m_image_available_semaphores.reserve( MAX_FRAMES_IN_FLIGHT );
-            m_render_finished_semaphores.reserve( MAX_FRAMES_IN_FLIGHT );
-            m_in_flight_fences.reserve( MAX_FRAMES_IN_FLIGHT );
+            vk::SemaphoreCreateInfo image_info;
+            // 时间线信号量需要使用 pNext 链
+            vk::StructureChain<vk::SemaphoreCreateInfo, vk::SemaphoreTypeCreateInfo> time_info;
+            time_info.get<vk::SemaphoreTypeCreateInfo>()
+                .setSemaphoreType( vk::SemaphoreType::eTimeline )
+                .setInitialValue( 0 );
+
+            m_present_semaphores.reserve( MAX_FRAMES_IN_FLIGHT );
+            m_image_semaphores.reserve( MAX_FRAMES_IN_FLIGHT );
+            m_time_semaphores.reserve( MAX_FRAMES_IN_FLIGHT );
             for(std::size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i){
-                m_image_available_semaphores.emplace_back( m_device->device(), semaphore_create_info );
-                m_render_finished_semaphores.emplace_back( m_device->device(),  semaphore_create_info );
-                m_in_flight_fences.emplace_back( m_device->device() , fence_create_info );
+                m_present_semaphores.emplace_back( m_device->device().createSemaphore(image_info) );
+                m_image_semaphores.emplace_back( m_device->device().createSemaphore(image_info) );
+                m_time_semaphores.emplace_back( m_device->device().createSemaphore(time_info.get()) );
             }
         }
         // 记录命令缓冲区

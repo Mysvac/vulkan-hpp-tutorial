@@ -43,7 +43,7 @@ export namespace vht {
         void init() {
             if ( !glfw::init() ) throw std::runtime_error("Failed to initialize GLFW");
             vk::ApplicationInfo app_info{
-                "Vulkan", 1,
+                "HelloVulkan", 1,
                 "MyEngine", 1,
                 vk::makeApiVersion(0, 1, 4, 0) // VK_API_VERSION_1_4
             };

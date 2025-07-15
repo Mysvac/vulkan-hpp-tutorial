@@ -254,14 +254,17 @@ m_device = m_physical_device.createDevice( create_info_chain.get() );
 现在我们有更语义化的表达， `None` 表示没有命令， `AllCommands` 表示所有命令：
 
 ```cpp
-// 等待管线的开始 曾经： dp.srcStageMask = vk::PipelineStageFlagBits::eTopOfPipe;
-dp.srcStageMask = vk::PipelineStageFlagBits2KHR::eNone; // 现在
-// 等待管线的结束 曾经：dp.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-dp.srcStageMask = vk::PipelineStageFlagBits2KHR::eAllCommands; // 现在，表示所有命令的结束
-// 等待完成后才能开始管线 曾经：dp.dstStageMask = vk::PipelineStageFlagBits::eTopOfPipe;
-dp.dstStageMask = vk::PipelineStageFlagBits2KHR::eAllCommands; // 现在，表示开始管线的所有任务
-// 等待完成后才能结束管线 曾经：dp.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-dp.dstStageMask = vk::PipelineStageFlagBits2KHR::eNone; // 现在
+// 等待管线的开始（不等待任何前置操作）
+dp.srcStageMask = vk::PipelineStageFlagBits2KHR::eNone;
+
+// 等待管线的结束（等待所有命令完成）
+dp.srcStageMask = vk::PipelineStageFlagBits2KHR::eAllCommands;
+
+// 等待完成后才能开始管线（允许所有后续命令）
+dp.dstStageMask = vk::PipelineStageFlagBits2KHR::eAllCommands;
+
+// 等待完成后才能结束管线（不激活任何后续阶段）
+dp.dstStageMask = vk::PipelineStageFlagBits2KHR::eNone;
 ```
 
 此外，旧版本中 `AccessMask` 字段常使用 `{}` 来表示“无访问”，即只做阶段同步而不涉及资源（如等待所有任务完成）。
