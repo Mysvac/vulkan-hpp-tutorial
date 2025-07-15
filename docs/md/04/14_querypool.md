@@ -4,35 +4,32 @@ comments: true
 ---
 # **查询池**
 
-**本节内容待重构！！**
-
 ## **前言**
 
 Vulkan 的 **查询池\(Query Pool\)** 是一种用于收集 GPU 统计信息和性能数据的机制。通过查询池，你可以获取诸如时间戳、管线统计、采样器使用情况等信息，常用于性能分析和调试。
 
 - 时间戳查询：测量 GPU 上命令执行的时间间隔。
 - 管线统计查询：统计顶点数、片元数、着色器调用次数等渲染管线相关数据。
-- 遮挡查询：判断绘制的物体是否被可见。
+- 遮挡查询：深度测试与模板测试的统计信息。
 
 ## **基础代码**
 
-请下载并阅读下面的基础代码，这个就是上一节“模块化”的第二部分代码：
+请下载并阅读下面的基础代码，这是“模块化”章节第二部分的代码：
 
 **[点击下载](../../codes/04/00_cxxmodule/module_code.zip)**
 
-我们将再次基础上创建一个“查询池”模块，并演示上述的三种查询方式。
+我们将在此基础上创建一个“查询池”模块，并演示上述的三种查询方式。
 
 ## **查询池模块**
 
 ### 1. 创建查询池模块
 
-首先，在项目的 `src/utils/` 目录下新建一个文件 `QueryPool.cppm`，并添加以下代码：
+首先，在项目的 `src/vht/` 目录下新建一个文件 `QueryPool.cppm`，并添加以下代码：
 
 ```cpp
-module;
-#include <memory>
 export module QueryPool;
 
+import std;
 import vulkan_hpp;
 import Device;
 
@@ -64,8 +61,6 @@ export namespace vht {
 
 查询池只需要用到逻辑设备，所以我们通过构造函数注入了依赖。
 我们还需要三种查询池，分别时间信息、管线统计和遮挡查询，因此创建了三个成员变量并对外提供访问句柄。
-
-> Vulkan raii 对象的大部分操作都是 const 的，我们使用此修饰防止资源被外部移动。
 
 ### 2. 创建查询池对象
 
@@ -115,10 +110,10 @@ features.pipelineStatisticsQuery = true;
 ## **依赖注入**
 
 回顾命令缓冲录制的方式，会有一个 `begin` 和 `end` 的过程。
-查询也需要在命令缓冲中进行录制，时间戳查询直接在需要的时候插入时间搓，管线统计查询和遮挡查询则需要使用各自的 `begin` 和 `end` 函数。
+查询也需要在命令缓冲中进行录制，时间戳查询直接在需要的时候插入时间戳，管线统计查询和遮挡查询则需要使用各自的 `begin` 和 `end` 函数进行录制。
 
 我们在很多地方用到了命令录制，本章节只查询最终图像的绘制与呈现信息。
-我们的绘制命令位于 `Drawer.cppm` 中，我们要为它注入查询池的依赖。
+我们的绘制命令位于 `Drawer.cppm` 中，要为它注入查询池的依赖。
 
 ### 1. Drawer模块
 
@@ -130,14 +125,11 @@ import QueryPool; // 导入查询池模块
 ...
 class Drawer {
     ...
-    std::shared_ptr<vht::Descriptor> m_descriptor{ nullptr };
-    std::shared_ptr<vht::QueryPool> m_query_pool; // 添加查询池成员
-    std::vector<vk::raii::Semaphore> m_image_available_semaphores;
+    std::shared_ptr<vht::QueryPool> m_query_pool{ nullptr }; // 添加查询池成员
     ...
 public:    
     explicit Drawer(
-        ...
-        std::shared_ptr<vht::Descriptor> descriptor,
+        ... ,
         std::shared_ptr<vht::QueryPool> query_pool // 添加查询池参数
     ):  ... ,
         m_query_pool(std::move(query_pool)) { // 成员变量初始化
@@ -150,7 +142,7 @@ public:
 
 ### 2. App模块
 
-我们在 `App.cppm` 中创建查询池对象，并将其传递给 `Drawer`：
+在 `App.cppm` 中创建查询池对象，并将其传递给 `Drawer`：
 
 ```cpp
 ...
@@ -159,22 +151,21 @@ import Drawer;
 ...
 class App {
     ...
-    std::shared_ptr<vht::QueryPool> m_query_pool; // 添加查询池成员
+    std::shared_ptr<vht::QueryPool> m_query_pool{ nullptr }; // 添加查询池成员
     std::shared_ptr<vht::Drawer> m_drawer{ nullptr };
     ......
     void init() {
         ......
         init_query_pool(); // 初始化查询池
-        std::cout << "query pool created" << std::endl;
+        std::println("query pool created");
         init_drawer();
-        std::cout << "drawer created" << std::endl;
+        std::println("drawer created");
     }
     ......
     void init_query_pool() { m_query_pool = std::make_shared<vht::QueryPool>( m_device ); }
     void init_drawer() {
         m_drawer = std::make_shared<vht::Drawer>(
-             ...
-            m_descriptor,
+            ... ,
             m_query_pool // 传递查询池
         );
     }
@@ -185,26 +176,49 @@ class App {
 
 ### 1. 插入时间戳查询
 
-首先是时间戳查询，假设我们需要测量整个命令的执行时间，我们可以在命令缓冲的开始和结束处添加时间戳查询：
+首先是时间戳查询，假设我们需要测量整个命令的执行时间，可以在命令缓冲的开始和结束处添加时间戳查询：
 回到 `Drawer.cppm` 的 `record_command_buffer` 函数，修改首尾部分代码：
 
-```cpp
 
+```cpp
 void record_command_buffer( ... ) {
     command_buffer.begin( vk::CommandBufferBeginInfo{} );
     // 重置查询池，索引 0 和 1
-    command_buffer.resetQueryPool( m_query_pool->timestamp(), 0, 2 ); 
+    command_buffer.resetQueryPool( m_query_pool->timestamp(), 0, 2 );
+    
+    ......
+    
+    command_buffer.end();
+}
+```
+
+查询池内的查询在每次用于命令缓冲录制时都需要重置（包括第一次使用）。
+我们交由命令缓冲，即 GPU 来重置查询池。使用查询池自身的 `reset` 成员函数则需要启用 `hostQueryReset` 特性 。
+
+然后可以在需要的时候插入时间戳，我们通过希望查询整个命令缓冲的执行时间，可以这样写：
+
+```cpp
+void record_command_buffer( ... ) {
+    command_buffer.begin( vk::CommandBufferBeginInfo{} );
+    // 重置查询池，索引 0 和 1
+    command_buffer.resetQueryPool( m_query_pool->timestamp(), 0, 2 );
     command_buffer.writeTimestamp( // 在管线顶部写入时间戳
-        vk::PipelineStageFlagBits::eTopOfPipe, 
+        vk::PipelineStageFlagBits::eTopOfPipe,
         m_query_pool->timestamp(), // 查询池
         0   // 查询池内部的查询索引
     );
+    // 你可以使用 `writeTimestamp2` ，这需要启用 `synchronization2` 特性
+    // command_buffer.writeTimestamp2(
+    //     vk::PipelineStageFlagBits2::eNone, // 唯一的区别是要使用 StageFlags2
+    //     m_query_pool->timestamp(),
+    //     0
+    // );
     
     ......
     // 开始渲染通道，绘制，结束渲染通道
     ......
     
-    command_buffer.writeTimestamp( // 在管线底部写入时间戳
+    command_buffer.writeTimestamp( // 在命令最后写入时间戳
         vk::PipelineStageFlagBits::eBottomOfPipe, 
         m_query_pool->timestamp(), 1 // 索引 1
     );
@@ -212,32 +226,28 @@ void record_command_buffer( ... ) {
 }
 ```
 
-查询池内的查询在每次用于命令缓冲录制时都需要重置（包括第一次使用）。
-我们交由命令缓冲，即 GPU 来重置查询池。使用查询池自身的 `reset` 成员函数则需要 `hostQueryReset` 特性 。
+如果你启用了 `synchronization2` 特性，可以使用 `writeTimestamp2` 函数。
+注意 `StageFlagBits2` 中推荐使用 `eNone` 表示最早， `eAllCommands` 表示所有命令执行完成。
 
 ### 2. 读取时间戳查询结果
 
-现在创建一个新函数，可以将它封装在 `QueryPool` 类中并公开访问权限：
+现在创建一个新函数用于查询时间戳结果，可以将它封装在 `QueryPool` 类中并公开访问权限：
 
 ```cpp
-...
-#include <vector>
-#include <iostream>
-......
-
 void print_delta_time() const {
     // 返回值是 vk::Result 和 std::vector<uint64_t> 的 pair
-    auto [result, vec]= m_timestamp.getResults<uint64_t>(
+    const auto [result, vec]= m_timestamp.getResults<std::uint64_t>(
         0,                          // 查询的起始索引
         2,                          // 查询的数量
-        2 * sizeof(uint64_t),       // 查询结果总数组的大小
-        sizeof(uint64_t),           // 查询结果的单个元素的大小
+        2 * sizeof(std::uint64_t),       // 查询结果总数组的大小
+        sizeof(std::uint64_t),           // 查询结果的单个元素的大小
         vk::QueryResultFlagBits::e64 |      // 64位结果
         vk::QueryResultFlagBits::eWait      // 等待查询结果
     );
     // 返回数组的元素数是 总数组大小 / 单个元素大小
-    const uint64_t delta = vec.at(1) - vec.at(0); // 计算时间差，纳秒
-    std::cout << "Time consumption per frame: " << (delta / 1000) << " microsecond" << std::endl;
+    const std::uint64_t delta = vec.at(1) - vec.at(0); // 计算时间差，纳秒
+    std::println("Time consumption per frame:  {} microsecond", delta / 1000);
+    // ↑ 注意是微秒而不是毫秒
 }
 ```
 
@@ -248,9 +258,9 @@ void print_delta_time() const {
 现在回到 `Drawer.cppm` 模块。
 
 查询命令需要等待命令执行完成后调用，也就需要 GPU 和 CPU 之间的同步，但我们的围栏只绑定在呈现命令上，无法等待绘制命令。
-为了方便，本章直接在 `draw` 函数末尾使用 `pipeline.waitIdle()` 等待 GPU 执行完成。
+为了方便，本章直接在 `draw` 函数末尾使用 `queue.waitIdle()` 等待 GPU 执行完成。
 
-此外，帧数过快导致输出数量太多，我们可以添加一个计数器，控制输出频率：
+此外，帧率过高导致输出过快，我们可以添加一个计数器，控制输出频率：
 
 ```cpp
 void draw() {
@@ -267,7 +277,7 @@ void draw() {
 
 我们没有控制帧数上限，不同设备的性能差异较大，请自行调整输出频率。
 
-> 注意，这样的等待方式对性能影响较大，此处仅方便演示，实际应用中应使用更合适的同步方式。
+> 这样的等待方式对性能影响较大，此处仅方便演示，实际应用中应使用更合适的同步方式。
 
 现在运行程序，你应该可以看到每隔一段时间输出一次（单次）绘制的耗时。
 
@@ -303,14 +313,14 @@ void record_command_buffer( ... ) const {
 ```cpp
 void print_statistics() const {
     // 返回值是 vk::Result 和 uint64_t ， 注意函数是 getResult, 末尾没有 s ，返回单个结果
-    auto [result, count] = m_statistics.getResult<uint64_t>(
+    const auto [result, count] = m_statistics.getResult<std::uint64_t>(
         0,                          // 查询的起始索引
         1,                          // 查询的数量
-        sizeof(uint64_t),           // 查询结果的单个元素的大小
+        sizeof(std::uint64_t),           // 查询结果的单个元素的大小
         vk::QueryResultFlagBits::e64 |      // 64位结果
         vk::QueryResultFlagBits::eWait      // 等待查询结果
     );
-    std::cout << "Vertex shader invocations: " << count << std::endl;
+    std::println("Vertex shader invocations: {}", count);
 }
 ```
 
@@ -340,17 +350,17 @@ if( ++counter % 2500 == 0 ){
 遮挡查询的使用方式和管线统计查询非常相似，修改 `record_command_buffer` 函数：
 
 ```cpp
-    void record_command_buffer(const vk::raii::CommandBuffer& command_buffer, const uint32_t image_index) const {
-        command_buffer.begin( vk::CommandBufferBeginInfo{} );
-        // 遮挡性查询
-        command_buffer.resetQueryPool( m_query_pool->occlusion(), 0, 1 );
-        command_buffer.beginQuery(m_query_pool->occlusion(), 0);
-        
-        ......
-        
-        command_buffer.endQuery(m_query_pool->occlusion(), 0);
-        command_buffer.end();
-    }
+void record_command_buffer(const vk::raii::CommandBuffer& command_buffer, const uint32_t image_index) const {
+    command_buffer.begin( vk::CommandBufferBeginInfo{} );
+    // 遮挡性查询
+    command_buffer.resetQueryPool( m_query_pool->occlusion(), 0, 1 );
+    command_buffer.beginQuery(m_query_pool->occlusion(), 0);
+    
+    ......
+    
+    command_buffer.endQuery(m_query_pool->occlusion(), 0);
+    command_buffer.end();
+}
 ```
 
 ### 2. 读取遮挡查询结果
@@ -359,14 +369,14 @@ if( ++counter % 2500 == 0 ){
 
 ```cpp
 void print_occlusion() const {
-    auto [result, count] = m_occlusion.getResult<uint64_t>(
+    const auto [result, count] = m_occlusion.getResult<std::uint64_t>(
         0,                          // 查询的起始索引
         1,                          // 查询的数量
-        sizeof(uint64_t),           // 查询结果的单个元素的大小
+        sizeof(std::uint64_t),           // 查询结果的单个元素的大小
         vk::QueryResultFlagBits::e64 |      // 64位结果
         vk::QueryResultFlagBits::eWait      // 等待查询结果
     );
-    std::cout << "Occlusion query result: " << count << std::endl;
+    std::println("Occlusion query result:  {}", count);
 }
 ```
 
@@ -386,26 +396,29 @@ if( ++counter % 2500 == 0 ){
 
 再次运行程序，可以看到遮挡查询的输出，当你视角转动或移动摄像机位置，应该看到不同的输出。
 
+## **最后**
+
+此处的查询池模块只是一个简单的示例，你还可以进行更细化的时间戳查询，比如顶点着色器或片段着色器各自的执行时间。
+
+此外，管线统计查询和遮挡查询的 `beginQuery` 函数还有一个可选的标志位，你可以自行查阅 Vulkan 文档了解更多细节。
 
 ---
 
 **[初始代码集](../../codes/04/00_cxxmodule/module_code.zip)**
 
-**[QueryPool.cppm（新增）](../../codes/04/10_querypool/cppm/QueryPool.cppm)**
+**[QueryPool.cppm（新增）](../../codes/04/14_querypool/QueryPool.cppm)**
 
-**[Device.cppm（修改）](../../codes/04/10_querypool/cppm/Device.cppm)**
+**[Device.cppm（修改）](../../codes/04/14_querypool/Device.cppm)**
 
-**[Device.diff（差异文件）](../../codes/04/10_querypool/cppm/Device.diff)**
+**[Device.diff（差异文件）](../../codes/04/14_querypool/Device.diff)**
 
-**[Drawer.cppm（修改）](../../codes/04/10_querypool/cppm/Drawer.cppm)**
+**[Drawer.cppm（修改）](../../codes/04/14_querypool/Drawer.cppm)**
 
-**[Drawer.diff（差异文件）](../../codes/04/10_querypool/cppm/Drawer.diff)**
+**[Drawer.diff（差异文件）](../../codes/04/14_querypool/Drawer.diff)**
 
-**[App.cppm（修改）](../../codes/04/10_querypool/cppm/App.cppm)**
+**[App.cppm（修改）](../../codes/04/14_querypool/App.cppm)**
 
-**[App.diff（差异文件）](../../codes/04/10_querypool/cppm/App.diff)**
-
-> 请下载后本地查看（UTF-8），浏览器查看文件可能出现中文乱码。
+**[App.diff（差异文件）](../../codes/04/14_querypool/App.diff)**
 
 ---
 

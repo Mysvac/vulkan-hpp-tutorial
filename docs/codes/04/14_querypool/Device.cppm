@@ -1,14 +1,6 @@
-module;
-
-#include <array>
-#include <vector>
-#include <set>
-#include <memory>
-#include <stdexcept>
-#include <optional>
-
 export module Device;
 
+import std;
 import vulkan_hpp;
 
 import Context;
@@ -23,8 +15,8 @@ export namespace  vht {
      * - is_complete(): 检查是否已找到所需的队列族索引
      */
     struct QueueFamilyIndices {
-        std::optional<uint32_t> graphics_family;
-        std::optional<uint32_t> present_family;
+        std::optional<std::uint32_t> graphics_family;
+        std::optional<std::uint32_t> present_family;
         [[nodiscard]]
         bool is_complete() const {
             return graphics_family.has_value() && present_family.has_value();
@@ -72,7 +64,8 @@ export namespace  vht {
         explicit Device(std::shared_ptr<vht::Context> context, std::shared_ptr<vht::Window> window)
         :   m_context(std::move(context)),
             m_window(std::move(window)) {
-            init();
+            pick_physical_device();
+            create_device();
         }
 
         [[nodiscard]]
@@ -88,11 +81,6 @@ export namespace  vht {
         [[nodiscard]]
         QueueFamilyIndices queue_family_indices() const { return m_queue_family_indices; }
     private:
-        void init() {
-            pick_physical_device();
-            create_device();
-        }
-
         /**
          * @brief 挑选物理设备
          */
@@ -153,7 +141,7 @@ export namespace  vht {
         QueueFamilyIndices find_queue_families(const vk::raii::PhysicalDevice& physical_device) const {
             QueueFamilyIndices indices{};
             const auto queue_families = physical_device.getQueueFamilyProperties();
-            for (uint32_t i = 0; const auto& queue_family : queue_families) {
+            for (std::uint32_t i = 0; const auto& queue_family : queue_families) {
                 if (queue_family.queueFlags & vk::QueueFlagBits::eGraphics) {
                     indices.graphics_family = i;
                 }
@@ -174,12 +162,12 @@ export namespace  vht {
             m_queue_family_indices = find_queue_families(m_physical_device);
             const auto [graphics_family, present_family] = m_queue_family_indices;
 
-            std::set<uint32_t> unique_queue_families { graphics_family.value(), present_family.value() };
+            std::set<std::uint32_t> unique_queue_families { graphics_family.value(), present_family.value() };
 
             std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
             queue_create_infos.reserve(unique_queue_families.size());
             float queue_priority = 1.0f;
-            for (const uint32_t queue_family : unique_queue_families) {
+            for (const std::uint32_t queue_family : unique_queue_families) {
                 vk::DeviceQueueCreateInfo queue_create_info;
                 queue_create_info.queueFamilyIndex = queue_family;
                 queue_create_info.setQueuePriorities( queue_priority );
@@ -187,8 +175,8 @@ export namespace  vht {
             }
 
             vk::PhysicalDeviceFeatures features;
-            features.pipelineStatisticsQuery = true;
             features.samplerAnisotropy = true;
+            features.pipelineStatisticsQuery = true;
             vk::DeviceCreateInfo create_info;
             create_info.setQueueCreateInfos( queue_create_infos );
             create_info.setPEnabledFeatures( &features );

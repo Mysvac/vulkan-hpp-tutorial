@@ -1,13 +1,7 @@
-module;
-
-#include <iostream>
-#include <memory>
-
-// #include <vulkan/vulkan.h>
-#include <GLFW/glfw3.h>
-
 export module App;
 
+import std;
+import glfw;
 import vulkan_hpp;
 
 import DataLoader;
@@ -41,53 +35,52 @@ export namespace vht {
         std::shared_ptr<vht::UniformBuffer> m_uniform_buffer{ nullptr };
         std::shared_ptr<vht::TextureSampler> m_texture_sampler{ nullptr };
         std::shared_ptr<vht::Descriptor> m_descriptor{ nullptr };
-        std::shared_ptr<vht::QueryPool> m_query_pool; // 添加查询池成员
+        std::shared_ptr<vht::QueryPool> m_query_pool{ nullptr };
         std::shared_ptr<vht::Drawer> m_drawer{ nullptr };
     public:
         void run() {
             init();
-            std::cout << "begin draw" << std::endl;
-            while (!glfwWindowShouldClose(m_window->ptr())) {
-                glfwPollEvents();
+            while (!glfw::window_should_close(m_window->ptr())) {
+                glfw::poll_events();
                 m_drawer->draw();
             }
-            std::cout << "device waitIdle" << std::endl;
+            std::println("device waitIdle");
             m_device->device().waitIdle();
-            std::cout << "finished" << std::endl;
+            std::println("finished");
         }
     private:
         void init() {
             init_data_loader();
-            init_vulkan();
+            init_context();
             init_window();
-            std::cout << "window created" << std::endl;
+            std::println("window created");
             init_device();
-            std::cout << "device created" << std::endl;
+            std::println("device created");
             init_swapchain();
-            std::cout << "swapchain created" << std::endl;
+            std::println("swapchain created");
             init_depth_image();
-            std::cout << "depth image created" << std::endl;
+            std::println("depth image created");
             init_render_pass();
-            std::cout << "render pass created" << std::endl;
+            std::println("render pass created");
             init_graphics_pipeline();
-            std::cout << "graphics pipeline created" << std::endl;
+            std::println("graphics pipeline created");
             init_command_pool();
-            std::cout << "command pool created" << std::endl;
-            init_input_assembly();
-            std::cout << "input assembly created" << std::endl;
+            std::println("command pool created");
             init_uniform_buffer();
-            std::cout << "uniform buffer created" << std::endl;
+            std::println("uniform buffer created");
             init_texture_sampler();
-            std::cout << "texture sampler created" << std::endl;
+            std::println("texture sampler created");
+            init_input_assembly();
+            std::println("input assembly created");
             init_descriptor();
-            std::cout << "descriptor created" << std::endl;
+            std::println("descriptor created");
             init_query_pool(); // 初始化查询池
-            std::cout << "query pool created" << std::endl;
+            std::println("query pool created");
             init_drawer();
-            std::cout << "drawer created" << std::endl;
+            std::println("drawer created");
         }
         void init_data_loader() { m_data_loader = std::make_shared<vht::DataLoader>(); }
-        void init_vulkan() { m_context = std::make_shared<vht::Context>( true ); }
+        void init_context() { m_context = std::make_shared<vht::Context>( true ); }
         void init_window() { m_window = std::make_shared<vht::Window>( m_context ); }
         void init_device() { m_device = std::make_shared<vht::Device>( m_context, m_window ); }
         void init_swapchain() { m_swapchain = std::make_shared<vht::Swapchain>( m_window, m_device ); }
@@ -112,9 +105,8 @@ export namespace vht {
                 m_input_assembly,
                 m_uniform_buffer,
                 m_descriptor,
-                m_query_pool // 传递查询池
+                m_query_pool
             );
         }
     };
 }
-

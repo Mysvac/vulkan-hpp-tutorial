@@ -1,12 +1,6 @@
-module;
-
-#include <memory>
-#include <array>
-#include <vector>
-#include <stdexcept>
-
 export module Drawer;
 
+import std;
 import vulkan_hpp;
 
 import Config;
@@ -54,7 +48,7 @@ export namespace vht {
         std::shared_ptr<vht::InputAssembly> m_input_assembly{ nullptr };
         std::shared_ptr<vht::UniformBuffer> m_uniform_buffer{ nullptr };
         std::shared_ptr<vht::Descriptor> m_descriptor{ nullptr };
-        std::shared_ptr<vht::QueryPool> m_query_pool; // 添加查询池成员
+        std::shared_ptr<vht::QueryPool> m_query_pool{ nullptr };
         std::vector<vk::raii::Semaphore> m_image_available_semaphores;
         std::vector<vk::raii::Semaphore> m_render_finished_semaphores;
         std::vector<vk::raii::Fence> m_in_flight_fences;
@@ -72,7 +66,7 @@ export namespace vht {
             std::shared_ptr<vht::InputAssembly> input_assembly,
             std::shared_ptr<vht::UniformBuffer> uniform_buffer,
             std::shared_ptr<vht::Descriptor> descriptor,
-            std::shared_ptr<vht::QueryPool> query_pool // 添加查询池参数
+            std::shared_ptr<vht::QueryPool> query_pool
         ):  m_data_loader(std::move(data_loader)),
             m_window(std::move(window)),
             m_device(std::move(device)),
@@ -90,14 +84,14 @@ export namespace vht {
 
         void draw() {
             // 等待当前帧的栅栏，即确保上一个帧的绘制完成
-            if( const auto res = m_device->device().waitForFences( *m_in_flight_fences[m_current_frame], true, UINT64_MAX );
+            if( const auto res = m_device->device().waitForFences( *m_in_flight_fences[m_current_frame], true, std::numeric_limits<std::uint64_t>::max() );
                 res != vk::Result::eSuccess
             ) throw std::runtime_error{ "waitForFences in drawFrame was failed" };
 
             // 获取交换链的下一个图像索引
-            uint32_t image_index;
+            std::uint32_t image_index;
             try{
-                auto [res, idx] = m_swapchain->swapchain().acquireNextImage(UINT64_MAX, m_image_available_semaphores[m_current_frame]);
+                auto [res, idx] = m_swapchain->swapchain().acquireNextImage(std::numeric_limits<std::uint64_t>::max(), m_image_available_semaphores[m_current_frame]);
                 image_index = idx;
             } catch (const vk::OutOfDateKHRError&){
                 m_render_pass->recreate();
@@ -141,8 +135,8 @@ export namespace vht {
 
             m_device->graphics_queue().waitIdle();
             static int counter = 0;
-            if( ++counter % 2500 == 0 ){
-                m_query_pool->print_delta_time();
+            if( ++counter % 2500 == 0 ){ // 2500 帧输出一次，可自行调整
+                m_query_pool->print_delta_time(); // 输出单次绘制耗时
                 m_query_pool->print_statistics();
                 m_query_pool->print_occlusion();
             }
@@ -169,30 +163,35 @@ export namespace vht {
             m_image_available_semaphores.reserve( MAX_FRAMES_IN_FLIGHT );
             m_render_finished_semaphores.reserve( MAX_FRAMES_IN_FLIGHT );
             m_in_flight_fences.reserve( MAX_FRAMES_IN_FLIGHT );
-            for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i){
+            for(std::size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i){
                 m_image_available_semaphores.emplace_back( m_device->device(), semaphore_create_info );
                 m_render_finished_semaphores.emplace_back( m_device->device(),  semaphore_create_info );
                 m_in_flight_fences.emplace_back( m_device->device() , fence_create_info );
             }
         }
         // 记录命令缓冲区
-        void record_command_buffer(const vk::raii::CommandBuffer& command_buffer, const uint32_t image_index) const {
+        void record_command_buffer(const vk::raii::CommandBuffer& command_buffer, const std::uint32_t image_index) const {
             command_buffer.begin( vk::CommandBufferBeginInfo{} );
-            // 可用性查询
+
             command_buffer.resetQueryPool( m_query_pool->occlusion(), 0, 1 );
             command_buffer.beginQuery(m_query_pool->occlusion(), 0);
-            // 管线统计查询
+
             command_buffer.resetQueryPool( m_query_pool->statistics(), 0, 1 );
-            command_buffer.beginQuery(m_query_pool->statistics(), 0);
-            // 时间戳查询
-            // 重置查询池，索引 0 和 1
+            command_buffer.beginQuery(m_query_pool->statistics(), 0); // 绑定管线统计信息查询
+
             command_buffer.resetQueryPool( m_query_pool->timestamp(), 0, 2 );
-            command_buffer.writeTimestamp(
-                vk::PipelineStageFlagBits::eTopOfPipe, // 在管线顶部写入时间戳
+            command_buffer.writeTimestamp( // 在管线顶部写入时间戳
+                vk::PipelineStageFlagBits::eTopOfPipe,
                 m_query_pool->timestamp(), // 查询池
                 0   // 查询池内部的查询索引
             );
-
+            // 你可以使用 `writeTimestamp2` ，这需要启用 `synchronization2` 特性
+            // command_buffer.writeTimestamp2(
+            //     vk::PipelineStageFlagBits2::eNone,
+            //     m_query_pool->timestamp(), // 查询池
+            //     0   // 查询池内部的查询索引
+            // );
+            // 重置查询池，起始索引 0， 数量 1
 
 
             vk::RenderPassBeginInfo render_pass_begin_info;
@@ -228,24 +227,30 @@ export namespace vht {
             command_buffer.bindVertexBuffers( 0, *m_input_assembly->vertex_buffer(), vk::DeviceSize{ 0 } );
             command_buffer.bindIndexBuffer( m_input_assembly->index_buffer(), 0, vk::IndexType::eUint32 );
 
+            const std::array<vk::DescriptorSet,2> descriptor_sets = {
+                m_descriptor->ubo_sets()[m_current_frame],
+                m_descriptor->texture_set()
+            };
+
             command_buffer.bindDescriptorSets(
                 vk::PipelineBindPoint::eGraphics,
                 m_graphics_pipeline->pipeline_layout(),
                 0,
-                *m_descriptor->sets()[m_current_frame],
+                descriptor_sets,
                 nullptr
             );
 
-            command_buffer.drawIndexed(static_cast<uint32_t>(m_data_loader->indices().size()), 1, 0, 0, 0);
+            command_buffer.drawIndexed(static_cast<std::uint32_t>(m_data_loader->indices().size()), 1, 0, 0, 0);
 
             command_buffer.endRenderPass();
 
-            command_buffer.writeTimestamp(
+            command_buffer.writeTimestamp( // 在命令最后写入时间戳
                 vk::PipelineStageFlagBits::eBottomOfPipe,
-                m_query_pool->timestamp(), 1 // 结束时间戳，索引1
+                m_query_pool->timestamp(), 1 // 索引 1
             );
             command_buffer.endQuery(m_query_pool->statistics(), 0);
             command_buffer.endQuery(m_query_pool->occlusion(), 0);
+
             command_buffer.end();
         }
     };
