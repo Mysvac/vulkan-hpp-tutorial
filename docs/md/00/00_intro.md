@@ -8,7 +8,7 @@ comments: true
 
 ### Vulkan 是什么
 
-**[Vulkan](https://www.vulkan.org/)** 是 [Khronos Group](https://www.khronos.org/) 推出的一款**跨平台**的**现代图形与计算 API**。与传统 API （如[OpenGL](https://en.wikipedia.org/wiki/OpenGL)和[Direct3D](https://en.wikipedia.org/wiki/Direct3D)）相比，它为显卡提供了更好的抽象，使你可以更好的描述应用程序的行为，从而减少意外的驱动程序行为并带来更好的性能。
+**[Vulkan](https://www.vulkan.org/)** 是 [Khronos Group](https://www.khronos.org/) 推出的一款**跨平台**的**现代图形与计算 API**。与传统 API （如[OpenGL](https://en.wikipedia.org/wiki/OpenGL)和[Direct3D](https://en.wikipedia.org/wiki/Direct3D)）相比，它为显卡提供了更好的抽象，使你可以更好的描述应用的工作内容，从而减少意外的驱动程序行为并带来更好的性能。
 
 > DirectX 12 同样是现代图形 API ，但它仅限于 Windows 平台。
 
@@ -29,9 +29,9 @@ comments: true
 
 如果您主要对游戏开发感兴趣，那么 OpenGL 或 Direct3D 可能更适合您，因为它们的上手难度相对较低，且在多数场景下仍然能够满足需求。
 
-
-
 另一种选择是使用 [Unreal Engine](https://www.unrealengine.com/zh-CN) 或 [Unity](https://unity.com/cn) 这样的游戏引擎。这些引擎可以利用 Vulkan 的高性能特性，同时为开发者提供更易用的高级 API，从而在不牺牲太多性能的前提下显著降低开发难度。
+
+> 在实际开发中通常会通过一个“渲染硬件接口\(RHI\)”层对图形引擎进行抽象，但学习底层的引擎 API 仍有助于你理解渲染程序本身。
 
 ## **学习前提**
 
@@ -86,21 +86,21 @@ comments: true
 
 11. 现在机器人终于可以画画了，我们要为他准备一个画桌，用于放置画纸等工具。这个画桌就是帧缓冲 `VkFrameBuffer` ，一帧代指一幅图像。
 
-12. 我们还要为机器人设计一个房子，这个房子代指渲染通道 `VkRenderPass`，而画笔等工具对应其中的附件 `Attachments`。
+12. 我们还要为机器人设计一个房子，这个房子代指渲染通道 `VkRenderPass`，而纸张对应其中的附件 `Attachments`。
 
 13. 虽然这些附件放置\(绑定\)在画桌\(帧缓冲\)上，但我们需要为房子贴上告示牌，写明房子内有哪些附件，即附件描述 `AttachmentDesctiption` 。 
 
-14. 机器人很笨，只能看着流程图画画，所以你需要在房间中放置一些流程图，可以是一张，也可以是多张。这个流程图就代指图形管线 `VkGraphicsPipeline` 。
+14. 机器人很笨，只能看着流程图画画，所以你需要在房子中放置一些流程图。这个流程图就代指图形管线 `VkGraphicsPipeline` 。
 
-15. 一个大房子分成多个小房间（可以只有一个），可以用不同的房间干不同的事，这些小房间就是子通道 `VkSubpass` ，通常一个子通道绑定一个图形管线。
+15. 一个大房子分成多个小房间（可以只有一个），可以用不同的房间干不同的事，这些小房间就是子通道 `VkSubpass` ，一个子通道绑定一个图形管线。
 
 16. 我们有一份流程图的模版，只需要修改它的部分内容就可以变成新的流程图。其中某几个部分是可编程的，这里就用到了着色器模块 `Shader Module` 。
 
-17. 这些机器人很呆，需要你写信告诉他该画画了，在哪个房子的哪些房间根据哪些流程图画画。这个信就是命令缓冲 `VkCommandBuffer` 。
+17. 这些机器人很呆，需要你写信告诉他该画画了，在哪个房子的哪些房间根据哪些流程图画画。这些信代指命令缓冲 `VkCommandBuffer` 。
 
-18. 特殊的是，这些信可以重用，所以我们使用一个命令池 `VkCommandPool` 管理这些资源。
+18. 特殊的是信可以重用，我们使用一个命令池 `VkCommandPool` 管理这些资源。
 
-19. 事情一多，机器人做起来就乱了。要保证他先画画，画完才能把画拿出去，所以我们用信号量 `Semaphore` 处理 GPU 自身的同步。还要保证机器人先完成一张画，我们再寄出新的信，所以我们使用围栏 `Fence` 处理 CPU 和 GPU 之间的同步。
+19. 事情一多，机器人做起来就乱了。要保证它先画画，画完才能把画拿出去，所以我们用信号量 `Semaphore` 处理 GPU 自身的同步。还要保证机器人先完成一张画，我们再寄出新的信，所以我们使用围栏 `Fence` 处理 CPU 和 GPU 之间的同步。
 
 绘制第一个三角形大致就是这些内容，你目前**不需要记住**，在后面的学习中随时可以回顾此内容。
 

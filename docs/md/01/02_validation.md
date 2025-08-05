@@ -117,9 +117,6 @@ if constexpr (ENABLE_VALIDATION_LAYER) {
 }
 ```
 
-> Vulkan 以前有两种不同类型的“层\(layer\)”：实例特定和设备特定。  
-> 设备特定层现在已被弃用，这意味着实例验证层适用于所有 Vulkan 调用。
-
 ## **设置调试回调**
 
 我们需要使用 `VK_EXT_debug_utils` 扩展程序创建一个带有回调函数的调试信使。

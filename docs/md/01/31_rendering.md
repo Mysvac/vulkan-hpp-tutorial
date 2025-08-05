@@ -334,7 +334,7 @@ m_graphicsQueue.submit(submitInfo, m_inFlightFence);
 回顾“渲染通道”章节，我们设置了图像的初始布局、子通道布局和最终布局，这里至少存在 2 次布局转换，这些布局转换的发生时机是由子通道依赖定义的。
 
 现在我们没有子通道依赖，因此使用默认的依赖，我们的子通道的开始（管线的 `Top` 阶段）将等待渲染通道开始前的“外部子通道”的结束（管线的 `Bottom` 阶段）。
-因此，图像布局转换将在我们的图形管线的 `Top` 阶段开始时发生（保证图像布局转换后再进行阶段任务）。
+因此，图像布局转换将在 `Top` 阶段触发（保证图像布局转换后再进行阶段任务）。
 
 这里就存在问题，我们在管线 `eColorAttachmentOutput` 阶段等待 `imageAvailableSemaphore`，即等待图像可用。
 但第一次布局转换发生在管线 `Top` 阶段开始时，此时图像可能还不可用！！
@@ -342,7 +342,7 @@ m_graphicsQueue.submit(submitInfo, m_inFlightFence);
 有两种方法可以解决此问题：
 
 1. 将 `imageAvailableSemaphore` 的 `waitStages` 更改为 `eTopOfPipe`，保证图像可用之前不会进入图形管线 `Top` 阶段。
-2. 修改子通道依赖，将布局转换延后至图形管线的 `eColorAttachmentOutput` 阶段。
+2. 修改子通道依赖，推迟布局转换到 `eColorAttachmentOutput` 阶段。
 
 我们将使用第二种，它通常带来更好的性能（因为更高的并行度），且有助于读者了解子通道依赖关系及其工作原理。
 

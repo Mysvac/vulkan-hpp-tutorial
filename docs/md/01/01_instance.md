@@ -15,7 +15,7 @@ comments: true
 - 保证它的生命周期覆盖其他 Vulkan 组件
 - 可以无参构造，不可 `nullptr` 构造（特殊）
 
-根据上面的要求，我们可以将它作为成员变量，在类实例化时自动创建并加载上下文：
+根据上面的要求，我们可以将它作为成员变量，在创建类对象时自动构造并加载上下文：
 
 ```cpp
 private:
@@ -71,9 +71,7 @@ void createInstance(){
 
 前四个参数可以任意填写，最后一个参数是 API 版本号。具体值请参考你的 Vulkan SDK 版本，可以写的比 SDK 版本低、但不能更高。
 
-> 版本号也可直接用宏 `VK_API_VERSION_X_X` 指定。
-
-注意到它并不是 RAII 的，因为它只是个配置信息、不含特殊资源。
+注意到它并不是 RAII 的，因为这只是个配置信息、不含特殊资源。
 所以我们可以无参构造，然后直接修改成员变量，像这样：
 
 ```cpp
@@ -81,6 +79,8 @@ vk::ApplicationInfo applicationInfo;
 applicationInfo.pApplicationName = "xxxx";  // 可以直接修改成员变量
 applicationInfo.setApplicationVersion(1);   // 也可以使用 setter 函数
 ```
+
+> `setter` 返回结构体对象本身，因此可以链式调用。
 
 ### 2. 配置基础创建信息
 
@@ -96,7 +96,7 @@ vk::InstanceCreateInfo createInfo(
 `flags` 参数是标志位，用于控制特殊行为，默认认初始化为空，大多时候无需修改。
 还有其他参数，但都提供了默认初始化，无需手动设置。
 
-注意到， `&applicationInfo` 传入指针，需要注意生命周期！
+`&applicationInfo` 传入指针，需要注意生命周期：
 
 1. `CreateInfo`仅用于提供配置信息。
 2. `CreateInfo`在创建对应资源后就无用了。
@@ -168,7 +168,7 @@ Vulkan-Hpp 需要调用底层C接口，所以这些配置信息采用相同的�
 
 > 特征：err.code() 为  `vk::Result::eErrorIncompatibleDriver`
 
-在使用最新 MoltenVK SDK 的 MacOS 上，可能抛出异常，因为 MacOS 在运行 Vulkan 时必须启用转换层扩展。
+在使用 MoltenVK SDK 的 MacOS 上，可能抛出异常，因为 MacOS 在运行 Vulkan 时必须启用转换层扩展。
 
 **解决方案：**
 
@@ -227,7 +227,7 @@ C风格接口必须手动调用相关 `Destroy` 函数释放 `VkInstance` 等特
 
 当你不确定成员变量声明顺序时，可以参考每章最下方的样例代码。
 
-> 实际上也可以使用 `m_xxx = nullptr` 显式清理资源，此时无需在意声明顺序。
+> 也可以使用 `m_xxx = nullptr` 显式清理资源，此时无需在意声明顺序。
 
 ---
 
