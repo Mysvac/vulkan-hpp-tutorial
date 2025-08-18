@@ -26,10 +26,6 @@ comments: true
 - [CMake](https://cmake.org/) 构建系统
 - [vcpkg](https://vcpkg.io/) 依赖管理
 
-`CMake` 用于项目构建，实现跨平台的项目配置，要求读者了解 CMake 的基础使用。
-
-`vcpkg` 用于管理第三方库，主要用于安装 `glfw3` 和 `glm` 等依赖，这非常简单。
-
 ## **其他说明**
 
 Vulkan SDK 本身由 C 编写，因此具有更好的跨语言兼容性，可通过 C 接口供其他语言调用。

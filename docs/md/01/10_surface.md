@@ -160,7 +160,7 @@ m_graphicsQueue = m_device.getQueue( graphics.value(), 0 );
 m_presentQueue = m_device.getQueue( present.value(), 0 );
 ```
 
-如果队列族相同，这两个句柄很可能具有相同的值，但这依然可以正常运行。
+如果队列族相同，这两个句柄很可能具有相同的值，但依然可以正常运行。
 
 ## **测试**
 

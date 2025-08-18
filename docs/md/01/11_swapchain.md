@@ -6,7 +6,7 @@ comments: true
 
 ## **前言**
 
-正如“教程前言”中的比喻，交换链\(SwapChain\)用于处理窗口表面和实际绘制之间的图像中转：
+正如“教程前言”中的比喻，交换链\(Swapchain\)用于处理窗口表面和实际绘制之间的图像中转：
 
 - 交换链是一组等待显示到屏幕的图像队列
 
@@ -109,11 +109,9 @@ SwapChainSupportDetails querySwapChainSupport(const vk::raii::PhysicalDevice& ph
 }
 ```
 
-> 本节仅介绍如何查询这些信息。它们的具体含义和内容将在下一节中讨论。
-
 ### 2. 查询可用设置
 
-我们从基本表面功能与可用设置开始，这些属性易于查询。
+这些属性的查询非常简单：
 
 ```cpp
 details.capabilities = physicalDevice.getSurfaceCapabilitiesKHR( m_surface );
@@ -339,9 +337,9 @@ createInfo.imageArrayLayers = 1;
 createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 ```
 
-- `imageArrayLayers` 指定每个图像由多少层组成。除非您正在开发立体 3D 应用程序，否则这始终为 `1`。
+`imageArrayLayers` 指定每个图像由多少层组成。除非您正在开发立体 3D 应用程序，否则这始终为 `1`。
 
-- `imageUsage` 位字段指定交换链中图像的操作类型。在本教程中，我们将直接渲染它们，这意味着它们用作颜色附件。我们会在“渲染通道”章节详细介绍附件。
+`imageUsage` 位字段指定交换链中图像的操作类型。在本教程中，我们将直接渲染它们，这意味着它们用作颜色附件。我们会在“渲染通道”章节详细介绍附件。
 
 ### 3. 队列族信息设置
 
@@ -448,8 +446,8 @@ std::vector<vk::Image> m_swapChainImages;
 m_swapChainImages = m_swapChain.getImages();
 ```
 
-> `vk::image` 的资源释放由交换链管理，交换链释放时会自动释放此资源，所以无需RAII。  
-> 情况类似`PhysicalDevice`，但物理设备加了`raii::`、这里却没有，可能是因为 `raii` 封装中物理设备需要特殊的成员函数。
+> `vk::image` 的资源释放由交换链管理，所以无需 RAII 。
+> 情况类似 `PhysicalDevice` ，但后者加了 `raii::`，因为 `raii` 封装中物理设备需要特殊的成员函数。
 
 ## **存储交换链参数**
 

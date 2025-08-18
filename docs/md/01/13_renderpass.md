@@ -45,6 +45,7 @@ vk::AttachmentDescription colorAttachment;
 ```
 
 注意渲染通道只包含附件的“描述”，而实际的附件对象绑定在帧缓冲上。  
+
 我们会在下一章创建帧缓冲区，你需要保证渲染通道的附件“描述”和帧缓冲实际绑定的“附件”一一对应。
 
 ### 1. 颜色附件格式
@@ -83,12 +84,12 @@ colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
 | **`storeOp`** | `vk::AttachmentStoreOp::eStore`    | 保存渲染结果（需后续读取或显示）。        |
 |               | `vk::AttachmentStoreOp::eDontCare` | 忽略渲染结果（适用于临时中间附件）。       |
 
-深度/模板附件的配置与此类似，但使用 `stencilLoadOp`/`stencilStoreOp`（模板缓冲未使用时设为 `eDontCare`）。
-
 ### 4. 图像布局
 
 Vulkan 中的纹理和帧缓冲由 `vk::Image` 对象表示，这些对象具有特定的像素格式。
-Vulkan 要求图像按操作类型切换布局以优化内存访问：
+Vulkan 要求图像按操作类型切换布局以优化内存访问。
+
+**注意：**图像布局并非图像在显存中的数据格式，而是指显卡通过何种方式访问和操作图像。
 
 | **布局类型**                                   | **适用场景**            |
 |--------------------------------------------|---------------------|
@@ -97,20 +98,16 @@ Vulkan 要求图像按操作类型切换布局以优化内存访问：
 | `vk::ImageLayout::ePresentSrcKHR`          | 渲染完成后准备显示到交换链。      |
 | `vk::ImageLayout::eTransferDstOptimal`     | 作为数据拷贝目标时使用（如纹理上传）。 |
 
-需要特别注意的一点是，渲染通道能够根据设置自动处理图像布局转换。
 
-我们将在“纹理映射”章节中更深入地讨论这个主题，但现在重要的是知道图像需要转换为特定的布局，这些布局要符合它们接下来会参与的操作。
+渲染通道能够根据设置自动处理图像布局转换，`initialLayout` 指定开始之前的布局，`finalLayout` 指定完成后**自动转换**到的布局：
 
 ```cpp
 colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
 colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 ```
 
-- `initialLayout` 指定图像在渲染通道开始之前将具有的布局。
-- `finalLayout` 指定渲染通道完成时**自动转换**到的布局。
-
 对 `initialLayout` 使用 `eUndefined` 意味着我们不在乎图像之前的布局是什么。
-此特殊值的不能保证图像的内容会被保留，但这没关系，因为我们无论如何都要清除它。
+此特殊值不能保证图像的内容会被保留，但这没关系，因为我们本就会主动清除内容。
 我们希望图像在使用交换链渲染后即可用于呈现，所以我们使用 `ePresentSrcKHR` 作为 `finalLayout`。
 
 ## **渲染通道组成**
@@ -130,21 +127,14 @@ colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
 `attachment` 参数通过其在附件描述数组中的索引来指定要引用的附件。
 我们的附件描述数组将由单个 `vk::AttachmentDescription` 组成，因此其索引为 `0`。
 
-`layout` 指定我们希望附件在此子通道期间具有的布局，当子通道启动时，Vulkan 自动将附件转换为此布局。
-我们打算使用该附件充当颜色缓冲，故使用 `eColorAttachmentOptimal` 布局提供最佳性能。
-
-> 现在此图像附件已经声明了三个布局：初始布局、最终布局和这里的子通道布局。
-> 渲染管线会自动处理布局转换，我们会在“渲染与呈现”章节深入讨论相关内容。
-
+`layout` 指定我们希望附件在此子通道期间具有的布局，我们打算使用该附件充当颜色缓冲，故使用 `eColorAttachmentOptimal` 布局，显卡通过此方式访问图像能获得最佳性能。
 
 ### 2. 子通道
 
 一个子通道绑定一个图形管线，并通过“附件引用”绑定附件资源，可通过子通道依赖显式定义子通道间的执行顺序和内存依赖。
 它将复杂的渲染过程拆分为多个逻辑阶段（多个子通道），每个子通道可以独立处理特定的渲染任务，从而显著提高渲染效率。
 
-我们会在**进阶章节**进行多子通道的详细讲解。
-
-对于第一个三角形，我们只需一个图形管线，只需单个子通道。子通道使用 `vk::SubpassDescription` 结构描述：
+对于第一个三角形，我们只需一个图形管线、单个子通道。子通道使用 `vk::SubpassDescription` 结构描述：
 
 ```cpp
 vk::SubpassDescription subpass;
@@ -168,10 +158,11 @@ subpass.setColorAttachments( colorAttachmentRef );
 
 ### 3. 子通道依赖
 
-不同的子通道可能可以部分并行以获得最高效率，此时需要通过**子通道依赖\(Subpass Dependencies\)**控制执行顺序。
-如果不指定子通道依赖，它使用默认的隐式依赖，当前子通道管线的开始依赖上一个子通道管线的结束，即顺序执行。
+不同的子通道可能可以部分并行以获得最高性能，此时需要通过**子通道依赖\(Subpass Dependencies\)**控制执行顺序。
 
-我们只有单个子通道，可以暂时不指定它。子通道依赖还会影响图像布局转换发生的时机，我们会在“渲染与呈现”章节回到这一点。
+如果不指定子通道依赖，它使用默认的隐式依赖，当前子通道管线的开始依赖外部子通道管线的结束，即顺序执行。
+
+此外，图像布局转换实际上也由子通道依赖控制，我们会在“渲染与呈现”章节深入讨论这一点。
 
 ## **渲染通道**
 

@@ -45,8 +45,8 @@ void selectPhysicalDevice() {
 }
 ```
 
-> 你可能见过 `vk::raii::PhysicalDevices` 类型，它末尾多了个 `s`。  
-> 他实际上继承了 `std::vector<vk::raii::PhysicalDevice>` ，二者功能基本一致。
+> 你可能见过 `vk::raii::PhysicalDevices` 类型，末尾多了个 `s`。  
+> 它实际上继承了 `std::vector<vk::raii::PhysicalDevice>` ，二者功能基本一致。
 
 ### 3. 设备适用性检查
 

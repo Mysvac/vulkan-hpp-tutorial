@@ -66,16 +66,14 @@ queueCreateInfo.setQueuePriorities( queuePriority );
 
 ### 3. 指定设备特性
 
-目前我们不需要任何特殊的东西，可以直接使用默认值。 当我们开始使用 Vulkan 做更有趣的事情时，会回来修改到这个结构。
-
 我们之前提到过，物理设备还有很多可选特性，它们的支持性取决于具体的 GPU 硬件。
 如果需要使用这些特性，要在逻辑设备创建时显式启用它们，但我们现在还没有需要的特性。
+
+目前我们不需要任何特殊的东西，可以直接使用默认值。 当我们开始使用 Vulkan 做更有趣的事情时，会回来修改到这个结构。
 
 ```cpp
 vk::PhysicalDeviceFeatures deviceFeatures;
 ```
-
-后续章节提到的“需要启用 GPU 特性”指得就是这里。
 
 ### 4. 创建信息
 
@@ -87,22 +85,12 @@ createInfo.setQueueCreateInfos( queueCreateInfo );
 createInfo.pEnabledFeatures = &deviceFeatures;
 ```
 
-其余信息与 `vk::InstanceCreateInfo` 结构相似，并要求您指定扩展。不同之处在于这次这些是设备特定的。
+其余信息与 `vk::InstanceCreateInfo` 结构相似，并要求您指定扩展，但这次是设备特定的。
+我们暂时没有扩展需要添加，因此无需填写。
 
-> 注意，虽然设备特定的“层”已废弃，但仍然需要指定设备特定的扩展与设备特性。
+> 实例除了“扩展”外还有“层”的概念。设备特定的“层”已弃用很久了，请不要使用它。
 
-### 5. 验证层
-
-设备特定的层很早就被废弃，你无需也不应该使用它们，以下代码将被 Vulkan 忽略。
-
-```cpp
-if constexpr (ENABLE_VALIDATION_LAYER) {
-    // 无效代码
-    createInfo.setPEnabledLayerNames( REQUIRED_LAYERS );
-}
-```
-
-### 6. 创建逻辑设备
+### 5. 创建逻辑设备
 
 目前我们不需要任何设备特定的扩展，可以实例化逻辑设备了：
 
