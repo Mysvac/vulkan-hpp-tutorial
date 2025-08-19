@@ -5,7 +5,7 @@ comments: true
 # **开发环境**
 
 ## **概述**
-本文将指导你完成 Vulkan 应用程序开发环境的设置，包括安装必要的工具和库。
+本文将指导你完成 Vulkan 应用程序开发环境的配置，包括安装必要的工具和库。
 
 注意，CMake 和 vcpkg 自身的安装，以及 MSVC/Clang 等编译器的安装，不是本教程的内容。
 
@@ -63,7 +63,7 @@ vkcube
 
 ## **依赖库安装**
 
-我们使用 vcpkg 进行依赖管理，它是由微软管理，是 C++ 目前最通用的包管理工具，安装方式请参考 [官方文档](https://learn.microsoft.com/zh-cn/vcpkg/get_started/overview) 。
+我们使用 vcpkg 进行依赖管理，它由微软管理、是 C++ 目前最通用的包管理工具，安装方式请参考 [官方文档](https://learn.microsoft.com/zh-cn/vcpkg/get_started/overview) 。
 
 ### GLFW
 
@@ -207,9 +207,9 @@ cmake --build build
 
 运行：
 ```shell
-# Windows
+# Windows 
 build/HelloVulkan.exe
-
+# ↑↓ 也可能是在 build/Debug/ 文件夹中
 # Linux/MacOS
 build/HelloVulkan
 ```
@@ -222,16 +222,16 @@ build/HelloVulkan
 
 ### 关于CMake预设
 
-**CMake预设不是必须的**，我们没有复杂的配置需求，你完全可以通过上面两行简单的CMake指令构建项目！
+**CMake预设不是必须的**，我们没有复杂的配置需求，你完全可以通过两行简单的 CMake 指令构建项目！
 
-如果你喜欢使用 `CMakePresets.json` \(它可以很好地和 CLion、VSCode、Visual Studio 集成\)，可以参考 **[这个](../../codes/00/01_env/CMakePresets.json)** 预设模板。
+如果你喜欢使用 `CMakePresets.json` \(它可以和 CLion、VSCode、Visual Studio 集成\)，可以参考 **[这个](../../codes/00/01_env/CMakePresets.json)** 预设模板。
 
 此预设模板使用 Ninja 作为生成器，提供了 MSVC/GNU/Clang 工具链的预设配置。
 
 ## **代码编辑器**
 
 建议使用一个足够智能的编辑器。
-当你不确定某些函数的参数和它的含义时，可以右键函数跳转到它的定义并查看实现。Visual Studio / VSCode / CLion 都提供此功能。
+当你不确定某些函数的参数和它的含义时，可以点击函数查看它的实现。Visual Studio / VSCode / CLion 都提供了此功能。
 
 --- 
 
