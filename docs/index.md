@@ -10,7 +10,7 @@ comments: true
 
 文档以代码演示为主，你可以在 **[Vulkan Guide](https://docs.vulkan.org/guide/latest/index.html)** 等网站找到更详细的 Vulkan 规范和概念介绍。
 
-教程将采用 C++20 标准，使用 SDK 内含的 Vulkan-Hpp 封装，充分利用 RAII 等现代 C++ 特性，这也是 Vulkan 官方推荐的方式。
+教程将采用 C++23 标准，使用 SDK 内含的 Vulkan-Hpp 封装，充分利用 RAII 等现代 C++ 特性，这也是 Vulkan 官方推荐的方式。
 
 你可以将此文档的前半部分看做是 [Vulkan Tutorial](https://docs.vulkan.org/tutorial/latest/index.html) 的中文翻译，它是官方教程，且在近期发布了现代 C++ 的新版本。
 
@@ -27,13 +27,6 @@ comments: true
 - [GLFW](http://www.glfw.org/) 窗口库
 - [CMake](https://cmake.org/) 构建系统
 - [vcpkg](https://vcpkg.io/) 依赖管理
-
-特殊的是着色器语言的选择，Vulkan 官方教程在旧版选用 GLSL，新版选用Slang，而本文档将采用基于 WebGPU 规范的 WGSL 语言。
-
-> WebGPU 是一个更新的图形与计算 API 规范，它不仅仅可用于 Web 平台，也可作为渲染引擎抽象层的实现规范。
-> Bevy 游戏引擎就采用了基于 WebGPU 规范的 [wgpu](https://wgpu.rs/) 库作为抽象层，底层可选用 Vulkan 等渲染引擎。
-
-好消息是着色器语言没有那么多复杂的特性，学会任何一种就能轻松上手其他语言。
 
 ## **其他说明**
 
