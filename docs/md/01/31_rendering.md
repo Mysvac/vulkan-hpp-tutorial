@@ -431,7 +431,28 @@ if (const auto res = m_presentQueue.presentKHR( presentInfo );
 > 这种彩色三角形可能看起来与您在图形教程中看到的三角形略有不同。
 > 这是因为本教程让着色器在线性颜色空间中插值，然后在之后转换为 sRGB 颜色空间。
 
-嘿！不幸的是，您可能会看到程序在您关闭它后立即崩溃。当启用验证层时，打印到终端的消息告诉了我们原因：
+### 信号量重用警告
+
+如果你启用了验证层，终端可能会输出一堆警告，表示信号量非预期的重复使用：
+
+```
+... pSignalSemaphores[0] ... is being signaled by VkQueue ..., but it may still be in use by VkSwapchainKHR.
+```
+
+我们会在下一章详细解释这一警告并将其解决，此时一个临时的修复措施是在 `drawFrame` 函数开头加上 `m_device.waitIdle();` ：
+
+```cpp
+void drawFrame() {
+    m_device.waitIdle();
+    // 其他内容不变
+}
+```
+
+这会强制上一轮操作完全结束，才能开始本轮内容。
+
+### 关闭时崩溃
+
+此外，如果你尝试关闭程序，可能会看到它在关闭时崩溃，验证层会告诉我们原因：
 
 ![error](../../images/0131/semaphore_in_use.png)
 
@@ -455,7 +476,7 @@ void mainLoop() {
 您还可以等待特定命令队列中的操作完成，方法是使用 `queue.waitIdle`。这些函数是执行同步的一种非常基础的方法。
 现在关闭窗口时，程序退出时应该不会出现问题。
 
-## **最小化崩溃**
+### **最小化崩溃**
 
 虽然关闭窗口时能正常退出，但你将窗口最小化时可能直接导致程序崩溃。
 

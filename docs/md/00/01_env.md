@@ -9,8 +9,6 @@ comments: true
 
 注意，CMake 和 vcpkg 自身的安装，以及 MSVC/Clang 等编译器的安装，不是本教程的内容。
 
-> 作为跨平台的教程，我们不限制编译器的选择，但请保证它支持您需要的 C++ 标准。
-
 ## **安装 Vulkan SDK**
 
 Vulkan SDK 是开发Vulkan应用程序的核心组件，包含：
@@ -20,46 +18,11 @@ Vulkan SDK 是开发Vulkan应用程序的核心组件，包含：
 - 标准验证层
 - 开发辅助库
 
-可以从 [LunarG官网](https://vulkan.lunarg.com/) 下载SDK，无需注册账户。
+作为学习环境，你应当有可视化界面，这里建议你从 [LunarG官网](https://vulkan.lunarg.com/) 下载SDK，无需注册账户。
 
-### Windows
+也可以参考 [Vulkan Tutorial](https://docs.vulkan.org/tutorial/latest/02_Development_environment.html) 环境搭建章节。
 
-从 [官网](https://vulkan.lunarg.com/sdk/home#windows) 下载 Vulkan SDK 并运行安装程序，**允许它设置环境变量**（如果可选）。
-
-#### 验证安装：
-
-进入 SDK 安装目录的 Bin 子目录，运行 vkcube.exe 演示程序：
-
-![cube](../../images/0001/cube_demo.png)
-
-### Linux
-
-推荐 [LunarG官网](https://vulkan.lunarg.com/sdk/home#linux) 下载。
-
-使用命令行安装请参考 [此文档](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html) 。
-
-#### 验证安装：
-
-```shell
-vkcube
-```
-
-确保您看到以下窗口弹出：
-
-![cube](../../images/0001/cube_demo_nowindow.png)
-
-
-### MacOS
-
-要求：MacOS 10.11或更高版本，支持Metal API的硬件。
-
-从 [LunarG官网](https://vulkan.lunarg.com/sdk/home#mac) 下载 SDK 并解压到选定目录。
-
-#### 验证安装：
-
-运行 `Applications` 目录下的 `vkcube` 演示程序，您应该看到以下内容：
-
-![cube](../../images/0001/cube_demo_mac.png)
+> 开发辅助库和验证层也可以使用 vcpkg 安装，但这里依然推荐从官网下载，它会为你设置好环境变量。
 
 ## **依赖库安装**
 
@@ -141,7 +104,6 @@ add_executable(${PROJECT_NAME} src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan )
 target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm )
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw )
-
 ```
 
 
@@ -173,7 +135,7 @@ int main() {
     const auto extensions = context.enumerateInstanceExtensionProperties();
     std::cout << "vulkan available extensions:" << std::endl;
     for (const auto& extension : extensions) {
-        std::println("{}", std::string_view( extension.extensionName ));
+        std::cout << extension.extensionName << std::endl;
     }
 
     // glm test

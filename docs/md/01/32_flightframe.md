@@ -132,9 +132,56 @@ void drawFrame() {
 }
 ```
 
-## **最后**
+## **验证层警告**
 
-现在构建和运行程序，保证程序正常。
+现在运行程序，你的验证层很可能还会提示“信号量非预期重用”的警告，和上一节末尾相同。
+
+### 原因
+
+此警告原自下面这一机制：
+
+如果图像被提交至呈现队时设置了信号量，那么 Vulkan 验证层会追踪此图像和信号量的状态，
+在图像被再次获取之前，信号量不能被再次使用（不能被激活）。
+
+由于呈现本身不是GPU工作，无法设置让呈现任务在完成时激活信号量。
+验证层的想法很好理解，只有图像被再次获取时才能确定呈现完成了，此时才能确定此信号量可以被别人使用。
+
+而我们的方案，由于交换链中存在多张图像，有可能图像A还在呈现，然后图像B就被获取并渲染，渲染完成就激活了不该激活的信号量。
+
+### 解决方法
+
+此问题的解决思路也很简单，只要将图像和呈现信号量一一对应，这样每个呈现信号量都只会被自身绑定的图像激活。
+
+现在修改信号量的创建函数，保证控制呈现的信号量与交换链图像数一致：
+
+```cpp
+void createSyncObjects() {
+    // ... 
+    for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i){
+        m_imageAvailableSemaphores.emplace_back( m_device, semaphoreInfo );
+        m_inFlightFences.emplace_back( m_device , fenceInfo );
+    }
+    for(size_t i = 0; i < m_swapChainImages.size(); ++i) {
+        m_renderFinishedSemaphores.emplace_back( m_device,  semaphoreInfo );
+    }
+}
+```
+
+然后修改 `drawFrame` ，把 `m_renderFinishedSemaphores` 的索引都改成 `imageIndex`。
+`imageIndex` 是图像的索引，实际是图像在交换链数组中的索引，从而将图像与此信号量一一对应。
+
+```cpp
+void drawFrame() {
+    // ....
+    m_renderFinishedSemaphores[imageIndex]
+    // ....
+}
+```
+
+再次运行程序，应该可以看到警告消失了。
+
+
+## **最后**
 
 我们已经实现了所有必要的同步工作以确保入队的工作帧不超过 `MAX_FRAMES_IN_FLIGHT` 个，且这些帧不会互相覆盖。
 请注意，对于代码的其他部分（如最终清理），可以依赖更粗略的同步，例如 `m_device.waitIdle()`。

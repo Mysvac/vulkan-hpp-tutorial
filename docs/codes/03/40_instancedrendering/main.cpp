@@ -874,8 +874,10 @@ private:
 
         for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i){
             m_imageAvailableSemaphores.emplace_back( m_device, semaphoreInfo );
-            m_renderFinishedSemaphores.emplace_back( m_device,  semaphoreInfo );
             m_inFlightFences.emplace_back( m_device , fenceInfo );
+        }
+        for(size_t i = 0; i < m_swapChainImages.size(); ++i) {
+            m_renderFinishedSemaphores.emplace_back( m_device,  semaphoreInfo );
         }
     }
     void drawFrame() {
@@ -906,11 +908,11 @@ private:
         submitInfo.setWaitDstStageMask( waitStages );
         submitInfo.setCommandBuffers( *m_commandBuffers[m_currentFrame] );
 
-        submitInfo.setSignalSemaphores( *m_renderFinishedSemaphores[m_currentFrame] );
+        submitInfo.setSignalSemaphores( *m_renderFinishedSemaphores[imageIndex] );
         m_graphicsQueue.submit(submitInfo, m_inFlightFences[m_currentFrame]);
 
         vk::PresentInfoKHR presentInfo;
-        presentInfo.setWaitSemaphores( *m_renderFinishedSemaphores[m_currentFrame] );
+        presentInfo.setWaitSemaphores( *m_renderFinishedSemaphores[imageIndex] );
         presentInfo.setSwapchains( *m_swapChain );
         presentInfo.pImageIndices = &imageIndex;
         try{

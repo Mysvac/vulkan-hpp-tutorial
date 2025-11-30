@@ -606,6 +606,8 @@ private:
         m_inFlightFence = m_device.createFence( fenceInfo );
     }
     void drawFrame() {
+        m_device.waitIdle(); // temp
+
         if(const auto res = m_device.waitForFences( *m_inFlightFence, true, std::numeric_limits<uint64_t>::max() );
             res != vk::Result::eSuccess
         ) throw std::runtime_error{ "waitForFences in drawFrame was failed" };

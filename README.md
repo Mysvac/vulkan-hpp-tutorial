@@ -22,10 +22,6 @@
 
 ## 项目说明
 
-[Vulkan Tutorial](https://docs.vulkan.org/tutorial/latest/index.html) 英文文档已经发布了现代 C++ 的版本，
-本文档完成时间略早于官方的新版文档，因此现在正在进行对齐和补充工作，但作者近期繁忙，更新可能较慢。
-建议读者直接阅读 [Vulkan Tutorial](https://docs.vulkan.org/tutorial/latest/index.html)  。
-
 ### 内容简介
 
 本文档是 Vulkan 的入门教程，将介绍 Vulkan 图形与计算 API 的基础知识与实际应用。
@@ -35,6 +31,9 @@
 教程将采用 C++20/23 标准，使用 SDK 内置的 Vulkan-Hpp 封装，充分利用 RAII 等现代 C++ 特性，这也是 Vulkan 官方推荐的方式。
 
 **文档网站：<https://mysvac.github.io/vulkan-hpp-tutorial>**
+
+[Vulkan Tutorial](https://docs.vulkan.org/tutorial/latest/index.html) 英文文档也发布了现代 C++ 的版本，
+本文档完成时间略早于官方的新版文档，因此现在正在进行对齐和补充工作，但作者近期繁忙，更新可能较慢。
 
 > 如果你发现了文档的错误，请提交 Issue 或 PR 。
 
