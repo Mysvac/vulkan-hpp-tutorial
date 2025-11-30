@@ -3,11 +3,6 @@
 <h1>Vulkan-hpp-tutorial</h1>
 
 <p>
-    <!-- <a href="#中文"><img src="https://img.shields.io/badge/中文-red?style=for-the-badge" alt="中文" /></a> -->
-    <!-- &nbsp;&nbsp;
-    <a href="#ENGLISH"><img src="https://img.shields.io/badge/English-blue?style=for-the-badge" alt="English" /></a> -->
-</p>
-<p>
     <a href="https://www.vulkan.org/">
         <img src="https://img.shields.io/badge/Vulkan-SDK-green?style=for-the-badge" alt="Vulkan-SDK" />
     </a>
@@ -25,21 +20,23 @@
 
 ---
 
-<div id="中文">
-
 ## 项目说明
 
-**文档网站：<https://mysvac.github.io/vulkan-hpp-tutorial>**
-
-备用站点：<https://vulkan.mysvac.com>
-
-> 如有错误，请提交 Issue 或 PR 。
+[Vulkan Tutorial](https://docs.vulkan.org/tutorial/latest/index.html) 英文文档已经发布了现代 C++ 的版本，
+本文档完成时间略早于官方的新版文档，因此现在正在进行对齐和补充工作，但作者近期繁忙，更新可能较慢。
+建议读者直接阅读 [Vulkan Tutorial](https://docs.vulkan.org/tutorial/latest/index.html)  。
 
 ### 内容简介
 
-本文档是 Vulkan 的入门教程，将系统讲解 Vulkan 图形与计算 API 的基础知识与实际应用。
+本文档是 Vulkan 的入门教程，将介绍 Vulkan 图形与计算 API 的基础知识与实际应用。
 
-教程将使用 C++ 编写代码，借助 Vulkan-Hpp 封装，充分利用 RAII 等现代 C++ 特性。
+文档以代码演示为主，你可以在 **[Vulkan Guide](https://docs.vulkan.org/guide/latest/index.html)** 等网站找到更详细的 Vulkan 规范和概念介绍。
+
+教程将采用 C++20/23 标准，使用 SDK 内置的 Vulkan-Hpp 封装，充分利用 RAII 等现代 C++ 特性，这也是 Vulkan 官方推荐的方式。
+
+**文档网站：<https://mysvac.github.io/vulkan-hpp-tutorial>**
+
+> 如果你发现了文档的错误，请提交 Issue 或 PR 。
 
 ### 项目结构
 
@@ -92,13 +89,4 @@ mkdocs serve
 mkdocs build
 ```
 
-</div>
-
----
-<!-- 
-<div id="ENGLISH">
-
-// TODO
-
-</div> -->
 
